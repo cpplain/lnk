@@ -1,0 +1,22 @@
+{
+  "ignore_patterns": [
+    "*.swp",
+    "*.tmp",
+    "*.log",
+    ".DS_Store",
+    "backup/",
+    "temp/"
+  ],
+  "link_mappings": [
+    {
+      "source": "home",
+      "target": "~/",
+      "link_as_directory": [".config/nvim", ".config/fish"]
+    },
+    {
+      "source": "private/home",
+      "target": "~/",
+      "link_as_directory": [".ssh", ".gnupg"]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+# Test gitignore file
+*.log
+*.tmp
+temp/
+.DS_Store
+node_modules/
