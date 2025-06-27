@@ -2,6 +2,17 @@
 
 All notable changes to cfgman will be documented in this file.
 
+## [1.0.0-beta.2] - 2025-06-27
+
+### Fixed
+
+- **Orphan command message order** - Messages now correctly reflect the actual operation order:
+  1. Remove symlink
+  2. Copy content back to original location
+  3. Remove file from repository
+- **Redundant orphan messages** - Fixed duplicate confirmation messages when orphaning directories with multiple symlinks
+- **Untracked file removal** - Fixed issue where files not tracked by git were left in the repository after orphaning. The orphan command now properly removes all files from the repository regardless of git tracking status.
+
 ## [1.0.0-beta.1] - 2025-06-24
 
 Initial beta release of cfgman.

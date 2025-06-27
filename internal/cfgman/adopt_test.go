@@ -734,6 +734,64 @@ func TestOrphanDryRun(t *testing.T) {
 	}
 }
 
+// TestOrphanUntrackedFile tests orphaning untracked files that are not in git
+func TestOrphanUntrackedFile(t *testing.T) {
+	// Set test environment
+	oldTestEnv := os.Getenv("CFGMAN_TEST")
+	os.Setenv("CFGMAN_TEST", "1")
+	defer os.Setenv("CFGMAN_TEST", oldTestEnv)
+
+	tempDir := t.TempDir()
+	homeDir := filepath.Join(tempDir, "home")
+	configRepo := filepath.Join(tempDir, "repo")
+
+	os.MkdirAll(homeDir, 0755)
+	os.MkdirAll(filepath.Join(configRepo, "home"), 0755)
+
+	// Create an untracked file in the repo
+	targetPath := filepath.Join(configRepo, "home", ".untrackedfile")
+	os.WriteFile(targetPath, []byte("untracked content"), 0644)
+
+	// Create symlink to the untracked file
+	linkPath := filepath.Join(homeDir, ".untrackedfile")
+	os.Symlink(targetPath, linkPath)
+
+	// Set confirmFunc to always return true
+	oldConfirmFunc := confirmFunc
+	confirmFunc = func(prompt string) bool { return true }
+	defer func() { confirmFunc = oldConfirmFunc }()
+
+	// Run orphan
+	config := &Config{}
+	err := Orphan(linkPath, configRepo, config, false)
+	if err != nil {
+		t.Fatalf("orphan failed: %v", err)
+	}
+
+	// Verify symlink is removed and replaced with regular file
+	info, err := os.Lstat(linkPath)
+	if err != nil {
+		t.Fatalf("failed to stat orphaned file: %v", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		t.Errorf("file is still a symlink after orphan")
+	}
+
+	// Verify content was copied back
+	content, err := os.ReadFile(linkPath)
+	if err != nil {
+		t.Fatalf("failed to read orphaned file: %v", err)
+	}
+	if string(content) != "untracked content" {
+		t.Errorf("content mismatch: got %q, want %q", string(content), "untracked content")
+	}
+
+	// Verify original file was removed from repository
+	if _, err := os.Stat(targetPath); err == nil || !os.IsNotExist(err) {
+		t.Errorf("untracked file was not removed from repository")
+	}
+}
+
 // TestCopyPath tests the copyPath function
 func TestCopyPath(t *testing.T) {
 	t.Run("copy file", func(t *testing.T) {

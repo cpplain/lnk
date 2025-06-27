@@ -238,18 +238,18 @@ func orphanDirectory(dirPath string, configRepo string, config *Config, dryRun b
 		for _, link := range links {
 			target, _ := os.Readlink(link)
 			fmt.Printf("\n%s Would orphan: %s\n", Yellow("[DRY RUN]"), link)
-			fmt.Printf("  Copy from: %s\n", target)
 			fmt.Printf("  Remove symlink: %s\n", link)
-			fmt.Printf("  Remove from git: %s\n", target)
+			fmt.Printf("  Copy from: %s\n", target)
+			fmt.Printf("  Remove from repository: %s\n", target)
 		}
 		return nil
 	}
 
 	// Confirm with user
 	fmt.Printf("This will:\n")
-	fmt.Printf("  - Copy content back to original locations\n")
 	fmt.Printf("  - Remove symlinks\n")
-	fmt.Printf("  - Remove files from git repository\n")
+	fmt.Printf("  - Copy content back to original locations\n")
+	fmt.Printf("  - Remove files from repository\n")
 	fmt.Printf("\n")
 	if !confirmFunc(fmt.Sprintf("Orphan all %d symlink(s)?", len(links))) {
 		return fmt.Errorf("operation cancelled")
@@ -263,14 +263,7 @@ func orphanDirectory(dirPath string, configRepo string, config *Config, dryRun b
 		fmt.Printf("\n[%d/%d] Orphaning: %s\n", i+1, len(links), link)
 
 		// Orphan the individual symlink (without additional confirmation)
-		oldConfirmFunc := confirmFunc
-		confirmFunc = func(prompt string) bool {
-			// Skip all confirmations for individual files
-			return true
-		}
-
-		err := orphanSingle(link, configRepo, config, false)
-		confirmFunc = oldConfirmFunc
+		err := orphanSingleWithConfirm(link, configRepo, config, false, false)
 
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("%s: %v", link, err))
@@ -295,6 +288,11 @@ func orphanDirectory(dirPath string, configRepo string, config *Config, dryRun b
 
 // orphanSingle handles orphaning a single file or symlink
 func orphanSingle(absLink string, configRepo string, config *Config, dryRun bool) error {
+	return orphanSingleWithConfirm(absLink, configRepo, config, dryRun, true)
+}
+
+// orphanSingleWithConfirm handles orphaning with optional confirmation display
+func orphanSingleWithConfirm(absLink string, configRepo string, config *Config, dryRun bool, showConfirmation bool) error {
 	// Check if it's a symlink
 	linkInfo, err := os.Lstat(absLink)
 	if err != nil {
@@ -330,21 +328,26 @@ func orphanSingle(absLink string, configRepo string, config *Config, dryRun bool
 
 	if dryRun {
 		fmt.Printf("%s Would orphan: %s %s\n", Yellow("[DRY RUN]"), absLink, Cyan("["+sourceMapping+"]"))
-		fmt.Printf("  Copy from: %s\n", target)
 		fmt.Printf("  Remove symlink: %s\n", absLink)
-		fmt.Printf("  Remove from git: %s\n", target)
+		fmt.Printf("  Copy from: %s\n", target)
+		fmt.Printf("  Remove from repository: %s\n", target)
 		return nil
 	}
 
 	// Confirm with user
-	fmt.Printf("Orphaning: %s -> %s %s\n", absLink, target, Cyan("["+sourceMapping+"]"))
-	fmt.Printf("\nThis will:\n")
-	fmt.Printf("  - Copy content back to original location\n")
-	fmt.Printf("  - Remove symlink\n")
-	fmt.Printf("  - Remove file from git repository\n")
-	fmt.Printf("\n")
-	if !confirmFunc("Continue?") {
-		return fmt.Errorf("operation cancelled")
+	if showConfirmation {
+		fmt.Printf("Orphaning: %s -> %s %s\n", absLink, target, Cyan("["+sourceMapping+"]"))
+		fmt.Printf("\nThis will:\n")
+		fmt.Printf("  - Remove symlink\n")
+		fmt.Printf("  - Copy content back to original location\n")
+		fmt.Printf("  - Remove file from repository\n")
+		fmt.Printf("\n")
+		if !confirmFunc("Continue?") {
+			return fmt.Errorf("operation cancelled")
+		}
+	} else {
+		// Just show what we're processing when in batch mode
+		fmt.Printf("Orphaning: %s %s\n", absLink, Cyan("["+sourceMapping+"]"))
 	}
 
 	// Remove the symlink first
@@ -367,12 +370,12 @@ func orphanSingle(absLink string, configRepo string, config *Config, dryRun bool
 	fmt.Printf("  %s Removed symlink: %s\n", Green("✓"), absLink)
 	fmt.Printf("  %s Copied content from: %s\n", Green("✓"), target)
 
-	// Remove from git repository
-	if err := removeFromGit(target); err != nil {
-		fmt.Printf("  %s Warning: Failed to remove from git: %v\n", Yellow("!"), err)
-		fmt.Printf("  %s You may need to manually run: git rm -f %s\n", Yellow("!"), target)
+	// Remove from repository
+	if err := removeFromRepository(target); err != nil {
+		fmt.Printf("  %s Warning: Failed to remove from repository: %v\n", Yellow("!"), err)
+		fmt.Printf("  %s You may need to manually remove: %s\n", Yellow("!"), target)
 	} else {
-		fmt.Printf("  %s Removed from git repository: %s\n", Green("✓"), target)
+		fmt.Printf("  %s Removed from repository: %s\n", Green("✓"), target)
 	}
 
 	return nil
@@ -546,14 +549,19 @@ func copyDir(src, dst string) error {
 	return nil
 }
 
-// removeFromGit removes a file from the git repository
-func removeFromGit(path string) error {
+// removeFromRepository removes a file from the repository (both git tracking and filesystem)
+func removeFromRepository(path string) error {
 	// First check if git is available
 	gitCheckCmd := exec.Command("git", "--version")
-	if err := gitCheckCmd.Run(); err != nil {
-		// Git is not installed or not accessible
-		fmt.Fprintf(os.Stderr, "Warning: git is not available. The file %s will be removed but not from git tracking.\n", path)
-		fmt.Fprintf(os.Stderr, "         To install git, visit: https://git-scm.com/downloads\n")
+	gitAvailable := gitCheckCmd.Run() == nil
+
+	if !gitAvailable {
+		// Git is not installed or not accessible, just remove from filesystem
+		fmt.Fprintf(os.Stderr, "Warning: git is not available. Removing file from filesystem only.\n")
+		if err := os.RemoveAll(path); err != nil {
+			return fmt.Errorf("failed to remove file/directory %s: %w", path, err)
+		}
+		fmt.Printf("Removed from repository: %s\n", path)
 		return nil
 	}
 
@@ -561,45 +569,56 @@ func removeFromGit(path string) error {
 	cmd := exec.Command("git", "rev-parse", "--git-dir")
 	cmd.Dir = filepath.Dir(path)
 	if _, err := cmd.CombinedOutput(); err != nil {
-		// Not in a git repo, which is fine
+		// Not in a git repo, just remove from filesystem
 		if os.Getenv("CFGMAN_DEBUG") != "" {
-			fmt.Fprintf(os.Stderr, "Debug: %s is not in a git repository, skipping git removal\n", path)
+			fmt.Fprintf(os.Stderr, "Debug: %s is not in a git repository, removing from filesystem\n", path)
 		}
+		if err := os.RemoveAll(path); err != nil {
+			return fmt.Errorf("failed to remove file/directory %s: %w", path, err)
+		}
+		fmt.Printf("Removed from repository: %s\n", path)
 		return nil
 	}
 
 	// Check if the file is tracked by git
 	statusCmd := exec.Command("git", "ls-files", "--error-unmatch", path)
 	statusCmd.Dir = filepath.Dir(path)
-	if err := statusCmd.Run(); err != nil {
-		// File is not tracked by git
+	isTracked := statusCmd.Run() == nil
+
+	if isTracked {
+		// Remove the file from git
+		cmd = exec.Command("git", "rm", "-f", path)
+		cmd.Dir = filepath.Dir(path)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			// Provide helpful error message
+			errMsg := fmt.Sprintf("Failed to remove %s from git tracking: %v", path, err)
+			if len(output) > 0 {
+				errMsg += fmt.Sprintf("\nGit output: %s", strings.TrimSpace(string(output)))
+			}
+
+			// Check for common issues
+			if strings.Contains(string(output), "Permission denied") {
+				errMsg += "\nHint: Check file permissions and repository ownership"
+			} else if strings.Contains(string(output), "uncommitted changes") {
+				errMsg += "\nHint: You may need to commit or stash your changes first"
+			}
+
+			return fmt.Errorf("%s", errMsg)
+		}
+		fmt.Printf("Removed %s from git tracking\n", path)
+	} else {
+		// File is not tracked by git, remove it from filesystem
 		if os.Getenv("CFGMAN_DEBUG") != "" {
-			fmt.Fprintf(os.Stderr, "Debug: %s is not tracked by git, skipping git removal\n", path)
+			fmt.Fprintf(os.Stderr, "Debug: %s is not tracked by git, removing from filesystem\n", path)
 		}
-		return nil
+
+		// Use RemoveAll to handle both files and directories
+		if err := os.RemoveAll(path); err != nil {
+			return fmt.Errorf("failed to remove untracked file/directory %s: %w", path, err)
+		}
+		fmt.Printf("Removed untracked file/directory from repository: %s\n", path)
 	}
 
-	// Remove the file from git
-	cmd = exec.Command("git", "rm", "-f", path)
-	cmd.Dir = filepath.Dir(path)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		// Provide helpful error message
-		errMsg := fmt.Sprintf("Failed to remove %s from git tracking: %v", path, err)
-		if len(output) > 0 {
-			errMsg += fmt.Sprintf("\nGit output: %s", strings.TrimSpace(string(output)))
-		}
-
-		// Check for common issues
-		if strings.Contains(string(output), "Permission denied") {
-			errMsg += "\nHint: Check file permissions and repository ownership"
-		} else if strings.Contains(string(output), "uncommitted changes") {
-			errMsg += "\nHint: You may need to commit or stash your changes first"
-		}
-
-		return fmt.Errorf("%s", errMsg)
-	}
-
-	fmt.Printf("Removed %s from git tracking\n", path)
 	return nil
 }
 
