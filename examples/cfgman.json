@@ -10,13 +10,11 @@
   "link_mappings": [
     {
       "source": "home",
-      "target": "~/",
-      "link_as_directory": [".config/nvim", ".config/fish"]
+      "target": "~/"
     },
     {
       "source": "private/home",
-      "target": "~/",
-      "link_as_directory": [".ssh", ".gnupg"]
+      "target": "~/"
     }
   ]
 }

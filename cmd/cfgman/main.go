@@ -1,3 +1,6 @@
+// Package main provides the command-line interface for cfgman,
+// a dotfile management tool that manages configuration files
+// across machines using intelligent symlinks.
 package main
 
 import (
@@ -126,7 +129,7 @@ func handleAdopt(args []string) {
 		sourceDir = fs.Arg(1)
 	} else {
 		var err error
-		sourceDir, err = cfgman.ReadUserInputWithDefault("Enter source directory (e.g., home, private/home, work)", "home")
+		sourceDir, err = cfgman.ReadUserInputWithDefault("Enter source directory from your config mappings", "")
 		if err != nil {
 			log.Fatalf("Error reading input: %v", err)
 		}
@@ -261,24 +264,22 @@ func handleInit(args []string) {
 
 	fs.Usage = func() {
 		fmt.Println("Usage: cfgman init [options]")
-		fmt.Println("\nCreate a minimal .cfgman.json configuration template")
+		fmt.Printf("\nCreate a minimal %s configuration template\n", cfgman.ConfigFileName)
 		fmt.Println("\nOptions:")
 		fs.PrintDefaults()
 		fmt.Println("\nThis creates a template configuration file that you must edit to:")
 		fmt.Println("  - Set the source directory (e.g., 'home')")
 		fmt.Println("  - Set the target directory (e.g., '~/')")
 		fmt.Println("  - Add any ignore patterns you need")
-		fmt.Println("  - Add directories to link_as_directory if needed")
 	}
 
 	fs.Parse(args)
 
 	// Check if config already exists
-	cfgmanPath := filepath.Join(".", ".cfgman.json")
+	cfgmanPath := filepath.Join(".", cfgman.ConfigFileName)
 	if !*force {
 		if _, err := os.Stat(cfgmanPath); err == nil {
-			fmt.Println("Error: .cfgman.json already exists. Use --force to overwrite.")
-			os.Exit(1)
+			log.Fatalf("Error: %s already exists. Use --force to overwrite.", cfgman.ConfigFileName)
 		}
 	}
 
@@ -287,9 +288,8 @@ func handleInit(args []string) {
 		IgnorePatterns: []string{},
 		LinkMappings: []cfgman.LinkMapping{
 			{
-				Source:          "",
-				Target:          "",
-				LinkAsDirectory: []string{},
+				Source: "",
+				Target: "",
 			},
 		},
 	}
@@ -301,22 +301,20 @@ func handleInit(args []string) {
 	}
 
 	if err := os.WriteFile(cfgmanPath, data, 0644); err != nil {
-		log.Fatalf("Error writing .cfgman.json: %v", err)
+		log.Fatalf("Error writing %s: %v", cfgman.ConfigFileName, err)
 	}
 
-	fmt.Println("Created .cfgman.json with a minimal template.")
-	fmt.Println("\nYou must edit .cfgman.json to configure:")
+	fmt.Printf("Created %s with a minimal template.\n", cfgman.ConfigFileName)
+	fmt.Printf("\nYou must edit %s to configure:\n", cfgman.ConfigFileName)
 	fmt.Println("  - source: The directory in your repo containing config files (e.g., 'home')")
 	fmt.Println("  - target: Where to link files to (e.g., '~/')")
 	fmt.Println("  - ignore_patterns: Files/patterns to ignore (e.g., '.DS_Store', '*.swp')")
-	fmt.Println("  - link_as_directory: Directories to link as whole directories instead of individual files")
 	fmt.Println("\nExample configuration:")
 	fmt.Println("  {")
 	fmt.Println("    \"ignore_patterns\": [\".DS_Store\", \"*.swp\"],")
 	fmt.Println("    \"link_mappings\": [{")
 	fmt.Println("      \"source\": \"home\",")
-	fmt.Println("      \"target\": \"~/\",")
-	fmt.Println("      \"link_as_directory\": [\".config/nvim\"]")
+	fmt.Println("      \"target\": \"~/\"")
 	fmt.Println("    }]")
 	fmt.Println("  }")
 }
@@ -326,14 +324,13 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("Commands:")
 	fmt.Println("  Configuration:")
-	fmt.Println("    init                Create a minimal .cfgman.json template")
+	fmt.Printf("    init                Create a minimal %s template\n", cfgman.ConfigFileName)
 	fmt.Println()
 	fmt.Println("  Link Management:")
 	fmt.Println("    status              Show status of all managed symlinks")
 	fmt.Println("    adopt PATH [SOURCE_DIR]")
 	fmt.Println("                        Adopt file/directory into repository")
-	fmt.Println("    orphan [--dry-run] PATH")
-	fmt.Println("                        Remove file/directory from repo management")
+	fmt.Println("    orphan PATH         Remove file/directory from repo management")
 	fmt.Println("    create-links        Create symlinks from repo to home")
 	fmt.Println("    remove-links        Remove all managed symlinks")
 	fmt.Println("    prune-links         Remove broken symlinks")
@@ -345,7 +342,7 @@ func printUsage() {
 	fmt.Println("Use 'cfgman help <command>' for more information about a command.")
 	fmt.Println()
 	fmt.Println("Note: cfgman must be run from within a cfgman-managed directory")
-	fmt.Println("      (a directory containing .cfgman.json)")
+	fmt.Printf("      (a directory containing %s)\n", cfgman.ConfigFileName)
 }
 
 func printCommandHelp(command string) {

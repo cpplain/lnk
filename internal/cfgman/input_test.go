@@ -84,29 +84,11 @@ func TestReadUserInput(t *testing.T) {
 
 // TestConfirmPrompt tests the ConfirmPrompt function
 func TestConfirmPrompt(t *testing.T) {
-	// Save original values
+	// Save original stdin
 	oldStdin := os.Stdin
-	oldTestEnv := os.Getenv("CFGMAN_TEST")
 	defer func() {
 		os.Stdin = oldStdin
-		os.Setenv("CFGMAN_TEST", oldTestEnv)
 	}()
-
-	// First test with CFGMAN_TEST=1
-	os.Setenv("CFGMAN_TEST", "1")
-
-	result := ConfirmPrompt("Test prompt")
-	if result != false {
-		t.Errorf("Expected false in test mode, got %v", result)
-	}
-
-	result = ConfirmPromptWithTestDefault("Test prompt", true)
-	if result != true {
-		t.Errorf("Expected true with test default true, got %v", result)
-	}
-
-	// Test with actual user input
-	os.Setenv("CFGMAN_TEST", "")
 
 	tests := []struct {
 		name  string

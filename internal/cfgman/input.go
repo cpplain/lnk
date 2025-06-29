@@ -31,16 +31,6 @@ func ReadUserInput(prompt string) (string, error) {
 
 // ConfirmPrompt asks the user for a yes/no confirmation
 func ConfirmPrompt(prompt string) bool {
-	return ConfirmPromptWithTestDefault(prompt, false)
-}
-
-// ConfirmPromptWithTestDefault asks for confirmation with a specific test default
-func ConfirmPromptWithTestDefault(prompt string, testDefault bool) bool {
-	// Check if we're in a test environment
-	if os.Getenv("CFGMAN_TEST") == "1" {
-		return testDefault
-	}
-
 	fullPrompt := fmt.Sprintf("%s [y/N]: ", prompt)
 	response, err := ReadUserInput(fullPrompt)
 	if err != nil {

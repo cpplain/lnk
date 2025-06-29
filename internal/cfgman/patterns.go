@@ -112,7 +112,7 @@ func compilePattern(pattern string) *compiledPattern {
 // normalizePathForMatching prepares a path for pattern matching
 func normalizePathForMatching(path string) string {
 	// Convert backslashes to forward slashes for cross-platform consistency
-	// filepath.ToSlash only works on Windows, so we do it manually
+	// This ensures Windows paths work correctly on all platforms
 	path = strings.ReplaceAll(path, "\\", "/")
 
 	// Remove leading ./ if present
@@ -161,7 +161,11 @@ func matchesPattern(path string, pattern compiledPattern) bool {
 	// If pattern contains a slash, match against the full path
 	if pattern.hasSlash {
 		if pattern.isGlob {
-			matched, _ := filepath.Match(pattern.pattern, path)
+			matched, err := filepath.Match(pattern.pattern, path)
+			if err != nil {
+				// Invalid pattern, treat as no match
+				return false
+			}
 			return matched
 		}
 		return path == pattern.pattern
@@ -172,13 +176,13 @@ func matchesPattern(path string, pattern compiledPattern) bool {
 
 	if pattern.isGlob {
 		// First try matching against basename
-		if matched, _ := filepath.Match(pattern.pattern, basename); matched {
+		if matched, err := filepath.Match(pattern.pattern, basename); err == nil && matched {
 			return true
 		}
 
 		// Also try matching against the full path for patterns like "*.log"
 		// This allows "*.log" to match "dir/file.log"
-		if matched, _ := filepath.Match(pattern.pattern, path); matched {
+		if matched, err := filepath.Match(pattern.pattern, path); err == nil && matched {
 			return true
 		}
 
@@ -186,7 +190,7 @@ func matchesPattern(path string, pattern compiledPattern) bool {
 		// This allows "node_modules" to match "path/to/node_modules/file.js"
 		parts := strings.Split(path, "/")
 		for _, part := range parts {
-			if matched, _ := filepath.Match(pattern.pattern, part); matched {
+			if matched, err := filepath.Match(pattern.pattern, part); err == nil && matched {
 				return true
 			}
 		}

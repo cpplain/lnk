@@ -20,14 +20,12 @@ func TestConfigSaveAndLoad(t *testing.T) {
 	config := &Config{
 		LinkMappings: []LinkMapping{
 			{
-				Source:          "home",
-				Target:          "~/",
-				LinkAsDirectory: []string{".config/nvim", ".config/fish"},
+				Source: "home",
+				Target: "~/",
 			},
 			{
-				Source:          "private/home",
-				Target:          "~/",
-				LinkAsDirectory: []string{".config/work", ".ssh"},
+				Source: "private/home",
+				Target: "~/",
 			},
 		},
 	}
@@ -69,15 +67,6 @@ func TestConfigSaveAndLoad(t *testing.T) {
 			t.Errorf("LinkMapping[%d].Target = %q, want %q", i, loadedMapping.Target, mapping.Target)
 		}
 
-		if len(loadedMapping.LinkAsDirectory) != len(mapping.LinkAsDirectory) {
-			t.Errorf("LinkMapping[%d].LinkAsDirectory length = %d, want %d", i, len(loadedMapping.LinkAsDirectory), len(mapping.LinkAsDirectory))
-		}
-
-		for j, dir := range mapping.LinkAsDirectory {
-			if j >= len(loadedMapping.LinkAsDirectory) || loadedMapping.LinkAsDirectory[j] != dir {
-				t.Errorf("LinkMapping[%d].LinkAsDirectory[%d] = %q, want %q", i, j, loadedMapping.LinkAsDirectory[j], dir)
-			}
-		}
 	}
 }
 
@@ -94,9 +83,8 @@ func TestConfigSaveNewFormat(t *testing.T) {
 		IgnorePatterns: []string{"*.tmp", "backup/"},
 		LinkMappings: []LinkMapping{
 			{
-				Source:          "home",
-				Target:          "~/",
-				LinkAsDirectory: []string{".config/nvim"},
+				Source: "home",
+				Target: "~/",
 			},
 		},
 	}
@@ -138,7 +126,7 @@ func TestLoadConfigNonExistent(t *testing.T) {
 	}
 
 	// Should return error about missing config file
-	if !strings.Contains(err.Error(), "no configuration file found") {
+	if !strings.Contains(err.Error(), "configuration file not found") {
 		t.Errorf("LoadConfig() error = %v, want error about missing config file", err)
 	}
 }
@@ -156,9 +144,8 @@ func TestLoadConfigNewFormat(t *testing.T) {
 		"ignore_patterns": []string{"*.tmp", "backup/", ".DS_Store"},
 		"link_mappings": []map[string]interface{}{
 			{
-				"source":            "home",
-				"target":            "~/",
-				"link_as_directory": []string{".config/nvim"},
+				"source": "home",
+				"target": "~/",
 			},
 		},
 	}
@@ -313,81 +300,116 @@ func TestGetMapping(t *testing.T) {
 	}
 }
 
-func TestAddDirectoryLinkToMapping(t *testing.T) {
-	config := &Config{
-		LinkMappings: []LinkMapping{
-			{Source: "home", Target: "~/", LinkAsDirectory: []string{".config/existing"}},
-		},
-	}
-
+func TestConfigValidate(t *testing.T) {
 	tests := []struct {
-		name    string
-		source  string
-		path    string
-		wantErr bool
+		name        string
+		config      *Config
+		wantErr     bool
+		errContains string
 	}{
-		{"add to existing mapping", "home", ".config/new", false},
-		{"add duplicate", "home", ".config/existing", true},
-		{"add to non-existing mapping", "other", ".config/test", true},
-		{"add with ./ prefix", "home", "./.config/another", false},
+		{
+			name: "valid config",
+			config: &Config{
+				LinkMappings: []LinkMapping{
+					{Source: "home", Target: "~/"},
+					{Source: "private/home", Target: "~/"},
+				},
+				IgnorePatterns: []string{"*.tmp", "*.log"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty source",
+			config: &Config{
+				LinkMappings: []LinkMapping{
+					{Source: "", Target: "~/"},
+				},
+			},
+			wantErr:     true,
+			errContains: "empty source in mapping 1",
+		},
+		{
+			name: "empty target",
+			config: &Config{
+				LinkMappings: []LinkMapping{
+					{Source: "home", Target: ""},
+				},
+			},
+			wantErr:     true,
+			errContains: "empty target in mapping 1",
+		},
+		{
+			name: "source with ..",
+			config: &Config{
+				LinkMappings: []LinkMapping{
+					{Source: "../home", Target: "~/"},
+				},
+			},
+			wantErr:     true,
+			errContains: "must be a relative path without '..'",
+		},
+		{
+			name: "absolute source",
+			config: &Config{
+				LinkMappings: []LinkMapping{
+					{Source: "/home", Target: "~/"},
+				},
+			},
+			wantErr:     true,
+			errContains: "must be a relative path without '..'",
+		},
+		{
+			name: "invalid target",
+			config: &Config{
+				LinkMappings: []LinkMapping{
+					{Source: "home", Target: "relative/path"},
+				},
+			},
+			wantErr:     true,
+			errContains: "must be an absolute path or start with ~/",
+		},
+		{
+			name: "empty ignore pattern",
+			config: &Config{
+				LinkMappings: []LinkMapping{
+					{Source: "home", Target: "~/"},
+				},
+				IgnorePatterns: []string{"*.tmp", "", "*.log"},
+			},
+			wantErr:     true,
+			errContains: "empty pattern at index 1",
+		},
+		{
+			name: "invalid glob pattern",
+			config: &Config{
+				LinkMappings: []LinkMapping{
+					{Source: "home", Target: "~/"},
+				},
+				IgnorePatterns: []string{"[invalid"},
+			},
+			wantErr:     true,
+			errContains: "invalid glob pattern",
+		},
+		{
+			name: "valid absolute target",
+			config: &Config{
+				LinkMappings: []LinkMapping{
+					{Source: "home", Target: "/opt/configs"},
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create a copy to avoid state pollution
-			testConfig := &Config{
-				LinkMappings: make([]LinkMapping, len(config.LinkMappings)),
-			}
-			for i, m := range config.LinkMappings {
-				testConfig.LinkMappings[i] = LinkMapping{
-					Source:          m.Source,
-					Target:          m.Target,
-					LinkAsDirectory: append([]string{}, m.LinkAsDirectory...),
-				}
-			}
-
-			err := testConfig.AddDirectoryLinkToMapping(tt.source, tt.path)
+			err := tt.config.Validate()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("AddDirectoryLinkToMapping() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
-		})
-	}
-}
-
-func TestShouldLinkAsDirectoryForMapping(t *testing.T) {
-	config := &Config{
-		LinkMappings: []LinkMapping{
-			{
-				Source:          "home",
-				Target:          "~/",
-				LinkAsDirectory: []string{".config/nvim", ".config/fish"},
-			},
-			{
-				Source:          "private/home",
-				Target:          "~/",
-				LinkAsDirectory: []string{".ssh", ".gnupg"},
-			},
-		},
-	}
-
-	tests := []struct {
-		name   string
-		source string
-		path   string
-		want   bool
-	}{
-		{"home existing", "home", ".config/nvim", true},
-		{"home not existing", "home", ".config/other", false},
-		{"private existing", "private/home", ".ssh", true},
-		{"private not existing", "private/home", ".config/nvim", false},
-		{"non-existing mapping", "other", ".config/nvim", false},
-		{"with ./ prefix", "home", "./.config/nvim", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := config.ShouldLinkAsDirectoryForMapping(tt.source, tt.path); got != tt.want {
-				t.Errorf("ShouldLinkAsDirectoryForMapping(%q, %q) = %v, want %v", tt.source, tt.path, got, tt.want)
+			if err != nil && tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
+				t.Errorf("Validate() error = %v, want error containing %q", err, tt.errContains)
 			}
 		})
 	}

@@ -4,11 +4,11 @@ import (
 	"os"
 )
 
-// isTerminal returns true if the given file descriptor is a terminal.
+// isTerminal returns true if stdout is a terminal.
 // This implementation uses a simple and portable approach that works
 // across Unix-like systems without relying on platform-specific syscalls.
-func isTerminal(fd uintptr) bool {
-	// Directly check stdout's file info without creating a new file descriptor
+func isTerminal() bool {
+	// Check stdout's file info
 	fi, err := os.Stdout.Stat()
 	if err != nil {
 		return false

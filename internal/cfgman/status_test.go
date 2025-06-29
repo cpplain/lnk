@@ -37,14 +37,12 @@ func TestStatusWithLinkMappings(t *testing.T) {
 	config := &Config{
 		LinkMappings: []LinkMapping{
 			{
-				Source:          "home",
-				Target:          "~/",
-				LinkAsDirectory: []string{".config/nvim"},
+				Source: "home",
+				Target: "~/",
 			},
 			{
-				Source:          "work",
-				Target:          "~/",
-				LinkAsDirectory: []string{},
+				Source: "work",
+				Target: "~/",
 			},
 		},
 	}
@@ -74,13 +72,7 @@ func TestStatusWithLinkMappings(t *testing.T) {
 		t.Errorf("Output should contain .gitconfig")
 	}
 
-	// Verify directories linked as units section
-	if !strings.Contains(output, "Directories linked as units:") {
-		t.Errorf("Output should contain 'Directories linked as units:' section")
-	}
-	if !strings.Contains(output, ".config/nvim") {
-		t.Errorf("Output should show .config/nvim as directory linked as unit")
-	}
+	// Removed directories linked as units section - no longer supported
 }
 
 func TestDetermineSourceMapping(t *testing.T) {
@@ -122,9 +114,9 @@ func TestDetermineSourceMapping(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := determineSourceMapping(tt.target, configRepo, config)
+			result := DetermineSourceMapping(tt.target, configRepo, config)
 			if result != tt.expected {
-				t.Errorf("determineSourceMapping(%s) = %s; want %s", tt.target, result, tt.expected)
+				t.Errorf("DetermineSourceMapping(%s) = %s; want %s", tt.target, result, tt.expected)
 			}
 		})
 	}

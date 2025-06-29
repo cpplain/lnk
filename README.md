@@ -5,7 +5,8 @@ A fast, reliable dotfile management tool. Manage your configuration files across
 ## Key Features
 
 - **Single binary** - No dependencies required (git integration optional)
-- **File-level and directory-level linking** - Links files by default and directories by configuration
+- **Recursive file linking** - Links individual files throughout directory trees
+- **Smart directory adoption** - Adopting directories moves all files and creates individual symlinks
 - **Flexible configuration** - Support for public and private config repositories
 - **Safety first** - Dry-run mode and clear status reporting
 - **Bidirectional operations** - Adopt existing files or orphan managed ones
@@ -55,13 +56,11 @@ Example configuration (after editing the template created by `cfgman init`):
   "link_mappings": [
     {
       "source": "home",
-      "target": "~/",
-      "link_as_directory": [".config/nvim"]
+      "target": "~/"
     },
     {
       "source": "private/home",
-      "target": "~/",
-      "link_as_directory": [".ssh"]
+      "target": "~/"
     }
   ]
 }
@@ -70,7 +69,6 @@ Example configuration (after editing the template created by `cfgman init`):
 - **ignore_patterns**: Gitignore-style patterns for files to never link
 - **source**: Directory in your repo containing configs
 - **target**: Where symlinks are created (usually `~/`)
-- **link_as_directory**: Directories to link as complete units instead of individual files
 
 ## Commands
 
@@ -86,7 +84,7 @@ cfgman init                          # Create a minimal .cfgman.json template
 cfgman status                        # Show all managed symlinks
 cfgman create-links [--dry-run]      # Create symlinks from repo to home
 cfgman remove-links [--dry-run]      # Remove all managed symlinks
-cfgman prune-links                   # Remove broken symlinks
+cfgman prune-links [--dry-run]       # Remove broken symlinks
 ```
 
 ### File Operations
@@ -111,9 +109,19 @@ cfgman help [command]                   # Get help
 
 ## How It Works
 
-### File-Level and Directory-Level Linking
+### Recursive File Linking
 
-By default, cfgman links individual files rather than entire directories. When you need to link entire directories (like `.config/nvim`), add them to `link_as_directory` in your `.cfgman.json`.
+cfgman recursively traverses your source directories and creates individual symlinks for each file. This approach:
+
+- Allows mixing files from different sources in the same directory
+- Preserves your ability to have local-only files alongside managed configs
+- Creates parent directories as needed (never as symlinks)
+
+For example, with source `home` mapped to `~/`:
+
+- `home/.config/git/config` → `~/.config/git/config` (file symlink)
+- `home/.config/nvim/init.vim` → `~/.config/nvim/init.vim` (file symlink)
+- The directories `.config`, `.config/git`, and `.config/nvim` are created as regular directories, not symlinks
 
 ### Ignore Patterns
 
@@ -140,8 +148,8 @@ cfgman create-links
 cd ~/dotfiles
 cfgman adopt ~/.config/newapp home
 
-# If it's a directory with plugins/state, link as directory
-# You'll be prompted during adoption, or edit .cfgman.json manually
+# This will move the entire directory tree to your repo
+# and create symlinks for each individual file
 ```
 
 ### Managing Sensitive Files

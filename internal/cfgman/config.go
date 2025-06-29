@@ -1,3 +1,7 @@
+// Package cfgman provides functionality for managing configuration files
+// across machines using intelligent symlinks. It handles the adoption of
+// existing files into a repository, creation and management of symlinks,
+// and tracking of configuration file status.
 package cfgman
 
 import (
@@ -10,9 +14,8 @@ import (
 
 // LinkMapping represents a mapping from source to target directory
 type LinkMapping struct {
-	Source          string   `json:"source"`
-	Target          string   `json:"target"`
-	LinkAsDirectory []string `json:"link_as_directory"`
+	Source string `json:"source"`
+	Target string `json:"target"`
 }
 
 // Config represents the link configuration
@@ -24,27 +27,34 @@ type Config struct {
 // LoadConfig reads the configuration from a JSON file in the specified directory
 func LoadConfig(configRepo string) (*Config, error) {
 	// Convert to absolute path
-	absPath, err := filepath.Abs(configRepo)
+	absConfigRepo, err := filepath.Abs(configRepo)
 	if err != nil {
 		return nil, fmt.Errorf("resolving config directory: %w", err)
 	}
-	configRepo = absPath
 	// Check for .cfgman.json
-	cfgmanPath := filepath.Join(configRepo, ".cfgman.json")
+	cfgmanPath := filepath.Join(absConfigRepo, ConfigFileName)
 	if _, err := os.Stat(cfgmanPath); err != nil {
 		// Config file doesn't exist
-		return nil, fmt.Errorf("no configuration file found: please create .cfgman.json in %s", configRepo)
+		if os.IsNotExist(err) {
+			return nil, NewPathError("load config", cfgmanPath, ErrConfigNotFound)
+		}
+		return nil, NewPathError("stat config", cfgmanPath, err)
 	}
 
 	// Load the config
 	data, err := os.ReadFile(cfgmanPath)
 	if err != nil {
-		return nil, fmt.Errorf("reading .cfgman.json: %w", err)
+		return nil, fmt.Errorf("reading %s: %w", ConfigFileName, err)
 	}
 
 	var config Config
 	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("parsing .cfgman.json: %w", err)
+		return nil, NewPathError("parse config", cfgmanPath, fmt.Errorf("%w: %v", ErrInvalidConfig, err))
+	}
+
+	// Validate configuration
+	if err := config.Validate(); err != nil {
+		return nil, err
 	}
 
 	return &config, nil
@@ -53,7 +63,7 @@ func LoadConfig(configRepo string) (*Config, error) {
 // Save writes the configuration to a JSON file
 func (c *Config) Save(configRepo string) error {
 	// Always save to .cfgman.json
-	cfgmanPath := filepath.Join(configRepo, ".cfgman.json")
+	cfgmanPath := filepath.Join(configRepo, ConfigFileName)
 
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
@@ -77,45 +87,6 @@ func (c *Config) GetMapping(source string) *LinkMapping {
 	return nil
 }
 
-// AddDirectoryLinkToMapping adds a directory to a specific mapping's LinkAsDirectory list
-func (c *Config) AddDirectoryLinkToMapping(source, relativePath string) error {
-	// Normalize path (remove leading ./ if present)
-	relativePath = strings.TrimPrefix(relativePath, "./")
-
-	mapping := c.GetMapping(source)
-	if mapping == nil {
-		return fmt.Errorf("no mapping found for source: %s", source)
-	}
-
-	// Check if already exists
-	for _, dir := range mapping.LinkAsDirectory {
-		if dir == relativePath {
-			return fmt.Errorf("path already configured to link as directory: %s", relativePath)
-		}
-	}
-
-	mapping.LinkAsDirectory = append(mapping.LinkAsDirectory, relativePath)
-	return nil
-}
-
-// ShouldLinkAsDirectoryForMapping checks if a path should be linked as a directory for a specific mapping
-func (c *Config) ShouldLinkAsDirectoryForMapping(source, relativePath string) bool {
-	// Normalize path (remove leading ./ if present)
-	relativePath = strings.TrimPrefix(relativePath, "./")
-
-	mapping := c.GetMapping(source)
-	if mapping == nil {
-		return false
-	}
-
-	for _, dir := range mapping.LinkAsDirectory {
-		if relativePath == dir {
-			return true
-		}
-	}
-	return false
-}
-
 // ShouldIgnore checks if a path matches any of the ignore patterns
 func (c *Config) ShouldIgnore(relativePath string) bool {
 	return MatchesPattern(relativePath, c.IgnorePatterns)
@@ -131,4 +102,64 @@ func ExpandPath(path string) (string, error) {
 		return filepath.Join(homeDir, path[2:]), nil
 	}
 	return path, nil
+}
+
+// Validate validates the configuration
+func (c *Config) Validate() error {
+	// Validate link mappings
+	for i, mapping := range c.LinkMappings {
+		if mapping.Source == "" {
+			return NewValidationError("link mapping source", "", fmt.Sprintf("empty source in mapping %d", i+1))
+		}
+		if mapping.Target == "" {
+			return NewValidationError("link mapping target", "", fmt.Sprintf("empty target in mapping %d", i+1))
+		}
+
+		// Source should not contain ".." or absolute paths
+		if strings.Contains(mapping.Source, "..") || filepath.IsAbs(mapping.Source) {
+			return NewValidationError("link mapping source", mapping.Source, "must be a relative path without '..'")
+		}
+
+		// Target should be a valid path (can be absolute or start with ~/)
+		if mapping.Target != "~/" && !strings.HasPrefix(mapping.Target, "~/") && !filepath.IsAbs(mapping.Target) {
+			return NewValidationError("link mapping target", mapping.Target, "must be an absolute path or start with ~/")
+		}
+	}
+
+	// Validate ignore patterns (basic check for malformed patterns)
+	for i, pattern := range c.IgnorePatterns {
+		if pattern == "" {
+			return NewValidationError("ignore pattern", "", fmt.Sprintf("empty pattern at index %d", i))
+		}
+		// Test if the pattern compiles (for glob patterns)
+		if strings.ContainsAny(pattern, "*?[") {
+			if _, err := filepath.Match(pattern, "test"); err != nil {
+				return NewValidationError("ignore pattern", pattern, fmt.Sprintf("invalid glob pattern: %v", err))
+			}
+		}
+	}
+
+	return nil
+}
+
+// DetermineSourceMapping determines which source mapping a target path belongs to
+func DetermineSourceMapping(target, configRepo string, config *Config) string {
+	// Remove the config repo prefix to get the relative path
+	relPath := strings.TrimPrefix(target, configRepo)
+	relPath = strings.TrimPrefix(relPath, "/")
+
+	// Check each mapping to find which one contains this path
+	for _, mapping := range config.LinkMappings {
+		if strings.HasPrefix(relPath, mapping.Source+"/") || relPath == mapping.Source {
+			return mapping.Source
+		}
+	}
+
+	// Default to showing the first directory component
+	parts := strings.Split(relPath, "/")
+	if len(parts) > 0 {
+		return parts[0]
+	}
+
+	return "unknown"
 }

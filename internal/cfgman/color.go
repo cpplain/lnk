@@ -36,7 +36,7 @@ func ShouldEnableColor() bool {
 		}
 
 		// Check if stdout is a terminal
-		colorEnabled = isTerminal(os.Stdout.Fd())
+		colorEnabled = isTerminal()
 	})
 	return colorEnabled
 }

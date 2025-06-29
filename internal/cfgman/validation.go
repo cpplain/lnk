@@ -1,0 +1,104 @@
+package cfgman
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+// ValidateNoCircularSymlink checks if creating a symlink would create a circular reference
+func ValidateNoCircularSymlink(source, target string) error {
+	// Check if target is already a symlink that points back to source
+	targetInfo, err := os.Lstat(target)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Target doesn't exist yet, no circular link possible
+			return nil
+		}
+		return fmt.Errorf("checking target: %w", err)
+	}
+
+	// If target is a symlink, check where it points
+	if targetInfo.Mode()&os.ModeSymlink != 0 {
+		linkDest, err := os.Readlink(target)
+		if err != nil {
+			return fmt.Errorf("reading symlink: %w", err)
+		}
+
+		// Resolve to absolute paths for comparison
+		absSource, err := filepath.Abs(source)
+		if err != nil {
+			return fmt.Errorf("resolving source path: %w", err)
+		}
+
+		absLinkDest := linkDest
+		if !filepath.IsAbs(linkDest) {
+			absLinkDest = filepath.Join(filepath.Dir(target), linkDest)
+		}
+		absLinkDest, err = filepath.Abs(absLinkDest)
+		if err != nil {
+			return fmt.Errorf("resolving link destination: %w", err)
+		}
+
+		// Check if the symlink points to our source
+		if absSource == absLinkDest {
+			return fmt.Errorf("would create circular symlink: %s -> %s -> %s", source, target, linkDest)
+		}
+	}
+
+	// Also check if source is within target directory (would create a loop)
+	absSource, _ := filepath.Abs(source)
+	absTarget, _ := filepath.Abs(target)
+
+	if strings.HasPrefix(absSource, absTarget+string(filepath.Separator)) {
+		return fmt.Errorf("source is inside target directory, would create circular reference")
+	}
+
+	return nil
+}
+
+// ValidateNoOverlappingPaths checks if source and target paths would overlap
+func ValidateNoOverlappingPaths(source, target string) error {
+	absSource, err := filepath.Abs(source)
+	if err != nil {
+		return fmt.Errorf("resolving source path: %w", err)
+	}
+
+	absTarget, err := filepath.Abs(target)
+	if err != nil {
+		return fmt.Errorf("resolving target path: %w", err)
+	}
+
+	// Check if paths are the same
+	if absSource == absTarget {
+		return fmt.Errorf("source and target are the same path")
+	}
+
+	// Check if source is inside target
+	if strings.HasPrefix(absSource, absTarget+string(filepath.Separator)) {
+		return fmt.Errorf("source path is inside target path")
+	}
+
+	// Check if target is inside source
+	if strings.HasPrefix(absTarget, absSource+string(filepath.Separator)) {
+		return fmt.Errorf("target path is inside source path")
+	}
+
+	return nil
+}
+
+// ValidateSymlinkCreation performs all validation checks before creating a symlink
+func ValidateSymlinkCreation(source, target string) error {
+	// Check for circular symlinks
+	if err := ValidateNoCircularSymlink(source, target); err != nil {
+		return err
+	}
+
+	// Check for overlapping paths
+	if err := ValidateNoOverlappingPaths(source, target); err != nil {
+		return err
+	}
+
+	return nil
+}
