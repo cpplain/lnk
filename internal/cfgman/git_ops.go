@@ -21,14 +21,13 @@ func removeFromRepository(path string) error {
 
 	if output, err := cmd.CombinedOutput(); err == nil {
 		// Success! File removed from both git and filesystem
-		log.Info("Removed from repository: %s", path)
 		return nil
 	} else if ctx.Err() == context.DeadlineExceeded {
 		// Command timed out
-		log.Warn("git rm timed out, falling back to filesystem removal")
+		Debug("git rm timed out, falling back to filesystem removal")
 	} else if len(output) > 0 {
-		// Log git output for debugging but don't fail
-		log.Debug("git rm failed: %s", strings.TrimSpace(string(output)))
+		// Debug git output but don't fail
+		Debug("git rm failed: %s", strings.TrimSpace(string(output)))
 	}
 
 	// Git rm failed (not in git repo, file not tracked, git not available, etc.)
@@ -37,6 +36,5 @@ func removeFromRepository(path string) error {
 		return fmt.Errorf("failed to remove %s: %w", path, err)
 	}
 
-	log.Info("Removed from repository: %s", path)
 	return nil
 }

@@ -250,7 +250,6 @@ func TestStandardErrors(t *testing.T) {
 		{ErrNoLinkMappings, "no link mappings defined"},
 		{ErrNotSymlink, "not a symlink"},
 		{ErrAlreadyAdopted, "file already adopted"},
-		{ErrOperationCancelled, "operation cancelled"},
 	}
 
 	for _, tt := range tests {

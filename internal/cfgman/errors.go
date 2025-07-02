@@ -21,9 +21,6 @@ var (
 
 	// ErrAlreadyAdopted indicates that a file is already adopted
 	ErrAlreadyAdopted = errors.New("file already adopted")
-
-	// ErrOperationCancelled indicates that the user cancelled the operation
-	ErrOperationCancelled = errors.New("operation cancelled")
 )
 
 // PathError represents an error related to a specific path

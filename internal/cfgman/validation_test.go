@@ -41,7 +41,7 @@ func TestValidateNoCircularSymlink(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "circular reference detected",
+			name: "symlink already points to source - valid relinking",
 			setupFunc: func(t *testing.T) (string, string, func()) {
 				tmpDir, _ := os.MkdirTemp("", "cfgman-validation-test")
 				source := filepath.Join(tmpDir, "source.txt")
@@ -53,8 +53,7 @@ func TestValidateNoCircularSymlink(t *testing.T) {
 
 				return source, target, func() { os.RemoveAll(tmpDir) }
 			},
-			expectError:   true,
-			errorContains: "would create circular symlink",
+			expectError: false,
 		},
 		{
 			name: "source inside target directory",
@@ -89,7 +88,7 @@ func TestValidateNoCircularSymlink(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "relative symlink circular reference",
+			name: "relative symlink already points to source - valid relinking",
 			setupFunc: func(t *testing.T) (string, string, func()) {
 				tmpDir, _ := os.MkdirTemp("", "cfgman-validation-test")
 				subdir := filepath.Join(tmpDir, "subdir")
@@ -104,8 +103,7 @@ func TestValidateNoCircularSymlink(t *testing.T) {
 
 				return source, target, func() { os.RemoveAll(tmpDir) }
 			},
-			expectError:   true,
-			errorContains: "would create circular symlink",
+			expectError: false,
 		},
 	}
 
@@ -158,7 +156,7 @@ func TestValidateNoOverlappingPaths(t *testing.T) {
 				return path, path, func() { os.RemoveAll(tmpDir) }
 			},
 			expectError:   true,
-			errorContains: "source and target are the same path",
+			errorContains: "failed to validate: source and target are the same path",
 		},
 		{
 			name: "source inside target",
@@ -170,7 +168,7 @@ func TestValidateNoOverlappingPaths(t *testing.T) {
 				return source, target, func() { os.RemoveAll(tmpDir) }
 			},
 			expectError:   true,
-			errorContains: "source path is inside target path",
+			errorContains: "failed to validate: source path is inside target path",
 		},
 		{
 			name: "target inside source",
@@ -182,7 +180,7 @@ func TestValidateNoOverlappingPaths(t *testing.T) {
 				return source, target, func() { os.RemoveAll(tmpDir) }
 			},
 			expectError:   true,
-			errorContains: "target path is inside source path",
+			errorContains: "failed to validate: target path is inside source path",
 		},
 		{
 			name: "sibling paths",
@@ -256,7 +254,7 @@ func TestValidateSymlinkCreation(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "circular symlink error",
+			name: "symlink already exists - valid relinking",
 			setupFunc: func(t *testing.T) (string, string, func()) {
 				tmpDir, _ := os.MkdirTemp("", "cfgman-validate-test")
 				source := filepath.Join(tmpDir, "source.txt")
@@ -267,8 +265,7 @@ func TestValidateSymlinkCreation(t *testing.T) {
 
 				return source, target, func() { os.RemoveAll(tmpDir) }
 			},
-			expectError:   true,
-			errorContains: "circular",
+			expectError: false,
 		},
 		{
 			name: "overlapping paths error",
@@ -345,16 +342,16 @@ func TestValidationErrorHandling(t *testing.T) {
 		// Should handle stat error gracefully
 		err := ValidateNoCircularSymlink(source, target)
 		// The function returns an error when it can't stat the target
-		if err == nil || !containsString(err.Error(), "checking target") {
-			t.Errorf("Expected checking target error, got: %v", err)
+		if err == nil || !containsString(err.Error(), "failed to check target") {
+			t.Errorf("Expected 'failed to check target' error, got: %v", err)
 		}
 	})
 
 	t.Run("validation with relative paths", func(t *testing.T) {
 		// ValidateNoOverlappingPaths should handle relative paths by converting to absolute
 		err := ValidateNoOverlappingPaths("./source", "./source")
-		if err == nil || !containsString(err.Error(), "same path") {
-			t.Errorf("Expected same path error, got: %v", err)
+		if err == nil || !containsString(err.Error(), "failed to validate: source and target are the same path") {
+			t.Errorf("Expected 'failed to validate: source and target are the same path' error, got: %v", err)
 		}
 	})
 }

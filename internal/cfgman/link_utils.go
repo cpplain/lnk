@@ -20,8 +20,8 @@ func FindManagedLinks(startPath, configRepo string, config *Config) ([]ManagedLi
 
 	err := filepath.Walk(startPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			// Log the error but continue walking
-			log.Debug("Error walking path %s: %v", path, err)
+			// Debug the error but continue walking
+			Debug("Error walking path %s: %v", path, err)
 			return nil
 		}
 
@@ -52,7 +52,7 @@ func FindManagedLinks(startPath, configRepo string, config *Config) ([]ManagedLi
 func checkManagedLink(linkPath, configRepo string, config *Config) *ManagedLink {
 	target, err := os.Readlink(linkPath)
 	if err != nil {
-		log.Debug("Failed to read symlink %s: %v", linkPath, err)
+		Debug("Failed to read symlink %s: %v", linkPath, err)
 		return nil
 	}
 
@@ -63,7 +63,7 @@ func checkManagedLink(linkPath, configRepo string, config *Config) *ManagedLink 
 	}
 	cleanTarget, err := filepath.Abs(absTarget)
 	if err != nil {
-		log.Debug("Failed to get absolute path for target %s: %v", target, err)
+		Debug("Failed to get absolute path for target %s: %v", target, err)
 		return nil
 	}
 

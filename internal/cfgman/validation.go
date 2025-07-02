@@ -16,20 +16,20 @@ func ValidateNoCircularSymlink(source, target string) error {
 			// Target doesn't exist yet, no circular link possible
 			return nil
 		}
-		return fmt.Errorf("checking target: %w", err)
+		return fmt.Errorf("failed to check target: %w", err)
 	}
 
 	// If target is a symlink, check where it points
 	if targetInfo.Mode()&os.ModeSymlink != 0 {
 		linkDest, err := os.Readlink(target)
 		if err != nil {
-			return fmt.Errorf("reading symlink: %w", err)
+			return fmt.Errorf("failed to read symlink: %w", err)
 		}
 
 		// Resolve to absolute paths for comparison
 		absSource, err := filepath.Abs(source)
 		if err != nil {
-			return fmt.Errorf("resolving source path: %w", err)
+			return fmt.Errorf("failed to resolve source path: %w", err)
 		}
 
 		absLinkDest := linkDest
@@ -38,12 +38,12 @@ func ValidateNoCircularSymlink(source, target string) error {
 		}
 		absLinkDest, err = filepath.Abs(absLinkDest)
 		if err != nil {
-			return fmt.Errorf("resolving link destination: %w", err)
+			return fmt.Errorf("failed to resolve link destination: %w", err)
 		}
 
 		// Check if the symlink points to our source - this is OK, not circular
 		if absSource == absLinkDest {
-			return nil  // Already points to correct location
+			return nil // Already points to correct location
 		}
 	}
 
@@ -52,7 +52,7 @@ func ValidateNoCircularSymlink(source, target string) error {
 	absTarget, _ := filepath.Abs(target)
 
 	if strings.HasPrefix(absSource, absTarget+string(filepath.Separator)) {
-		return fmt.Errorf("source is inside target directory, would create circular reference")
+		return fmt.Errorf("failed to validate: source is inside target directory, would create circular reference")
 	}
 
 	return nil
@@ -67,22 +67,22 @@ func ValidateNoOverlappingPaths(source, target string) error {
 
 	absTarget, err := filepath.Abs(target)
 	if err != nil {
-		return fmt.Errorf("resolving target path: %w", err)
+		return fmt.Errorf("failed to resolve target path: %w", err)
 	}
 
 	// Check if paths are the same
 	if absSource == absTarget {
-		return fmt.Errorf("source and target are the same path")
+		return fmt.Errorf("failed to validate: source and target are the same path")
 	}
 
 	// Check if source is inside target
 	if strings.HasPrefix(absSource, absTarget+string(filepath.Separator)) {
-		return fmt.Errorf("source path is inside target path")
+		return fmt.Errorf("failed to validate: source path is inside target path")
 	}
 
 	// Check if target is inside source
 	if strings.HasPrefix(absTarget, absSource+string(filepath.Separator)) {
-		return fmt.Errorf("target path is inside source path")
+		return fmt.Errorf("failed to validate: target path is inside source path")
 	}
 
 	return nil

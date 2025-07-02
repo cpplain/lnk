@@ -18,9 +18,9 @@ func CreateLinks(configRepo string, config *Config, dryRun bool) error {
 	// Convert to absolute path
 	absConfigRepo, err := filepath.Abs(configRepo)
 	if err != nil {
-		return fmt.Errorf("resolving repository path: %w", err)
+		return fmt.Errorf("failed to resolve repository path: %w", err)
 	}
-	log.Info("Creating links with smart defaults...")
+	PrintHeader("Creating Symlinks")
 
 	// Require LinkMappings to be defined
 	if len(config.LinkMappings) == 0 {
@@ -42,15 +42,15 @@ func CreateLinks(configRepo string, config *Config, dryRun bool) error {
 		// Check if source directory exists
 		if info, err := os.Stat(sourcePath); err != nil {
 			if os.IsNotExist(err) {
-				log.Info("Skipping mapping %s: source directory does not exist", mapping.Source)
+				PrintSkip("Skipping %s: source directory does not exist", mapping.Source)
 				continue
 			}
-			return fmt.Errorf("checking source directory for mapping %s: %w", mapping.Source, err)
+			return fmt.Errorf("failed to check source directory for mapping %s: %w", mapping.Source, err)
 		} else if !info.IsDir() {
-			return fmt.Errorf("source path for mapping %s is not a directory: %s", mapping.Source, sourcePath)
+			return fmt.Errorf("failed to process mapping %s: source path is not a directory: %s", mapping.Source, sourcePath)
 		}
 
-		log.Info("Processing mapping: %s -> %s", mapping.Source, mapping.Target)
+		Debug("Processing mapping: %s -> %s", mapping.Source, mapping.Target)
 
 		// Collect files from this mapping
 		links, err := collectPlannedLinks(sourcePath, targetPath, absConfigRepo, &mapping, config)
@@ -61,7 +61,7 @@ func CreateLinks(configRepo string, config *Config, dryRun bool) error {
 	}
 
 	if len(plannedLinks) == 0 {
-		log.Info("No files to link.")
+		PrintInfo("No files to link.")
 		return nil
 	}
 
@@ -74,9 +74,10 @@ func CreateLinks(configRepo string, config *Config, dryRun bool) error {
 
 	// Phase 3: Execute (or show dry-run)
 	if dryRun {
-		log.Info("\n%s Would create %d symlink(s):", Yellow(DryRunPrefix), len(plannedLinks))
+		fmt.Println()
+		PrintDryRun("Would create %d symlink(s):", len(plannedLinks))
 		for _, link := range plannedLinks {
-			log.Info("%s Would link: %s -> %s", Yellow(DryRunPrefix), link.Target, link.Source)
+			PrintDryRun("Would link: %s -> %s", ContractPath(link.Target), ContractPath(link.Source))
 		}
 		return nil
 	}
@@ -90,56 +91,57 @@ func RemoveLinks(configRepo string, config *Config, dryRun bool) error {
 	// Convert to absolute path
 	absConfigRepo, err := filepath.Abs(configRepo)
 	if err != nil {
-		return fmt.Errorf("resolving repository path: %w", err)
+		return fmt.Errorf("failed to resolve repository path: %w", err)
 	}
 	return removeLinks(absConfigRepo, config, dryRun, false)
 }
 
 // removeLinks is the internal implementation that allows skipping confirmation
 func removeLinks(configRepo string, config *Config, dryRun bool, skipConfirm bool) error {
-	log.Info("Removing all links...")
+	PrintHeader("Removing Symlinks")
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("getting home directory: %w", err)
+		return fmt.Errorf("failed to get home directory: %w", err)
 	}
 
 	// Find all symlinks pointing to our repo
 	links, err := FindManagedLinks(homeDir, configRepo, config)
 	if err != nil {
-		return fmt.Errorf("finding managed links: %w", err)
+		return fmt.Errorf("failed to find managed links: %w", err)
 	}
 
 	if len(links) == 0 {
-		log.Info("No links found to remove.")
+		PrintInfo("No symlinks found to remove.")
 		return nil
 	}
 
-	// Show all links that will be removed
-	log.Info("Found %d symlinks to remove:", len(links))
-	for _, link := range links {
-		log.Info("  %s -> %s", link.Path, link.Target)
-	}
-	log.Info("")
-
-	// Confirm if not in dry-run mode and not skipping confirmation
-	if !dryRun && !skipConfirm {
-		if !ConfirmPrompt("Remove all symlinks?") {
-			log.Info("Cancelled.")
-			return nil
-		}
-	}
+	// Track results for summary
+	var removed, failed int
 
 	// Remove links
 	for _, link := range links {
 		if dryRun {
-			log.Info("%s Would remove: %s", DryRunPrefix, link.Path)
+			PrintDryRun("Would remove: %s", ContractPath(link.Path))
 		} else {
 			if err := os.Remove(link.Path); err != nil {
-				log.Info("%s: %v", Red("Error removing"), err)
+				PrintError("Failed to remove %s: %v", ContractPath(link.Path), err)
+				failed++
 				continue
 			}
-			log.Info("Removed: %s", link.Path)
+			PrintSuccess("Removed: %s", ContractPath(link.Path))
+			removed++
+		}
+	}
+
+	// Print summary for non-dry-run
+	if !dryRun {
+		fmt.Println()
+		if removed > 0 {
+			PrintSuccess("Removed %d symlink(s) successfully", removed)
+		}
+		if failed > 0 {
+			PrintWarning("Failed to remove %d symlink(s)", failed)
 		}
 	}
 
@@ -151,18 +153,19 @@ func PruneLinks(configRepo string, config *Config, dryRun bool) error {
 	// Convert to absolute path
 	absConfigRepo, err := filepath.Abs(configRepo)
 	if err != nil {
-		return fmt.Errorf("resolving repository path: %w", err)
+		return fmt.Errorf("failed to resolve repository path: %w", err)
 	}
+	PrintHeader("Pruning Broken Symlinks")
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("getting home directory: %w", err)
+		return fmt.Errorf("failed to get home directory: %w", err)
 	}
 
 	// Find all symlinks pointing to our repo
 	links, err := FindManagedLinks(homeDir, absConfigRepo, config)
 	if err != nil {
-		return fmt.Errorf("finding managed links: %w", err)
+		return fmt.Errorf("failed to find managed links: %w", err)
 	}
 
 	// Collect all broken links first
@@ -176,36 +179,37 @@ func PruneLinks(configRepo string, config *Config, dryRun bool) error {
 
 	// If no broken links found, report and return
 	if len(brokenLinks) == 0 {
-		log.Info("No broken links found.")
+		PrintInfo("No broken symlinks found.")
 		return nil
 	}
 
-	// Display all broken links
-	log.Info("Found %d broken symlinks:", len(brokenLinks))
-	for _, link := range brokenLinks {
-		log.Info("  %s -> %s (target missing)", link.Path, link.Target)
-	}
-
-	// In dry-run mode, just show what would be removed
-	if dryRun {
-		log.Info("")
-		log.Info("%s Would remove the above broken symlinks.", DryRunPrefix)
-		return nil
-	}
-
-	// Ask for confirmation
-	if !ConfirmPrompt("\nRemove all broken symlinks?") {
-		log.Info("Cancelled.")
-		return nil
-	}
+	// Track results for summary
+	var pruned, failed int
 
 	// Remove the broken links
 	for _, link := range brokenLinks {
-		if err := os.Remove(link.Path); err != nil {
-			log.Info("%s: %v", Red("Error removing"), err)
-			continue
+		if dryRun {
+			PrintDryRun("Would prune: %s", ContractPath(link.Path))
+		} else {
+			if err := os.Remove(link.Path); err != nil {
+				PrintError("Failed to remove %s: %v", ContractPath(link.Path), err)
+				failed++
+				continue
+			}
+			PrintSuccess("Pruned: %s", ContractPath(link.Path))
+			pruned++
 		}
-		log.Info("Removed: %s", link.Path)
+	}
+
+	// Print summary for non-dry-run
+	if !dryRun {
+		fmt.Println()
+		if pruned > 0 {
+			PrintSuccess("Pruned %d broken symlink(s) successfully", pruned)
+		}
+		if failed > 0 {
+			PrintWarning("Failed to prune %d symlink(s)", failed)
+		}
 	}
 
 	return nil
@@ -242,7 +246,7 @@ func collectPlannedLinks(sourcePath, targetPath, repoRoot string, mapping *LinkM
 		// Calculate relative path from source
 		relPath, err := filepath.Rel(sourcePath, path)
 		if err != nil {
-			return fmt.Errorf("calculating relative path: %w", err)
+			return fmt.Errorf("failed to calculate relative path: %w", err)
 		}
 
 		// Build target path
@@ -264,24 +268,52 @@ func executePlannedLinks(links []PlannedLink) error {
 	// Track which directories we've created to avoid redundant checks
 	createdDirs := make(map[string]bool)
 
+	// Track results for summary
+	var created, failed int
+
 	for _, link := range links {
 		// Create parent directory if needed
 		parentDir := filepath.Dir(link.Target)
 		if !createdDirs[parentDir] {
 			if err := os.MkdirAll(parentDir, 0755); err != nil {
-				return fmt.Errorf("creating directory %s: %w", parentDir, err)
+				return fmt.Errorf("failed to create directory %s: %w", parentDir, err)
 			}
 			createdDirs[parentDir] = true
 		}
 
 		// Create the symlink
 		if err := createLink(link.Source, link.Target); err != nil {
-			// Log warning but continue with other links
-			log.Info("%s linking file %s: %v", Yellow("Warning"), link.Target, err)
+			if _, ok := err.(LinkExistsError); ok {
+				// Link already exists with correct target - skip silently
+				continue
+			}
+			// Print warning but continue with other links
+			PrintWarning("Failed to link %s: %v", ContractPath(link.Target), err)
+			failed++
+		} else {
+			created++
 		}
 	}
 
+	// Print summary
+	fmt.Println()
+	if created > 0 {
+		PrintSuccess("Created %d symlink(s) successfully", created)
+	}
+	if failed > 0 {
+		PrintWarning("Failed to create %d symlink(s)", failed)
+	}
+
 	return nil
+}
+
+// LinkExistsError indicates a symlink already exists with the correct target
+type LinkExistsError struct {
+	target string
+}
+
+func (e LinkExistsError) Error() string {
+	return fmt.Sprintf("symlink already exists: %s", e.target)
 }
 
 // createLink creates a single symlink, handling existing files/links
@@ -291,23 +323,23 @@ func createLink(source, target string) error {
 		// If it's already a symlink pointing to our source, nothing to do
 		if info.Mode()&os.ModeSymlink != 0 {
 			if existingTarget, err := os.Readlink(target); err == nil && existingTarget == source {
-				return nil
+				return LinkExistsError{target: target}
 			}
 			// Remove existing symlink pointing elsewhere
 			if err := os.Remove(target); err != nil {
-				return fmt.Errorf("removing existing link: %w", err)
+				return fmt.Errorf("failed to remove existing link: %w", err)
 			}
 		} else {
 			// Target exists and is not a symlink
-			return fmt.Errorf("%s exists and is not a symlink", target)
+			return fmt.Errorf("failed to create symlink: %s already exists and is not a symlink. Use 'cfgman adopt' to adopt this file first", target)
 		}
 	}
 
 	// Create new symlink
 	if err := os.Symlink(source, target); err != nil {
-		return fmt.Errorf("creating symlink: %w", err)
+		return fmt.Errorf("failed to create symlink: %w", err)
 	}
 
-	log.Info("Linked: %s", target)
+	PrintSuccess("Created: %s", ContractPath(target))
 	return nil
 }

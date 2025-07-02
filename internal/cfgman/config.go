@@ -29,7 +29,7 @@ func LoadConfig(configRepo string) (*Config, error) {
 	// Convert to absolute path
 	absConfigRepo, err := filepath.Abs(configRepo)
 	if err != nil {
-		return nil, fmt.Errorf("resolving config directory: %w", err)
+		return nil, fmt.Errorf("failed to resolve config directory: %w", err)
 	}
 	// Check for .cfgman.json
 	cfgmanPath := filepath.Join(absConfigRepo, ConfigFileName)
@@ -44,12 +44,15 @@ func LoadConfig(configRepo string) (*Config, error) {
 	// Load the config
 	data, err := os.ReadFile(cfgmanPath)
 	if err != nil {
-		return nil, fmt.Errorf("reading %s: %w", ConfigFileName, err)
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("failed to read %s: file not found. Run 'cfgman init' to create a config file", ConfigFileName)
+		}
+		return nil, fmt.Errorf("failed to read %s: %w", ConfigFileName, err)
 	}
 
 	var config Config
 	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, NewPathError("parse config", cfgmanPath, fmt.Errorf("%w: %v", ErrInvalidConfig, err))
+		return nil, NewPathError("failed to parse config", cfgmanPath, fmt.Errorf("%w: %v", ErrInvalidConfig, err))
 	}
 
 	// Validate configuration
@@ -67,11 +70,11 @@ func (c *Config) Save(configRepo string) error {
 
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
-		return fmt.Errorf("marshaling config: %w", err)
+		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
 	if err := os.WriteFile(cfgmanPath, data, 0644); err != nil {
-		return fmt.Errorf("writing config: %w", err)
+		return fmt.Errorf("failed to write config: %w", err)
 	}
 
 	return nil
@@ -97,7 +100,7 @@ func ExpandPath(path string) (string, error) {
 	if strings.HasPrefix(path, "~/") {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			return "", fmt.Errorf("getting home directory: %w", err)
+			return "", fmt.Errorf("failed to get home directory: %w", err)
 		}
 		return filepath.Join(homeDir, path[2:]), nil
 	}

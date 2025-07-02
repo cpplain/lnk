@@ -20,20 +20,20 @@ func Status(configRepo string, config *Config) error {
 	// Convert to absolute path
 	absConfigRepo, err := filepath.Abs(configRepo)
 	if err != nil {
-		return fmt.Errorf("resolving repository path: %w", err)
+		return fmt.Errorf("failed to resolve repository path: %w", err)
 	}
-	log.Info(Bold("=== Dotfiles Status ==="))
-	log.Info("")
+	PrintHeader("Dotfile Status")
+	fmt.Println()
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("getting home directory: %w", err)
+		return fmt.Errorf("failed to get home directory: %w", err)
 	}
 
 	// Find all symlinks pointing to our repo
 	managedLinks, err := FindManagedLinks(homeDir, absConfigRepo, config)
 	if err != nil {
-		return fmt.Errorf("finding managed links: %w", err)
+		return fmt.Errorf("failed to find managed links: %w", err)
 	}
 
 	// Convert to LinkInfo
@@ -55,31 +55,42 @@ func Status(configRepo string, config *Config) error {
 
 	// Display links
 	if len(links) > 0 {
-		log.Info(Bold("Active links:"))
+		// Separate active and broken links
+		var activeLinks, brokenLinks []LinkInfo
 		for _, link := range links {
-			displayLink(link)
+			if link.IsBroken {
+				brokenLinks = append(brokenLinks, link)
+			} else {
+				activeLinks = append(activeLinks, link)
+			}
 		}
+
+		// Display active links
+		if len(activeLinks) > 0 {
+			for _, link := range activeLinks {
+				PrintSuccess("Active: %s", ContractPath(link.Link))
+			}
+		}
+
+		// Display broken links
+		if len(brokenLinks) > 0 {
+			if len(activeLinks) > 0 {
+				fmt.Println()
+			}
+			for _, link := range brokenLinks {
+				PrintError("Broken: %s", ContractPath(link.Link))
+			}
+		}
+
+		// Summary
+		fmt.Println()
+		PrintInfo("Total: %s (%s active, %s broken)",
+			Bold(fmt.Sprintf("%d links", len(links))),
+			Green(fmt.Sprintf("%d", len(activeLinks))),
+			Red(fmt.Sprintf("%d", len(brokenLinks))))
 	} else {
-		log.Info("No active links found.")
+		PrintInfo("No active links found.")
 	}
 
 	return nil
-}
-
-func displayLink(link LinkInfo) {
-	// Show source mapping
-	sourceLabel := "[" + link.Source + "]"
-	sourceColor := Cyan(sourceLabel)
-
-	status := Green("OK")
-	if link.IsBroken {
-		status = Red("BROKEN")
-	}
-
-	// Format for aligned output
-	log.Info("  %-50s -> %-40s %-15s %s",
-		link.Link,
-		link.Target,
-		sourceColor,
-		status)
 }

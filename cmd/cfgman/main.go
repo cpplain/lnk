@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/cpplain/cfgman/internal/cfgman"
 )
@@ -21,11 +21,25 @@ var (
 	date    = "unknown"
 )
 
+// formatFlags returns a formatted string of all flags in the FlagSet
+func formatFlags(fs *flag.FlagSet) string {
+	var b strings.Builder
+	count := 0
+	fs.VisitAll(func(f *flag.Flag) {
+		fmt.Fprintf(&b, "  --%s\t%s\n", f.Name, f.Usage)
+		count++
+	})
+	if count == 0 {
+		return "  (none)\n"
+	}
+	return b.String()
+}
+
 func main() {
 	// Handle --version flag before any other parsing
 	for _, arg := range os.Args[1:] {
 		if arg == "--version" {
-			fmt.Printf("cfgman version %s\n", version)
+			cfgman.PrintInfo("%s %s", cfgman.Bold("cfgman version"), cfgman.Green(version))
 			return
 		}
 	}
@@ -70,7 +84,7 @@ func main() {
 	case "version":
 		handleVersion(commandArgs)
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", command)
+		cfgman.PrintError("Unknown command: %s", command)
 		printUsage()
 		os.Exit(1)
 	}
@@ -79,19 +93,22 @@ func main() {
 func handleStatus(args []string) {
 	fs := flag.NewFlagSet("status", flag.ExitOnError)
 	fs.Usage = func() {
-		fmt.Println("Usage: cfgman status")
-		fmt.Println("\nShow status of all managed symlinks")
-		fs.PrintDefaults()
+		fmt.Printf("%s cfgman status [options]\n", cfgman.Bold("Usage:"))
+		fmt.Printf("\n%s\n", cfgman.Cyan("Show status of all managed symlinks"))
+		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
+		fmt.Print(formatFlags(fs))
 	}
 	fs.Parse(args)
 
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
-		log.Fatalf("Error loading config: %v", err)
+		cfgman.PrintError("%v", err)
+		os.Exit(1)
 	}
 
 	if err := cfgman.Status(".", config); err != nil {
-		log.Fatal(err)
+		cfgman.PrintError("%v", err)
+		os.Exit(1)
 	}
 }
 
@@ -100,48 +117,37 @@ func handleAdopt(args []string) {
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 
 	fs.Usage = func() {
-		fmt.Println("Usage: cfgman adopt [options] PATH [SOURCE_DIR]")
-		fmt.Println("\nAdopt a file or directory into the repository")
-		fmt.Println("\nArguments:")
-		fmt.Println("  PATH        The file or directory to adopt")
-		fmt.Println("  SOURCE_DIR  The source directory in the repository (e.g., home, private/home)")
-		fmt.Println("              If not provided, you will be prompted to enter it")
-		fmt.Println("\nOptions:")
-		fs.PrintDefaults()
-		fmt.Println("\nExamples:")
-		fmt.Println("  cfgman adopt ~/.gitconfig home")
-		fmt.Println("  cfgman adopt ~/.ssh/config private/home")
-		fmt.Println("  cfgman adopt ~/.zshrc  # Will prompt for source directory")
+		fmt.Printf("%s cfgman adopt [options] PATH SOURCE_DIR\n", cfgman.Bold("Usage:"))
+		fmt.Printf("\n%s\n", cfgman.Cyan("Adopt a file or directory into the repository"))
+		fmt.Printf("\n%s\n", cfgman.Bold("Arguments:"))
+		fmt.Printf("  %-20s The file or directory to adopt\n", cfgman.Bold("PATH"))
+		fmt.Printf("  %-20s The source directory in the repository (e.g., home, private/home)\n", cfgman.Bold("SOURCE_DIR"))
+		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
+		fmt.Print(formatFlags(fs))
+		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
+		fmt.Println(cfgman.Cyan("  cfgman adopt ~/.gitconfig home"))
+		fmt.Println(cfgman.Cyan("  cfgman adopt ~/.ssh/config private/home"))
 	}
 
 	fs.Parse(args)
 
-	if fs.NArg() < 1 || fs.NArg() > 2 {
+	if fs.NArg() != 2 {
 		fs.Usage()
 		os.Exit(1)
 	}
 
 	path := fs.Arg(0)
-	var sourceDir string
-
-	// Get source directory from args or prompt
-	if fs.NArg() == 2 {
-		sourceDir = fs.Arg(1)
-	} else {
-		var err error
-		sourceDir, err = cfgman.ReadUserInputWithDefault("Enter source directory from your config mappings", "")
-		if err != nil {
-			log.Fatalf("Error reading input: %v", err)
-		}
-	}
+	sourceDir := fs.Arg(1)
 
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
-		log.Fatalf("Error loading config: %v", err)
+		cfgman.PrintError("%v", err)
+		os.Exit(1)
 	}
 
 	if err := cfgman.Adopt(path, ".", config, sourceDir, *dryRun); err != nil {
-		log.Fatal(err)
+		cfgman.PrintError("%v", err)
+		os.Exit(1)
 	}
 }
 
@@ -150,11 +156,16 @@ func handleOrphan(args []string) {
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 
 	fs.Usage = func() {
-		fmt.Println("Usage: cfgman orphan [options] PATH")
-		fmt.Println("\nRemove a file or directory from repository management")
+		fmt.Printf("%s cfgman orphan [options] PATH\n", cfgman.Bold("Usage:"))
+		fmt.Printf("\n%s\n", cfgman.Cyan("Remove a file or directory from repository management"))
 		fmt.Println("For directories, recursively orphans all managed symlinks within")
-		fmt.Println("\nOptions:")
-		fs.PrintDefaults()
+		fmt.Printf("\n%s\n", cfgman.Bold("Arguments:"))
+		fmt.Printf("  %-20s The file or directory to orphan\n", cfgman.Bold("PATH"))
+		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
+		fmt.Print(formatFlags(fs))
+		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
+		fmt.Println(cfgman.Cyan("  cfgman orphan ~/.gitconfig"))
+		fmt.Println(cfgman.Cyan("  cfgman orphan ~/.config/nvim"))
 	}
 
 	fs.Parse(args)
@@ -167,11 +178,13 @@ func handleOrphan(args []string) {
 	path := fs.Arg(0)
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
-		log.Fatalf("Error loading config: %v", err)
+		cfgman.PrintError("%v", err)
+		os.Exit(1)
 	}
 
 	if err := cfgman.Orphan(path, ".", config, *dryRun); err != nil {
-		log.Fatal(err)
+		cfgman.PrintError("%v", err)
+		os.Exit(1)
 	}
 }
 
@@ -180,21 +193,26 @@ func handleCreateLinks(args []string) {
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 
 	fs.Usage = func() {
-		fmt.Println("Usage: cfgman create-links [options]")
-		fmt.Println("\nCreate symlinks from repository to home directory")
-		fmt.Println("\nOptions:")
-		fs.PrintDefaults()
+		fmt.Printf("%s cfgman create-links [options]\n", cfgman.Bold("Usage:"))
+		fmt.Printf("\n%s\n", cfgman.Cyan("Create symlinks from repository to home directory"))
+		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
+		fmt.Print(formatFlags(fs))
+		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
+		fmt.Println(cfgman.Cyan("  cfgman create-links"))
+		fmt.Println(cfgman.Cyan("  cfgman create-links --dry-run"))
 	}
 
 	fs.Parse(args)
 
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
-		log.Fatalf("Error loading config: %v", err)
+		cfgman.PrintError("%v", err)
+		os.Exit(1)
 	}
 
 	if err := cfgman.CreateLinks(".", config, *dryRun); err != nil {
-		log.Fatal(err)
+		cfgman.PrintError("%v", err)
+		os.Exit(1)
 	}
 }
 
@@ -203,21 +221,26 @@ func handleRemoveLinks(args []string) {
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 
 	fs.Usage = func() {
-		fmt.Println("Usage: cfgman remove-links [options]")
-		fmt.Println("\nRemove all managed symlinks")
-		fmt.Println("\nOptions:")
-		fs.PrintDefaults()
+		fmt.Printf("%s cfgman remove-links [options]\n", cfgman.Bold("Usage:"))
+		fmt.Printf("\n%s\n", cfgman.Cyan("Remove all managed symlinks"))
+		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
+		fmt.Print(formatFlags(fs))
+		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
+		fmt.Println(cfgman.Cyan("  cfgman remove-links"))
+		fmt.Println(cfgman.Cyan("  cfgman remove-links --dry-run"))
 	}
 
 	fs.Parse(args)
 
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
-		log.Fatalf("Error loading config: %v", err)
+		cfgman.PrintError("%v", err)
+		os.Exit(1)
 	}
 
 	if err := cfgman.RemoveLinks(".", config, *dryRun); err != nil {
-		log.Fatal(err)
+		cfgman.PrintError("%v", err)
+		os.Exit(1)
 	}
 }
 
@@ -226,36 +249,42 @@ func handlePruneLinks(args []string) {
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 
 	fs.Usage = func() {
-		fmt.Println("Usage: cfgman prune-links [options]")
-		fmt.Println("\nRemove broken symlinks")
-		fmt.Println("\nOptions:")
-		fs.PrintDefaults()
+		fmt.Printf("%s cfgman prune-links [options]\n", cfgman.Bold("Usage:"))
+		fmt.Printf("\n%s\n", cfgman.Cyan("Remove broken symlinks"))
+		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
+		fmt.Print(formatFlags(fs))
+		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
+		fmt.Println(cfgman.Cyan("  cfgman prune-links"))
+		fmt.Println(cfgman.Cyan("  cfgman prune-links --dry-run"))
 	}
 
 	fs.Parse(args)
 
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
-		log.Fatalf("Error loading config: %v", err)
+		cfgman.PrintError("%v", err)
+		os.Exit(1)
 	}
 
 	if err := cfgman.PruneLinks(".", config, *dryRun); err != nil {
-		log.Fatal(err)
+		cfgman.PrintError("%v", err)
+		os.Exit(1)
 	}
 }
 
 func handleVersion(args []string) {
 	fs := flag.NewFlagSet("version", flag.ExitOnError)
 	fs.Usage = func() {
-		fmt.Println("Usage: cfgman version")
-		fmt.Println("\nShow version information")
-		fs.PrintDefaults()
+		fmt.Printf("%s cfgman version [options]\n", cfgman.Bold("Usage:"))
+		fmt.Printf("\n%s\n", cfgman.Cyan("Show version information"))
+		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
+		fmt.Print(formatFlags(fs))
 	}
 	fs.Parse(args)
 
-	fmt.Printf("cfgman version %s\n", version)
-	fmt.Printf("  commit: %s\n", commit)
-	fmt.Printf("  built:  %s\n", date)
+	cfgman.PrintInfo("%s %s", cfgman.Bold("cfgman version"), cfgman.Green(version))
+	cfgman.PrintInfo("  commit: %s", cfgman.Cyan(commit))
+	cfgman.PrintInfo("  built:  %s", cfgman.Cyan(date))
 }
 
 func handleInit(args []string) {
@@ -263,14 +292,14 @@ func handleInit(args []string) {
 	force := fs.Bool("force", false, "Overwrite existing configuration file")
 
 	fs.Usage = func() {
-		fmt.Println("Usage: cfgman init [options]")
-		fmt.Printf("\nCreate a minimal %s configuration template\n", cfgman.ConfigFileName)
-		fmt.Println("\nOptions:")
-		fs.PrintDefaults()
-		fmt.Println("\nThis creates a template configuration file that you must edit to:")
-		fmt.Println("  - Set the source directory (e.g., 'home')")
-		fmt.Println("  - Set the target directory (e.g., '~/')")
-		fmt.Println("  - Add any ignore patterns you need")
+		fmt.Printf("%s cfgman init [options]\n", cfgman.Bold("Usage:"))
+		fmt.Printf("\n%s\n", cfgman.Cyan(fmt.Sprintf("Create a minimal %s configuration template", cfgman.ConfigFileName)))
+		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
+		fmt.Print(formatFlags(fs))
+		fmt.Printf("\n%s\n", cfgman.Bold("This creates a template configuration file that you must edit to:"))
+		fmt.Printf("  • Set the %s (e.g., 'home')\n", cfgman.Bold("source directory"))
+		fmt.Printf("  • Set the %s (e.g., '~/')\n", cfgman.Bold("target directory"))
+		fmt.Printf("  • Add any %s you need\n", cfgman.Bold("ignore patterns"))
 	}
 
 	fs.Parse(args)
@@ -279,7 +308,8 @@ func handleInit(args []string) {
 	cfgmanPath := filepath.Join(".", cfgman.ConfigFileName)
 	if !*force {
 		if _, err := os.Stat(cfgmanPath); err == nil {
-			log.Fatalf("Error: %s already exists. Use --force to overwrite.", cfgman.ConfigFileName)
+			cfgman.PrintError("%s already exists. Use --force to overwrite.", cfgman.ConfigFileName)
+			os.Exit(1)
 		}
 	}
 
@@ -297,52 +327,53 @@ func handleInit(args []string) {
 	// Write the config file
 	data, err := json.MarshalIndent(defaultConfig, "", "  ")
 	if err != nil {
-		log.Fatalf("Error marshaling config: %v", err)
+		cfgman.PrintError("%v", err)
+		os.Exit(1)
 	}
 
 	if err := os.WriteFile(cfgmanPath, data, 0644); err != nil {
-		log.Fatalf("Error writing %s: %v", cfgman.ConfigFileName, err)
+		cfgman.PrintError("Failed to write %s: %v", cfgman.ConfigFileName, err)
+		os.Exit(1)
 	}
 
-	fmt.Printf("Created %s with a minimal template.\n", cfgman.ConfigFileName)
-	fmt.Printf("\nYou must edit %s to configure:\n", cfgman.ConfigFileName)
-	fmt.Println("  - source: The directory in your repo containing config files (e.g., 'home')")
-	fmt.Println("  - target: Where to link files to (e.g., '~/')")
-	fmt.Println("  - ignore_patterns: Files/patterns to ignore (e.g., '.DS_Store', '*.swp')")
-	fmt.Println("\nExample configuration:")
-	fmt.Println("  {")
-	fmt.Println("    \"ignore_patterns\": [\".DS_Store\", \"*.swp\"],")
-	fmt.Println("    \"link_mappings\": [{")
-	fmt.Println("      \"source\": \"home\",")
-	fmt.Println("      \"target\": \"~/\"")
-	fmt.Println("    }]")
-	fmt.Println("  }")
+	cfgman.PrintSuccess("Created %s with a minimal template.", cfgman.ConfigFileName)
+	fmt.Printf("\n%s %s to configure:\n", cfgman.Bold("You must edit"), cfgman.Cyan(cfgman.ConfigFileName))
+	fmt.Printf("  %s The directory in your repo containing config files (e.g., 'home')\n", cfgman.Bold("source:"))
+	fmt.Printf("  %s Where to link files to (e.g., '~/')\n", cfgman.Bold("target:"))
+	fmt.Printf("  %s Files/patterns to ignore (e.g., '.DS_Store', '*.swp')\n", cfgman.Bold("ignore_patterns:"))
+	fmt.Printf("\n%s\n", cfgman.Bold("Example configuration:"))
+	fmt.Println(cfgman.Cyan("  {"))
+	fmt.Println(cfgman.Cyan("    \"ignore_patterns\": [\".DS_Store\", \"*.swp\"],"))
+	fmt.Println(cfgman.Cyan("    \"link_mappings\": [{"))
+	fmt.Println(cfgman.Cyan("      \"source\": \"home\","))
+	fmt.Println(cfgman.Cyan("      \"target\": \"~/\""))
+	fmt.Println(cfgman.Cyan("    }]"))
+	fmt.Println(cfgman.Cyan("  }"))
 }
 
 func printUsage() {
-	fmt.Println("Usage: cfgman <command> [options]")
+	fmt.Printf("%s cfgman <command> [options]\n", cfgman.Bold("Usage:"))
 	fmt.Println()
-	fmt.Println("Commands:")
-	fmt.Println("  Configuration:")
-	fmt.Printf("    init                Create a minimal %s template\n", cfgman.ConfigFileName)
+	fmt.Println(cfgman.Bold("Commands:"))
+	fmt.Printf("  %s\n", cfgman.Cyan("Configuration:"))
+	fmt.Printf("    %-20s Create a minimal %s template\n", cfgman.Bold("init"), cfgman.ConfigFileName)
 	fmt.Println()
-	fmt.Println("  Link Management:")
-	fmt.Println("    status              Show status of all managed symlinks")
-	fmt.Println("    adopt PATH [SOURCE_DIR]")
-	fmt.Println("                        Adopt file/directory into repository")
-	fmt.Println("    orphan PATH         Remove file/directory from repo management")
-	fmt.Println("    create-links        Create symlinks from repo to home")
-	fmt.Println("    remove-links        Remove all managed symlinks")
-	fmt.Println("    prune-links         Remove broken symlinks")
+	fmt.Printf("  %s\n", cfgman.Cyan("Link Management:"))
+	fmt.Printf("    %-20s Show status of all managed symlinks\n", cfgman.Bold("status"))
+	fmt.Printf("    %-20s Adopt file/directory into repository\n", cfgman.Bold("adopt"))
+	fmt.Printf("    %-20s Remove file/directory from repo management\n", cfgman.Bold("orphan"))
+	fmt.Printf("    %-20s Create symlinks from repo to home\n", cfgman.Bold("create-links"))
+	fmt.Printf("    %-20s Remove all managed symlinks\n", cfgman.Bold("remove-links"))
+	fmt.Printf("    %-20s Remove broken symlinks\n", cfgman.Bold("prune-links"))
 	fmt.Println()
-	fmt.Println("  Other:")
-	fmt.Println("    version             Show version information")
-	fmt.Println("    help [command]      Show help for a command")
+	fmt.Printf("  %s\n", cfgman.Cyan("Other:"))
+	fmt.Printf("    %-20s Show version information\n", cfgman.Bold("version"))
+	fmt.Printf("    %-20s Show help for a command\n", cfgman.Bold("help"))
 	fmt.Println()
-	fmt.Println("Use 'cfgman help <command>' for more information about a command.")
+	fmt.Printf("Use '%s' for more information about a command.\n", cfgman.Bold("cfgman help <command>"))
 	fmt.Println()
-	fmt.Println("Note: cfgman must be run from within a cfgman-managed directory")
-	fmt.Printf("      (a directory containing %s)\n", cfgman.ConfigFileName)
+	fmt.Printf("%s cfgman must be run from within a cfgman-managed directory\n", cfgman.Bold("Note:"))
+	fmt.Printf("      (a directory containing %s)\n", cfgman.Cyan(cfgman.ConfigFileName))
 }
 
 func printCommandHelp(command string) {
@@ -364,7 +395,7 @@ func printCommandHelp(command string) {
 	case "version":
 		handleVersion([]string{"-h"})
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", command)
+		cfgman.PrintError("Unknown command: %s", command)
 		printUsage()
 	}
 }

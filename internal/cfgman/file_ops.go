@@ -13,17 +13,17 @@ func copyPath(src, dst string) error {
 	// Validate and clean paths
 	absSrc, err := filepath.Abs(src)
 	if err != nil {
-		return fmt.Errorf("invalid source path: %w", err)
+		return fmt.Errorf("failed to validate source path: %w", err)
 	}
 	absDst, err := filepath.Abs(dst)
 	if err != nil {
-		return fmt.Errorf("invalid destination path: %w", err)
+		return fmt.Errorf("failed to validate destination path: %w", err)
 	}
 
 	// Prevent copying a directory into itself
 	relPath, err := filepath.Rel(absSrc, absDst)
 	if err == nil && !strings.HasPrefix(relPath, "..") {
-		return fmt.Errorf("cannot copy directory into itself")
+		return fmt.Errorf("failed to copy: cannot copy directory into itself")
 	}
 
 	srcInfo, err := os.Stat(absSrc)

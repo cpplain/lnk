@@ -58,13 +58,16 @@ func TestStatusWithLinkMappings(t *testing.T) {
 	// Debug: print the actual output
 	t.Logf("Status output:\n%s", output)
 
-	// Verify output contains source mappings
-	if !strings.Contains(output, "[home]") {
-		t.Errorf("Output should contain [home] source mapping")
+	// Verify the output shows the active links
+	if !strings.Contains(output, "✓ Active: ~/.bashrc") {
+		t.Errorf("Output should show active bashrc link")
 	}
-	if !strings.Contains(output, "[work]") {
-		t.Errorf("Output should contain [work] source mapping")
+	if !strings.Contains(output, "✓ Active: ~/.gitconfig") {
+		t.Errorf("Output should show active gitconfig link")
 	}
+
+	// Verify output contains the files and paths
+	// We no longer show source mappings in brackets since the full path shows the source
 	if !strings.Contains(output, ".bashrc") {
 		t.Errorf("Output should contain .bashrc")
 	}
