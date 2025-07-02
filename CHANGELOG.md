@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Circular symlink validation** - Fixed incorrect circular reference error when symlinks already exist and point to the correct target. The validation now properly allows existing symlinks that point to their intended source.
+
 ## [0.3.0] - 2025-06-28
 
 ### Changed - MAJOR REWRITE

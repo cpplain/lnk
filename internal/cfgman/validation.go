@@ -41,9 +41,9 @@ func ValidateNoCircularSymlink(source, target string) error {
 			return fmt.Errorf("resolving link destination: %w", err)
 		}
 
-		// Check if the symlink points to our source
+		// Check if the symlink points to our source - this is OK, not circular
 		if absSource == absLinkDest {
-			return fmt.Errorf("would create circular symlink: %s -> %s -> %s", source, target, linkDest)
+			return nil  // Already points to correct location
 		}
 	}
 
