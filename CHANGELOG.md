@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--quiet` suppresses all non-error output for scripting
   - Flags are mutually exclusive and work with all commands
   - Verbose mode includes configuration loading details and operation progress
+- **JSON output support** - Added `--json` flag for machine-readable output:
+  - Currently supported by the `status` command
+  - Outputs structured JSON with links array and summary statistics
+  - Automatically enables quiet mode to ensure clean JSON output
+  - Includes link details (path, target, broken status, source mapping)
 
 ### Changed
 

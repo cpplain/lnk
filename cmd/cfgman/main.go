@@ -45,7 +45,7 @@ func main() {
 	}
 
 	// Parse global flags first
-	var globalVerbose, globalQuiet bool
+	var globalVerbose, globalQuiet, globalJSON bool
 	remainingArgs := []string{}
 
 	// Manual parsing to extract global flags before command
@@ -61,6 +61,8 @@ func main() {
 			globalVerbose = true
 		case "--quiet", "-q":
 			globalQuiet = true
+		case "--json":
+			globalJSON = true
 		case "-h", "--help":
 			// Let it pass through to be handled later
 			remainingArgs = append(remainingArgs, arg)
@@ -78,6 +80,15 @@ func main() {
 		cfgman.SetVerbosity(cfgman.VerbosityQuiet)
 	} else if globalVerbose {
 		cfgman.SetVerbosity(cfgman.VerbosityVerbose)
+	}
+
+	// Set output format
+	if globalJSON {
+		cfgman.SetOutputFormat(cfgman.FormatJSON)
+		// JSON output implies quiet mode for non-data output
+		if !globalVerbose {
+			cfgman.SetVerbosity(cfgman.VerbosityQuiet)
+		}
 	}
 
 	if len(remainingArgs) < 1 {
@@ -390,6 +401,7 @@ func printUsage() {
 	fmt.Println(cfgman.Bold("Global Options:"))
 	fmt.Printf("  -v, --verbose        Enable verbose output\n")
 	fmt.Printf("  -q, --quiet          Suppress all non-error output\n")
+	fmt.Printf("      --json           Output in JSON format (where supported)\n")
 	fmt.Printf("      --version        Show version information\n")
 	fmt.Printf("  -h, --help           Show this help message\n")
 	fmt.Println()

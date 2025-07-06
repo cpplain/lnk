@@ -1,6 +1,7 @@
 package cfgman
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,10 +10,20 @@ import (
 
 // LinkInfo represents information about a symlink
 type LinkInfo struct {
-	Link     string
-	Target   string
-	IsBroken bool
-	Source   string // Source mapping name (e.g., "home", "work")
+	Link     string `json:"link"`
+	Target   string `json:"target"`
+	IsBroken bool   `json:"is_broken"`
+	Source   string `json:"source"` // Source mapping name (e.g., "home", "work")
+}
+
+// StatusOutput represents the complete status output for JSON formatting
+type StatusOutput struct {
+	Links   []LinkInfo `json:"links"`
+	Summary struct {
+		Total  int `json:"total"`
+		Active int `json:"active"`
+		Broken int `json:"broken"`
+	} `json:"summary"`
 }
 
 // Status displays the status of all managed symlinks
@@ -22,8 +33,12 @@ func Status(configRepo string, config *Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to resolve repository path: %w", err)
 	}
-	PrintHeader("Dotfile Status")
-	fmt.Println()
+
+	// Only print header in human format
+	if !IsJSONFormat() {
+		PrintHeader("Dotfile Status")
+		fmt.Println()
+	}
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -52,6 +67,11 @@ func Status(configRepo string, config *Config) error {
 	sort.Slice(links, func(i, j int) bool {
 		return links[i].Link < links[j].Link
 	})
+
+	// If JSON format is requested, output JSON and return
+	if IsJSONFormat() {
+		return outputStatusJSON(links)
+	}
 
 	// Display links
 	if len(links) > 0 {
@@ -92,5 +112,36 @@ func Status(configRepo string, config *Config) error {
 		PrintInfo("No active links found.")
 	}
 
+	return nil
+}
+
+// outputStatusJSON outputs the status in JSON format
+func outputStatusJSON(links []LinkInfo) error {
+	// Ensure links is not nil for proper JSON output
+	if links == nil {
+		links = []LinkInfo{}
+	}
+
+	output := StatusOutput{
+		Links: links,
+	}
+
+	// Calculate summary
+	for _, link := range links {
+		output.Summary.Total++
+		if link.IsBroken {
+			output.Summary.Broken++
+		} else {
+			output.Summary.Active++
+		}
+	}
+
+	// Marshal to JSON with pretty printing
+	data, err := json.MarshalIndent(output, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal status to JSON: %w", err)
+	}
+
+	fmt.Println(string(data))
 	return nil
 }
