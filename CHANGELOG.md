@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- CLI design documentation following [cpplain/cli-design](https://github.com/cpplain/cli-design) principles
+  - Added CLI Design Guidelines section to CONTRIBUTING.md for contributors
+  - Added CLI Design Principles section to CLAUDE.md for implementation guidance
+  - Documents four core principles: Obvious Over Clever, Helpful Over Minimal, Consistent Over Special, Human-First Machine-Friendly
+
 ### Changed
 
 - **Major refactoring for better maintainability** - Simplified codebase architecture:

@@ -57,4 +57,30 @@ fix!: change config file format to JSON
 BREAKING CHANGE: config files must now use .cfgman.json extension
 ```
 
+### CLI Design Guidelines
+
+This project follows the principles outlined in [cpplain/cli-design](https://github.com/cpplain/cli-design).
+
+#### Core Principles
+
+1. **Obvious Over Clever**: Make the most intuitive path the easiest to follow
+2. **Helpful Over Minimal**: Provide clear guidance and helpful error messages
+3. **Consistent Over Special**: Follow established CLI conventions
+4. **Human-First, Machine-Friendly**: Prioritize human usability while ensuring scriptability
+
+#### When Adding Commands
+
+- Use clear, descriptive command names (e.g., `create-links` not `link`)
+- Provide comprehensive help text with examples
+- Support `--dry-run` for all destructive operations
+- Use consistent flag naming across commands
+- Include helpful error messages that guide users to solutions
+- Ensure all commands work both interactively and in scripts
+
+#### Additional Resources
+
+- [clig.dev](https://clig.dev/) - Command Line Interface Guidelines
+- [Heroku CLI Style Guide](https://devcenter.heroku.com/articles/cli-style-guide)
+- [GNU Standards for Command Line Interfaces](https://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces)
+
 Thank you for your understanding.
