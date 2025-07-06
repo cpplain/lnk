@@ -23,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Outputs structured JSON with links array and summary statistics
   - Automatically enables quiet mode to ensure clean JSON output
   - Includes link details (path, target, broken status, source mapping)
+- **Progress indicators** - Added progress indicators for operations that may take more than 1 second:
+  - Spinner animation with file counts for long-running operations
+  - Automatically appears after 1 second (following CLI best practices)
+  - Shows progress for: searching managed links (status/remove/prune), creating multiple symlinks, adopting directories
+  - Respects terminal detection, quiet mode, and JSON output settings
+  - Thread-safe implementation with smooth 100ms update intervals
 
 ### Changed
 

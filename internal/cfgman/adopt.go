@@ -144,88 +144,101 @@ func performDirectoryAdoption(absSource, destPath string) error {
 	// Track results
 	var adopted, skipped int
 	var walkErr error
+	var fileCount int
+
+	// Create progress indicator
+	progress := NewProgressIndicator("Scanning files to adopt")
 
 	// Walk the source directory
-	walkErr = filepath.Walk(absSource, func(sourcePath string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Calculate relative path from source root
-		relPath, err := filepath.Rel(absSource, sourcePath)
-		if err != nil {
-			return fmt.Errorf("failed to calculate relative path: %w", err)
-		}
-
-		// Skip the root directory itself
-		if relPath == "." {
-			return nil
-		}
-
-		// Calculate destination path
-		destItemPath := filepath.Join(destPath, relPath)
-
-		if info.IsDir() {
-			// Create directory in destination
-			if err := os.MkdirAll(destItemPath, info.Mode()); err != nil {
-				return fmt.Errorf("failed to create directory %s: %w", destItemPath, err)
+	processFiles := func() error {
+		return filepath.Walk(absSource, func(sourcePath string, info os.FileInfo, err error) error {
+			fileCount++
+			if fileCount%50 == 0 {
+				progress.Update(fileCount)
 			}
-			// Directory will be created in original location after all files are moved
-			return nil
-		}
+			if err != nil {
+				return err
+			}
 
-		// It's a file - check if it's already adopted
-		sourceFileInfo, err := os.Lstat(sourcePath)
-		if err != nil {
-			return fmt.Errorf("failed to check file %s: %w", relPath, err)
-		}
+			// Calculate relative path from source root
+			relPath, err := filepath.Rel(absSource, sourcePath)
+			if err != nil {
+				return fmt.Errorf("failed to calculate relative path: %w", err)
+			}
 
-		// Skip if it's already a symlink
-		if sourceFileInfo.Mode()&os.ModeSymlink != 0 {
-			// Check if it points to our destination
-			if target, err := os.Readlink(sourcePath); err == nil && target == destItemPath {
-				Debug("Skipping already adopted file: %s", relPath)
+			// Skip the root directory itself
+			if relPath == "." {
+				return nil
+			}
+
+			// Calculate destination path
+			destItemPath := filepath.Join(destPath, relPath)
+
+			if info.IsDir() {
+				// Create directory in destination
+				if err := os.MkdirAll(destItemPath, info.Mode()); err != nil {
+					return fmt.Errorf("failed to create directory %s: %w", destItemPath, err)
+				}
+				// Directory will be created in original location after all files are moved
+				return nil
+			}
+
+			// It's a file - check if it's already adopted
+			sourceFileInfo, err := os.Lstat(sourcePath)
+			if err != nil {
+				return fmt.Errorf("failed to check file %s: %w", relPath, err)
+			}
+
+			// Skip if it's already a symlink
+			if sourceFileInfo.Mode()&os.ModeSymlink != 0 {
+				// Check if it points to our destination
+				if target, err := os.Readlink(sourcePath); err == nil && target == destItemPath {
+					Debug("Skipping already adopted file: %s", relPath)
+					skipped++
+					return nil
+				}
+			}
+
+			// Check if destination already exists
+			if _, err := os.Stat(destItemPath); err == nil {
+				PrintSkip("Skipping %s: file already exists in repository at %s", ContractPath(sourcePath), ContractPath(destItemPath))
 				skipped++
 				return nil
 			}
-		}
 
-		// Check if destination already exists
-		if _, err := os.Stat(destItemPath); err == nil {
-			PrintSkip("Skipping %s: file already exists in repository at %s", ContractPath(sourcePath), ContractPath(destItemPath))
-			skipped++
+			// Move file to repo
+			if err := os.Rename(sourcePath, destItemPath); err != nil {
+				// If rename fails (e.g., cross-device), fall back to copy and remove
+				if err := copyAndVerify(sourcePath, destItemPath); err != nil {
+					return fmt.Errorf("failed to move file %s: %w", relPath, err)
+				}
+			}
+
+			// Create parent directory in original location if needed
+			sourceDir := filepath.Dir(sourcePath)
+			if err := os.MkdirAll(sourceDir, 0755); err != nil {
+				// Rollback: move file back
+				os.Rename(destItemPath, sourcePath)
+				return fmt.Errorf("failed to create parent directory for symlink: %w", err)
+			}
+
+			// Create symlink back
+			if err := os.Symlink(destItemPath, sourcePath); err != nil {
+				// Rollback: move file back
+				if rollbackErr := os.Rename(destItemPath, sourcePath); rollbackErr != nil {
+					return fmt.Errorf("failed to create symlink: %v (rollback also failed: %v)", err, rollbackErr)
+				}
+				return fmt.Errorf("failed to create symlink for %s: %w", relPath, err)
+			}
+
+			PrintSuccess("Adopted: %s", ContractPath(sourcePath))
+			adopted++
 			return nil
-		}
+		})
+	}
 
-		// Move file to repo
-		if err := os.Rename(sourcePath, destItemPath); err != nil {
-			// If rename fails (e.g., cross-device), fall back to copy and remove
-			if err := copyAndVerify(sourcePath, destItemPath); err != nil {
-				return fmt.Errorf("failed to move file %s: %w", relPath, err)
-			}
-		}
-
-		// Create parent directory in original location if needed
-		sourceDir := filepath.Dir(sourcePath)
-		if err := os.MkdirAll(sourceDir, 0755); err != nil {
-			// Rollback: move file back
-			os.Rename(destItemPath, sourcePath)
-			return fmt.Errorf("failed to create parent directory for symlink: %w", err)
-		}
-
-		// Create symlink back
-		if err := os.Symlink(destItemPath, sourcePath); err != nil {
-			// Rollback: move file back
-			if rollbackErr := os.Rename(destItemPath, sourcePath); rollbackErr != nil {
-				return fmt.Errorf("failed to create symlink: %v (rollback also failed: %v)", err, rollbackErr)
-			}
-			return fmt.Errorf("failed to create symlink for %s: %w", relPath, err)
-		}
-
-		PrintSuccess("Adopted: %s", ContractPath(sourcePath))
-		adopted++
-		return nil
-	})
+	// Use ShowProgress to handle the 1-second delay
+	walkErr = ShowProgress("Scanning files to adopt", processFiles)
 
 	// Print summary if we adopted multiple files
 	if walkErr == nil && (adopted > 0 || skipped > 0) {

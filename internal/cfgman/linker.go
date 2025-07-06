@@ -276,27 +276,50 @@ func executePlannedLinks(links []PlannedLink) error {
 	// Track results for summary
 	var created, failed int
 
-	for _, link := range links {
-		// Create parent directory if needed
-		parentDir := filepath.Dir(link.Target)
-		if !createdDirs[parentDir] {
-			if err := os.MkdirAll(parentDir, 0755); err != nil {
-				return fmt.Errorf("failed to create directory %s: %w", parentDir, err)
-			}
-			createdDirs[parentDir] = true
-		}
+	// Show progress for large operations
+	progress := NewProgressIndicator("Creating symlinks")
+	if len(links) > 10 {
+		progress.SetTotal(len(links))
+	}
 
-		// Create the symlink
-		if err := createLink(link.Source, link.Target); err != nil {
-			if _, ok := err.(LinkExistsError); ok {
-				// Link already exists with correct target - skip silently
-				continue
+	processLinks := func() error {
+		for i, link := range links {
+			if len(links) > 10 && i%5 == 0 {
+				progress.Update(i + 1)
 			}
-			// Print warning but continue with other links
-			PrintWarning("Failed to link %s: %v", ContractPath(link.Target), err)
-			failed++
-		} else {
-			created++
+			// Create parent directory if needed
+			parentDir := filepath.Dir(link.Target)
+			if !createdDirs[parentDir] {
+				if err := os.MkdirAll(parentDir, 0755); err != nil {
+					return fmt.Errorf("failed to create directory %s: %w", parentDir, err)
+				}
+				createdDirs[parentDir] = true
+			}
+
+			// Create the symlink
+			if err := createLink(link.Source, link.Target); err != nil {
+				if _, ok := err.(LinkExistsError); ok {
+					// Link already exists with correct target - skip silently
+					continue
+				}
+				// Print warning but continue with other links
+				PrintWarning("Failed to link %s: %v", ContractPath(link.Target), err)
+				failed++
+			} else {
+				created++
+			}
+		}
+		return nil
+	}
+
+	// Use ShowProgress to handle the 1-second delay
+	if len(links) > 10 {
+		if err := ShowProgress("Creating symlinks", processLinks); err != nil {
+			return err
+		}
+	} else {
+		if err := processLinks(); err != nil {
+			return err
 		}
 	}
 

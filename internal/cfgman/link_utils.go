@@ -17,32 +17,43 @@ type ManagedLink struct {
 // FindManagedLinks finds all symlinks within a directory that point to the config repo
 func FindManagedLinks(startPath, configRepo string, config *Config) ([]ManagedLink, error) {
 	var links []ManagedLink
+	var fileCount int
 
-	err := filepath.Walk(startPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			// Debug the error but continue walking
-			Debug("Error walking path %s: %v", path, err)
-			return nil
-		}
+	// Create progress indicator
+	progress := NewProgressIndicator("Searching for managed links")
 
-		// Skip certain directories
-		if info.IsDir() {
-			name := filepath.Base(path)
-			// Skip specific system directories but allow other dot directories
-			if name == LibraryDir || name == TrashDir {
-				return filepath.SkipDir
+	// Use ShowProgress to handle the 1-second delay
+	err := ShowProgress("Searching for managed links", func() error {
+		return filepath.Walk(startPath, func(path string, info os.FileInfo, err error) error {
+			fileCount++
+			if fileCount%100 == 0 {
+				progress.Update(fileCount)
 			}
-			return nil
-		}
-
-		// Check if it's a symlink
-		if info.Mode()&os.ModeSymlink != 0 {
-			if link := checkManagedLink(path, configRepo, config); link != nil {
-				links = append(links, *link)
+			if err != nil {
+				// Debug the error but continue walking
+				Debug("Error walking path %s: %v", path, err)
+				return nil
 			}
-		}
 
-		return nil
+			// Skip certain directories
+			if info.IsDir() {
+				name := filepath.Base(path)
+				// Skip specific system directories but allow other dot directories
+				if name == LibraryDir || name == TrashDir {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+
+			// Check if it's a symlink
+			if info.Mode()&os.ModeSymlink != 0 {
+				if link := checkManagedLink(path, configRepo, config); link != nil {
+					links = append(links, *link)
+				}
+			}
+
+			return nil
+		})
 	})
 
 	return links, err
