@@ -44,8 +44,41 @@ func main() {
 		}
 	}
 
-	// No global flags needed anymore - cfgman works from current directory
-	remainingArgs := os.Args[1:]
+	// Parse global flags first
+	var globalVerbose, globalQuiet bool
+	remainingArgs := []string{}
+
+	// Manual parsing to extract global flags before command
+	skipNext := false
+	for _, arg := range os.Args[1:] {
+		if skipNext {
+			skipNext = false
+			continue
+		}
+
+		switch arg {
+		case "--verbose", "-v":
+			globalVerbose = true
+		case "--quiet", "-q":
+			globalQuiet = true
+		case "-h", "--help":
+			// Let it pass through to be handled later
+			remainingArgs = append(remainingArgs, arg)
+		default:
+			remainingArgs = append(remainingArgs, arg)
+		}
+	}
+
+	// Set verbosity level based on flags
+	if globalQuiet && globalVerbose {
+		cfgman.PrintError("Cannot use --quiet and --verbose together")
+		os.Exit(1)
+	}
+	if globalQuiet {
+		cfgman.SetVerbosity(cfgman.VerbosityQuiet)
+	} else if globalVerbose {
+		cfgman.SetVerbosity(cfgman.VerbosityVerbose)
+	}
 
 	if len(remainingArgs) < 1 {
 		printUsage()
@@ -352,7 +385,13 @@ func handleInit(args []string) {
 }
 
 func printUsage() {
-	fmt.Printf("%s cfgman <command> [options]\n", cfgman.Bold("Usage:"))
+	fmt.Printf("%s cfgman [global options] <command> [options]\n", cfgman.Bold("Usage:"))
+	fmt.Println()
+	fmt.Println(cfgman.Bold("Global Options:"))
+	fmt.Printf("  -v, --verbose        Enable verbose output\n")
+	fmt.Printf("  -q, --quiet          Suppress all non-error output\n")
+	fmt.Printf("      --version        Show version information\n")
+	fmt.Printf("  -h, --help           Show this help message\n")
 	fmt.Println()
 	fmt.Println(cfgman.Bold("Commands:"))
 	fmt.Printf("  %s\n", cfgman.Cyan("Configuration:"))

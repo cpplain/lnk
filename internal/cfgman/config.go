@@ -26,13 +26,18 @@ type Config struct {
 
 // LoadConfig reads the configuration from a JSON file in the specified directory
 func LoadConfig(configRepo string) (*Config, error) {
+	PrintVerbose("Loading configuration from directory: %s", configRepo)
+
 	// Convert to absolute path
 	absConfigRepo, err := filepath.Abs(configRepo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve config directory: %w", err)
 	}
+	PrintVerbose("Resolved config directory: %s", absConfigRepo)
+
 	// Check for .cfgman.json
 	cfgmanPath := filepath.Join(absConfigRepo, ConfigFileName)
+	PrintVerbose("Looking for config file: %s", cfgmanPath)
 	if _, err := os.Stat(cfgmanPath); err != nil {
 		// Config file doesn't exist
 		if os.IsNotExist(err) {
@@ -59,6 +64,9 @@ func LoadConfig(configRepo string) (*Config, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
+
+	PrintVerbose("Successfully loaded config with %d link mappings and %d ignore patterns",
+		len(config.LinkMappings), len(config.IgnorePatterns))
 
 	return &config, nil
 }

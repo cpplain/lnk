@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added CLI Design Guidelines section to CONTRIBUTING.md for contributors
   - Added CLI Design Principles section to CLAUDE.md for implementation guidance
   - Documents four core principles: Obvious Over Clever, Helpful Over Minimal, Consistent Over Special, Human-First Machine-Friendly
+- **Global verbosity control** - Added `--verbose`/`-v` and `--quiet`/`-q` global flags:
+  - `--verbose` enables detailed debug output showing internal operations
+  - `--quiet` suppresses all non-error output for scripting
+  - Flags are mutually exclusive and work with all commands
+  - Verbose mode includes configuration loading details and operation progress
 
 ### Changed
 

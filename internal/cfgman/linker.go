@@ -28,16 +28,21 @@ func CreateLinks(configRepo string, config *Config, dryRun bool) error {
 	}
 
 	// Phase 1: Collect all files to link
+	PrintVerbose("Starting phase 1: collecting files to link")
 	var plannedLinks []PlannedLink
 	for _, mapping := range config.LinkMappings {
+		PrintVerbose("Processing mapping: %s -> %s", mapping.Source, mapping.Target)
+
 		// Expand the target path (handle ~/)
 		targetPath, err := ExpandPath(mapping.Target)
 		if err != nil {
 			return fmt.Errorf("expanding target path for mapping %s: %w", mapping.Source, err)
 		}
+		PrintVerbose("Expanded target path: %s", targetPath)
 
 		// Build the source path
 		sourcePath := filepath.Join(absConfigRepo, mapping.Source)
+		PrintVerbose("Source path: %s", sourcePath)
 
 		// Check if source directory exists
 		if info, err := os.Stat(sourcePath); err != nil {
