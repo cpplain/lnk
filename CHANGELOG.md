@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING: Standardized command naming** - Renamed hyphenated commands to single-word verbs:
+  - `create-links` → `create` (context makes it clear we're creating symlinks)
+  - `remove-links` → `remove` (context makes it clear we're removing symlinks)  
+  - `prune-links` → `prune` (already implies removing broken symlinks)
+  - All commands now follow consistent single-word verb pattern
+  - Simplifies command usage and improves consistency
+  - Updated all documentation and help text to reflect new names
+
 ### Added
 
 - CLI design documentation following [cpplain/cli-design](https://github.com/cpplain/cli-design) principles

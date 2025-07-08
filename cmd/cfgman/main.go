@@ -134,11 +134,11 @@ func main() {
 		handleAdopt(commandArgs)
 	case "orphan":
 		handleOrphan(commandArgs, globalYes)
-	case "create-links":
+	case "create":
 		handleCreateLinks(commandArgs)
-	case "remove-links":
+	case "remove":
 		handleRemoveLinks(commandArgs, globalYes)
-	case "prune-links":
+	case "prune":
 		handlePruneLinks(commandArgs, globalYes)
 	case "init":
 		handleInit(commandArgs)
@@ -160,7 +160,7 @@ func handleStatus(args []string) {
 		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
 		fmt.Print(formatFlags(fs))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
-		fmt.Printf("  %s\n", cfgman.Cyan("create-links, prune-links"))
+		fmt.Printf("  %s\n", cfgman.Cyan("create, prune"))
 	}
 	fs.Parse(args)
 
@@ -192,7 +192,7 @@ func handleAdopt(args []string) {
 		fmt.Println(cfgman.Cyan("  cfgman adopt ~/.gitconfig home"))
 		fmt.Println(cfgman.Cyan("  cfgman adopt ~/.ssh/config private/home"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
-		fmt.Printf("  %s\n", cfgman.Cyan("orphan, create-links, status"))
+		fmt.Printf("  %s\n", cfgman.Cyan("orphan, create, status"))
 	}
 
 	fs.Parse(args)
@@ -258,19 +258,19 @@ func handleOrphan(args []string, globalYes bool) {
 }
 
 func handleCreateLinks(args []string) {
-	fs := flag.NewFlagSet("create-links", flag.ExitOnError)
+	fs := flag.NewFlagSet("create", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 
 	fs.Usage = func() {
-		fmt.Printf("%s cfgman create-links [options]\n", cfgman.Bold("Usage:"))
+		fmt.Printf("%s cfgman create [options]\n", cfgman.Bold("Usage:"))
 		fmt.Printf("\n%s\n", cfgman.Cyan("Create symlinks from repository to home directory"))
 		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
 		fmt.Print(formatFlags(fs))
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
-		fmt.Println(cfgman.Cyan("  cfgman create-links"))
-		fmt.Println(cfgman.Cyan("  cfgman create-links --dry-run"))
+		fmt.Println(cfgman.Cyan("  cfgman create"))
+		fmt.Println(cfgman.Cyan("  cfgman create --dry-run"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
-		fmt.Printf("  %s\n", cfgman.Cyan("remove-links, status, adopt"))
+		fmt.Printf("  %s\n", cfgman.Cyan("remove, status, adopt"))
 	}
 
 	fs.Parse(args)
@@ -288,20 +288,20 @@ func handleCreateLinks(args []string) {
 }
 
 func handleRemoveLinks(args []string, globalYes bool) {
-	fs := flag.NewFlagSet("remove-links", flag.ExitOnError)
+	fs := flag.NewFlagSet("remove", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 	force := fs.Bool("force", false, "Skip confirmation prompt")
 
 	fs.Usage = func() {
-		fmt.Printf("%s cfgman remove-links [options]\n", cfgman.Bold("Usage:"))
+		fmt.Printf("%s cfgman remove [options]\n", cfgman.Bold("Usage:"))
 		fmt.Printf("\n%s\n", cfgman.Cyan("Remove all managed symlinks"))
 		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
 		fmt.Print(formatFlags(fs))
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
-		fmt.Println(cfgman.Cyan("  cfgman remove-links"))
-		fmt.Println(cfgman.Cyan("  cfgman remove-links --dry-run"))
+		fmt.Println(cfgman.Cyan("  cfgman remove"))
+		fmt.Println(cfgman.Cyan("  cfgman remove --dry-run"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
-		fmt.Printf("  %s\n", cfgman.Cyan("create-links, prune-links, orphan"))
+		fmt.Printf("  %s\n", cfgman.Cyan("create, prune, orphan"))
 	}
 
 	fs.Parse(args)
@@ -319,20 +319,20 @@ func handleRemoveLinks(args []string, globalYes bool) {
 }
 
 func handlePruneLinks(args []string, globalYes bool) {
-	fs := flag.NewFlagSet("prune-links", flag.ExitOnError)
+	fs := flag.NewFlagSet("prune", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 	force := fs.Bool("force", false, "Skip confirmation prompt")
 
 	fs.Usage = func() {
-		fmt.Printf("%s cfgman prune-links [options]\n", cfgman.Bold("Usage:"))
+		fmt.Printf("%s cfgman prune [options]\n", cfgman.Bold("Usage:"))
 		fmt.Printf("\n%s\n", cfgman.Cyan("Remove broken symlinks"))
 		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
 		fmt.Print(formatFlags(fs))
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
-		fmt.Println(cfgman.Cyan("  cfgman prune-links"))
-		fmt.Println(cfgman.Cyan("  cfgman prune-links --dry-run"))
+		fmt.Println(cfgman.Cyan("  cfgman prune"))
+		fmt.Println(cfgman.Cyan("  cfgman prune --dry-run"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
-		fmt.Printf("  %s\n", cfgman.Cyan("remove-links, status"))
+		fmt.Printf("  %s\n", cfgman.Cyan("remove, status"))
 	}
 
 	fs.Parse(args)
@@ -378,7 +378,7 @@ func handleInit(args []string) {
 		fmt.Printf("  • Set the %s (e.g., '~/')\n", cfgman.Bold("target directory"))
 		fmt.Printf("  • Add any %s you need\n", cfgman.Bold("ignore patterns"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
-		fmt.Printf("  %s\n", cfgman.Cyan("adopt, create-links"))
+		fmt.Printf("  %s\n", cfgman.Cyan("adopt, create"))
 	}
 
 	fs.Parse(args)
@@ -454,9 +454,9 @@ func printUsage() {
 	fmt.Printf("    %-20s Show status of all managed symlinks\n", cfgman.Bold("status"))
 	fmt.Printf("    %-20s Adopt file/directory into repository\n", cfgman.Bold("adopt"))
 	fmt.Printf("    %-20s Remove file/directory from repo management\n", cfgman.Bold("orphan"))
-	fmt.Printf("    %-20s Create symlinks from repo to home\n", cfgman.Bold("create-links"))
-	fmt.Printf("    %-20s Remove all managed symlinks\n", cfgman.Bold("remove-links"))
-	fmt.Printf("    %-20s Remove broken symlinks\n", cfgman.Bold("prune-links"))
+	fmt.Printf("    %-20s Create symlinks from repo to home\n", cfgman.Bold("create"))
+	fmt.Printf("    %-20s Remove all managed symlinks\n", cfgman.Bold("remove"))
+	fmt.Printf("    %-20s Remove broken symlinks\n", cfgman.Bold("prune"))
 	fmt.Println()
 	fmt.Printf("  %s\n", cfgman.Cyan("Other:"))
 	fmt.Printf("    %-20s Show version information\n", cfgman.Bold("version"))
@@ -476,11 +476,11 @@ func printCommandHelp(command string) {
 		handleAdopt([]string{"-h"})
 	case "orphan":
 		handleOrphan([]string{"-h"}, false)
-	case "create-links":
+	case "create":
 		handleCreateLinks([]string{"-h"})
-	case "remove-links":
+	case "remove":
 		handleRemoveLinks([]string{"-h"}, false)
-	case "prune-links":
+	case "prune":
 		handlePruneLinks([]string{"-h"}, false)
 	case "init":
 		handleInit([]string{"-h"})

@@ -70,7 +70,7 @@ This project follows the principles outlined in [cpplain/cli-design](https://git
 
 #### When Adding Commands
 
-- Use clear, descriptive command names (e.g., `create-links` not `link`)
+- Use clear, descriptive command names that are unambiguous in context
 - Provide comprehensive help text with examples
 - Support `--dry-run` for all destructive operations
 - Use consistent flag naming across commands

@@ -37,7 +37,7 @@ cfgman adopt ~/.gitconfig home
 cfgman adopt ~/.ssh/config private/home
 
 # 4. Create symlinks on new machines
-cfgman create-links
+cfgman create
 ```
 
 ## Configuration
@@ -82,9 +82,9 @@ cfgman init                          # Create a minimal .cfgman.json template
 
 ```bash
 cfgman status                        # Show all managed symlinks
-cfgman create-links [--dry-run]      # Create symlinks from repo to home
-cfgman remove-links [--dry-run]      # Remove all managed symlinks
-cfgman prune-links [--dry-run]       # Remove broken symlinks
+cfgman create [--dry-run]      # Create symlinks from repo to home
+cfgman remove [--dry-run]            # Remove all managed symlinks
+cfgman prune [--dry-run]             # Remove broken symlinks
 ```
 
 ### File Operations
@@ -138,7 +138,7 @@ cd ~/dotfiles && git submodule update --init  # If using private submodule
 
 # 2. Create links (must be run from repository directory)
 cd ~/dotfiles
-cfgman create-links
+cfgman create
 ```
 
 ### Adding New Configurations
