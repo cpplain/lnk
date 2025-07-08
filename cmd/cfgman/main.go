@@ -37,7 +37,7 @@ func formatFlags(fs *flag.FlagSet) string {
 
 func main() {
 	// Parse global flags first
-	var globalVerbose, globalQuiet, globalJSON, globalNoColor, globalVersion bool
+	var globalVerbose, globalQuiet, globalJSON, globalNoColor, globalVersion, globalYes bool
 	remainingArgs := []string{}
 
 	// Manual parsing to extract global flags before command
@@ -59,6 +59,8 @@ func main() {
 			globalNoColor = true
 		case "--version":
 			globalVersion = true
+		case "--yes", "-y":
+			globalYes = true
 		case "-h", "--help":
 			// Let it pass through to be handled later
 			remainingArgs = append(remainingArgs, arg)
@@ -125,13 +127,13 @@ func main() {
 	case "adopt":
 		handleAdopt(commandArgs)
 	case "orphan":
-		handleOrphan(commandArgs)
+		handleOrphan(commandArgs, globalYes)
 	case "create-links":
 		handleCreateLinks(commandArgs)
 	case "remove-links":
-		handleRemoveLinks(commandArgs)
+		handleRemoveLinks(commandArgs, globalYes)
 	case "prune-links":
-		handlePruneLinks(commandArgs)
+		handlePruneLinks(commandArgs, globalYes)
 	case "init":
 		handleInit(commandArgs)
 	case "version":
@@ -205,7 +207,7 @@ func handleAdopt(args []string) {
 	}
 }
 
-func handleOrphan(args []string) {
+func handleOrphan(args []string, globalYes bool) {
 	fs := flag.NewFlagSet("orphan", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 	force := fs.Bool("force", false, "Skip confirmation prompt")
@@ -237,7 +239,7 @@ func handleOrphan(args []string) {
 		os.Exit(1)
 	}
 
-	if err := cfgman.Orphan(path, ".", config, *dryRun, *force); err != nil {
+	if err := cfgman.Orphan(path, ".", config, *dryRun, *force || globalYes); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
@@ -271,7 +273,7 @@ func handleCreateLinks(args []string) {
 	}
 }
 
-func handleRemoveLinks(args []string) {
+func handleRemoveLinks(args []string, globalYes bool) {
 	fs := flag.NewFlagSet("remove-links", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 	force := fs.Bool("force", false, "Skip confirmation prompt")
@@ -294,13 +296,13 @@ func handleRemoveLinks(args []string) {
 		os.Exit(1)
 	}
 
-	if err := cfgman.RemoveLinks(".", config, *dryRun, *force); err != nil {
+	if err := cfgman.RemoveLinks(".", config, *dryRun, *force || globalYes); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
 }
 
-func handlePruneLinks(args []string) {
+func handlePruneLinks(args []string, globalYes bool) {
 	fs := flag.NewFlagSet("prune-links", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 	force := fs.Bool("force", false, "Skip confirmation prompt")
@@ -323,7 +325,7 @@ func handlePruneLinks(args []string) {
 		os.Exit(1)
 	}
 
-	if err := cfgman.PruneLinks(".", config, *dryRun, *force); err != nil {
+	if err := cfgman.PruneLinks(".", config, *dryRun, *force || globalYes); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
@@ -418,6 +420,7 @@ func printUsage() {
 	fmt.Println(cfgman.Bold("Global Options:"))
 	fmt.Printf("  -v, --verbose        Enable verbose output\n")
 	fmt.Printf("  -q, --quiet          Suppress all non-error output\n")
+	fmt.Printf("  -y, --yes            Assume yes to all prompts\n")
 	fmt.Printf("      --json           Output in JSON format (where supported)\n")
 	fmt.Printf("      --no-color       Disable colored output\n")
 	fmt.Printf("      --version        Show version information\n")
@@ -452,13 +455,13 @@ func printCommandHelp(command string) {
 	case "adopt":
 		handleAdopt([]string{"-h"})
 	case "orphan":
-		handleOrphan([]string{"-h"})
+		handleOrphan([]string{"-h"}, false)
 	case "create-links":
 		handleCreateLinks([]string{"-h"})
 	case "remove-links":
-		handleRemoveLinks([]string{"-h"})
+		handleRemoveLinks([]string{"-h"}, false)
 	case "prune-links":
-		handlePruneLinks([]string{"-h"})
+		handlePruneLinks([]string{"-h"}, false)
 	case "init":
 		handleInit([]string{"-h"})
 	case "version":

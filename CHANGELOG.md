@@ -44,6 +44,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Default answer is "No" for safety
   - Added `--force` flag to all three commands to skip confirmation prompts
   - Automatically skips prompts when not in a terminal (safe for scripts)
+- **Global --yes flag** - Added `--yes`/`-y` global flag for automation:
+  - Works with all destructive commands (orphan, remove-links, prune-links)
+  - Assumes "yes" to all confirmation prompts
+  - Can be used instead of or in addition to command-specific `--force` flags
+  - Follows common CLI conventions (similar to apt-get -y, npm -y)
 
 ### Changed
 
