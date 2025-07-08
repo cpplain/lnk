@@ -651,7 +651,7 @@ func TestPruneLinks(t *testing.T) {
 			configRepo := tt.setup(t, tmpDir)
 
 			config := &Config{}
-			err := PruneLinks(configRepo, config, tt.dryRun)
+			err := PruneLinks(configRepo, config, tt.dryRun, true)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("PruneLinks() error = %v, wantErr %v", err, tt.wantErr)
 				return

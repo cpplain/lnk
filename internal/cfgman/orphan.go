@@ -7,7 +7,7 @@ import (
 )
 
 // Orphan removes a file or directory from repository management
-func Orphan(link string, configRepo string, config *Config, dryRun bool) error {
+func Orphan(link string, configRepo string, config *Config, dryRun bool, force bool) error {
 	// Convert to absolute paths
 	absConfigRepo, err := filepath.Abs(configRepo)
 	if err != nil {
@@ -77,6 +77,26 @@ func Orphan(link string, configRepo string, config *Config, dryRun bool) error {
 			PrintDetail("Remove from repository: %s", ContractPath(link.Target))
 		}
 		return nil
+	}
+
+	// Confirm action if not forced
+	if !force {
+		fmt.Println()
+		var prompt string
+		if len(managedLinks) == 1 {
+			prompt = fmt.Sprintf("This will orphan 1 file. Continue? (y/N): ")
+		} else {
+			prompt = fmt.Sprintf("This will orphan %d file(s). Continue? (y/N): ", len(managedLinks))
+		}
+
+		confirmed, err := ConfirmAction(prompt)
+		if err != nil {
+			return fmt.Errorf("failed to read confirmation: %w", err)
+		}
+		if !confirmed {
+			PrintInfo("Operation cancelled.")
+			return nil
+		}
 	}
 
 	// Process each link

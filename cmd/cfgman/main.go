@@ -208,6 +208,7 @@ func handleAdopt(args []string) {
 func handleOrphan(args []string) {
 	fs := flag.NewFlagSet("orphan", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
+	force := fs.Bool("force", false, "Skip confirmation prompt")
 
 	fs.Usage = func() {
 		fmt.Printf("%s cfgman orphan [options] PATH\n", cfgman.Bold("Usage:"))
@@ -236,7 +237,7 @@ func handleOrphan(args []string) {
 		os.Exit(1)
 	}
 
-	if err := cfgman.Orphan(path, ".", config, *dryRun); err != nil {
+	if err := cfgman.Orphan(path, ".", config, *dryRun, *force); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
@@ -273,6 +274,7 @@ func handleCreateLinks(args []string) {
 func handleRemoveLinks(args []string) {
 	fs := flag.NewFlagSet("remove-links", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
+	force := fs.Bool("force", false, "Skip confirmation prompt")
 
 	fs.Usage = func() {
 		fmt.Printf("%s cfgman remove-links [options]\n", cfgman.Bold("Usage:"))
@@ -292,7 +294,7 @@ func handleRemoveLinks(args []string) {
 		os.Exit(1)
 	}
 
-	if err := cfgman.RemoveLinks(".", config, *dryRun); err != nil {
+	if err := cfgman.RemoveLinks(".", config, *dryRun, *force); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
@@ -301,6 +303,7 @@ func handleRemoveLinks(args []string) {
 func handlePruneLinks(args []string) {
 	fs := flag.NewFlagSet("prune-links", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
+	force := fs.Bool("force", false, "Skip confirmation prompt")
 
 	fs.Usage = func() {
 		fmt.Printf("%s cfgman prune-links [options]\n", cfgman.Bold("Usage:"))
@@ -320,7 +323,7 @@ func handlePruneLinks(args []string) {
 		os.Exit(1)
 	}
 
-	if err := cfgman.PruneLinks(".", config, *dryRun); err != nil {
+	if err := cfgman.PruneLinks(".", config, *dryRun, *force); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}

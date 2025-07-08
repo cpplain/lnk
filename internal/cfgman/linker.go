@@ -93,13 +93,13 @@ func CreateLinks(configRepo string, config *Config, dryRun bool) error {
 }
 
 // RemoveLinks removes all symlinks pointing to the config repository
-func RemoveLinks(configRepo string, config *Config, dryRun bool) error {
+func RemoveLinks(configRepo string, config *Config, dryRun bool, force bool) error {
 	// Convert to absolute path
 	absConfigRepo, err := filepath.Abs(configRepo)
 	if err != nil {
 		return fmt.Errorf("failed to resolve repository path: %w", err)
 	}
-	return removeLinks(absConfigRepo, config, dryRun, false)
+	return removeLinks(absConfigRepo, config, dryRun, !force)
 }
 
 // removeLinks is the internal implementation that allows skipping confirmation
@@ -122,40 +122,62 @@ func removeLinks(configRepo string, config *Config, dryRun bool, skipConfirm boo
 		return nil
 	}
 
+	// Show what will be removed in dry-run mode
+	if dryRun {
+		for _, link := range links {
+			PrintDryRun("Would remove: %s", ContractPath(link.Path))
+		}
+		return nil
+	}
+
+	// Confirm action if not skipped
+	if !skipConfirm {
+		fmt.Println()
+		var prompt string
+		if len(links) == 1 {
+			prompt = fmt.Sprintf("This will remove 1 symlink. Continue? (y/N): ")
+		} else {
+			prompt = fmt.Sprintf("This will remove %d symlink(s). Continue? (y/N): ", len(links))
+		}
+
+		confirmed, err := ConfirmAction(prompt)
+		if err != nil {
+			return fmt.Errorf("failed to read confirmation: %w", err)
+		}
+		if !confirmed {
+			PrintInfo("Operation cancelled.")
+			return nil
+		}
+	}
+
 	// Track results for summary
 	var removed, failed int
 
 	// Remove links
 	for _, link := range links {
-		if dryRun {
-			PrintDryRun("Would remove: %s", ContractPath(link.Path))
-		} else {
-			if err := os.Remove(link.Path); err != nil {
-				PrintError("Failed to remove %s: %v", ContractPath(link.Path), err)
-				failed++
-				continue
-			}
-			PrintSuccess("Removed: %s", ContractPath(link.Path))
-			removed++
+		if err := os.Remove(link.Path); err != nil {
+			PrintError("Failed to remove %s: %v", ContractPath(link.Path), err)
+			failed++
+			continue
 		}
+		PrintSuccess("Removed: %s", ContractPath(link.Path))
+		removed++
 	}
 
-	// Print summary for non-dry-run
-	if !dryRun {
-		fmt.Println()
-		if removed > 0 {
-			PrintSuccess("Removed %d symlink(s) successfully", removed)
-		}
-		if failed > 0 {
-			PrintWarning("Failed to remove %d symlink(s)", failed)
-		}
+	// Print summary
+	fmt.Println()
+	if removed > 0 {
+		PrintSuccess("Removed %d symlink(s) successfully", removed)
+	}
+	if failed > 0 {
+		PrintWarning("Failed to remove %d symlink(s)", failed)
 	}
 
 	return nil
 }
 
 // PruneLinks removes broken symlinks pointing to the config repository
-func PruneLinks(configRepo string, config *Config, dryRun bool) error {
+func PruneLinks(configRepo string, config *Config, dryRun bool, force bool) error {
 	// Convert to absolute path
 	absConfigRepo, err := filepath.Abs(configRepo)
 	if err != nil {
@@ -189,33 +211,55 @@ func PruneLinks(configRepo string, config *Config, dryRun bool) error {
 		return nil
 	}
 
+	// Show what will be pruned in dry-run mode
+	if dryRun {
+		for _, link := range brokenLinks {
+			PrintDryRun("Would prune: %s", ContractPath(link.Path))
+		}
+		return nil
+	}
+
+	// Confirm action if not forced
+	if !force {
+		fmt.Println()
+		var prompt string
+		if len(brokenLinks) == 1 {
+			prompt = fmt.Sprintf("This will remove 1 broken symlink. Continue? (y/N): ")
+		} else {
+			prompt = fmt.Sprintf("This will remove %d broken symlink(s). Continue? (y/N): ", len(brokenLinks))
+		}
+
+		confirmed, err := ConfirmAction(prompt)
+		if err != nil {
+			return fmt.Errorf("failed to read confirmation: %w", err)
+		}
+		if !confirmed {
+			PrintInfo("Operation cancelled.")
+			return nil
+		}
+	}
+
 	// Track results for summary
 	var pruned, failed int
 
 	// Remove the broken links
 	for _, link := range brokenLinks {
-		if dryRun {
-			PrintDryRun("Would prune: %s", ContractPath(link.Path))
-		} else {
-			if err := os.Remove(link.Path); err != nil {
-				PrintError("Failed to remove %s: %v", ContractPath(link.Path), err)
-				failed++
-				continue
-			}
-			PrintSuccess("Pruned: %s", ContractPath(link.Path))
-			pruned++
+		if err := os.Remove(link.Path); err != nil {
+			PrintError("Failed to remove %s: %v", ContractPath(link.Path), err)
+			failed++
+			continue
 		}
+		PrintSuccess("Pruned: %s", ContractPath(link.Path))
+		pruned++
 	}
 
-	// Print summary for non-dry-run
-	if !dryRun {
-		fmt.Println()
-		if pruned > 0 {
-			PrintSuccess("Pruned %d broken symlink(s) successfully", pruned)
-		}
-		if failed > 0 {
-			PrintWarning("Failed to prune %d symlink(s)", failed)
-		}
+	// Print summary
+	fmt.Println()
+	if pruned > 0 {
+		PrintSuccess("Pruned %d broken symlink(s) successfully", pruned)
+	}
+	if failed > 0 {
+		PrintWarning("Failed to prune %d symlink(s)", failed)
 	}
 
 	return nil

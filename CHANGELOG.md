@@ -38,12 +38,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Invalid paths show correct format examples
   - Unknown commands direct to help documentation
   - Leverages existing hint infrastructure throughout the codebase
+- **Confirmation prompts for destructive operations** - Added interactive confirmation prompts:
+  - `orphan`, `remove-links`, and `prune-links` now ask for confirmation before proceeding
+  - Prompts clearly indicate what will be affected (e.g., "This will remove 3 symlink(s). Continue? (y/N): ")
+  - Default answer is "No" for safety
+  - Added `--force` flag to all three commands to skip confirmation prompts
+  - Automatically skips prompts when not in a terminal (safe for scripts)
 
 ### Changed
 
 - **Major refactoring for better maintainability** - Simplified codebase architecture:
   - Removed logger abstraction (`logger.go`) in favor of direct output functions
-  - Removed input handling abstraction (`input.go`) for non-interactive operation
   - Removed unnecessary interface abstractions (`interfaces.go`) for cleaner, more idiomatic Go code
   - Added centralized output helpers (`output.go`) for consistent formatting
   - Added path utilities (`path_utils.go`) for home directory contraction
@@ -54,12 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Debug output only shown when `CFGMAN_DEBUG` environment variable is set
 - **Better status output** - Status command now uses tabwriter for aligned table format with summary statistics
 - **Cleaner error handling** - All errors in main.go now use consistent format without log.Fatal timestamps
-- **Consistent prune-links behavior** - Updated prune-links to match remove-links: no confirmation prompt, immediate execution with "Pruning broken symlinks..." message
 - **Consistent home directory display** - All paths shown to users now consistently display home directory as `~` instead of the full path
-- **Non-interactive operation** - Removed all user prompts for scriptability:
-  - `adopt` now requires source directory as a mandatory argument
-  - `orphan` executes immediately without confirmation (use `--dry-run` for safety)
-  - Removed all input handling code and interfaces
 - **Cleaner orphan output** - Removed redundant initial file listing; progress is shown as files are processed
 - **Simplified adopt output** - Adopt command now uses single "✓ Adopted: <path>" line per file, matching the pattern of other commands
 - **Standardized all output helpers** - All commands now use consistent output helper functions (PrintError, PrintSuccess, PrintWarning, etc.) for uniform formatting across the entire CLI
