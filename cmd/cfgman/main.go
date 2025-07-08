@@ -159,6 +159,8 @@ func handleStatus(args []string) {
 		fmt.Printf("\n%s\n", cfgman.Cyan("Show status of all managed symlinks"))
 		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
 		fmt.Print(formatFlags(fs))
+		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
+		fmt.Printf("  %s\n", cfgman.Cyan("create-links, prune-links"))
 	}
 	fs.Parse(args)
 
@@ -189,6 +191,8 @@ func handleAdopt(args []string) {
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
 		fmt.Println(cfgman.Cyan("  cfgman adopt ~/.gitconfig home"))
 		fmt.Println(cfgman.Cyan("  cfgman adopt ~/.ssh/config private/home"))
+		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
+		fmt.Printf("  %s\n", cfgman.Cyan("orphan, create-links, status"))
 	}
 
 	fs.Parse(args)
@@ -229,6 +233,8 @@ func handleOrphan(args []string, globalYes bool) {
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
 		fmt.Println(cfgman.Cyan("  cfgman orphan ~/.gitconfig"))
 		fmt.Println(cfgman.Cyan("  cfgman orphan ~/.config/nvim"))
+		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
+		fmt.Printf("  %s\n", cfgman.Cyan("adopt, status"))
 	}
 
 	fs.Parse(args)
@@ -263,6 +269,8 @@ func handleCreateLinks(args []string) {
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
 		fmt.Println(cfgman.Cyan("  cfgman create-links"))
 		fmt.Println(cfgman.Cyan("  cfgman create-links --dry-run"))
+		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
+		fmt.Printf("  %s\n", cfgman.Cyan("remove-links, status, adopt"))
 	}
 
 	fs.Parse(args)
@@ -292,6 +300,8 @@ func handleRemoveLinks(args []string, globalYes bool) {
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
 		fmt.Println(cfgman.Cyan("  cfgman remove-links"))
 		fmt.Println(cfgman.Cyan("  cfgman remove-links --dry-run"))
+		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
+		fmt.Printf("  %s\n", cfgman.Cyan("create-links, prune-links, orphan"))
 	}
 
 	fs.Parse(args)
@@ -321,6 +331,8 @@ func handlePruneLinks(args []string, globalYes bool) {
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
 		fmt.Println(cfgman.Cyan("  cfgman prune-links"))
 		fmt.Println(cfgman.Cyan("  cfgman prune-links --dry-run"))
+		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
+		fmt.Printf("  %s\n", cfgman.Cyan("remove-links, status"))
 	}
 
 	fs.Parse(args)
@@ -365,6 +377,8 @@ func handleInit(args []string) {
 		fmt.Printf("  • Set the %s (e.g., 'home')\n", cfgman.Bold("source directory"))
 		fmt.Printf("  • Set the %s (e.g., '~/')\n", cfgman.Bold("target directory"))
 		fmt.Printf("  • Add any %s you need\n", cfgman.Bold("ignore patterns"))
+		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
+		fmt.Printf("  %s\n", cfgman.Cyan("adopt, create-links"))
 	}
 
 	fs.Parse(args)

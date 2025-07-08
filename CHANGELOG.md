@@ -54,6 +54,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Boolean flags that default to false don't show defaults (implied behavior)
   - Prepared infrastructure for future non-boolean flags to show defaults
   - Maintains clean, uncluttered help text for current boolean-only flags
+- **"See also" sections in command help** - Added cross-references between related commands:
+  - Each command's help text now includes a "See also" section listing related commands
+  - Helps users discover complementary functionality (e.g., adopt ↔ orphan, create-links ↔ remove-links)
+  - Improves command discoverability and navigation
+  - Follows CLI best practices for help text organization
 
 ### Changed
 
