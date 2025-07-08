@@ -59,6 +59,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Helps users discover complementary functionality (e.g., adopt ↔ orphan, create-links ↔ remove-links)
   - Improves command discoverability and navigation
   - Follows CLI best practices for help text organization
+- **Automatic output format adaptation for piping** - Output adapts based on TTY detection:
+  - When output is piped, automatically switches to simplified, parseable format
+  - Interactive terminal: Uses icons (✓, ✗, !) and colors for human-friendly output
+  - Piped output: Uses simple text markers (success, error, warning) for easy parsing
+  - Status command outputs `active <path>` or `broken <path>` format when piped
+  - Makes cfgman compatible with grep, awk, and other text processing tools
+  - JSON output (--json) takes precedence over automatic adaptation
+  - Follows CLI best practices for human-first, machine-friendly design
 
 ### Changed
 

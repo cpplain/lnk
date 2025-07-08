@@ -58,11 +58,11 @@ func TestStatusWithLinkMappings(t *testing.T) {
 	// Debug: print the actual output
 	t.Logf("Status output:\n%s", output)
 
-	// Verify the output shows the active links
-	if !strings.Contains(output, "✓ Active: ~/.bashrc") {
+	// Verify the output shows the active links (in simplified format when piped)
+	if !strings.Contains(output, "active ~/.bashrc") {
 		t.Errorf("Output should show active bashrc link")
 	}
-	if !strings.Contains(output, "✓ Active: ~/.gitconfig") {
+	if !strings.Contains(output, "active ~/.gitconfig") {
 		t.Errorf("Output should show active gitconfig link")
 	}
 

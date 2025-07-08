@@ -88,26 +88,38 @@ func Status(configRepo string, config *Config) error {
 		// Display active links
 		if len(activeLinks) > 0 {
 			for _, link := range activeLinks {
-				PrintSuccess("Active: %s", ContractPath(link.Link))
+				if ShouldSimplifyOutput() {
+					// For piped output, use simple format
+					fmt.Printf("active %s\n", ContractPath(link.Link))
+				} else {
+					PrintSuccess("Active: %s", ContractPath(link.Link))
+				}
 			}
 		}
 
 		// Display broken links
 		if len(brokenLinks) > 0 {
-			if len(activeLinks) > 0 {
+			if len(activeLinks) > 0 && !ShouldSimplifyOutput() {
 				fmt.Println()
 			}
 			for _, link := range brokenLinks {
-				PrintError("Broken: %s", ContractPath(link.Link))
+				if ShouldSimplifyOutput() {
+					// For piped output, use simple format
+					fmt.Printf("broken %s\n", ContractPath(link.Link))
+				} else {
+					PrintError("Broken: %s", ContractPath(link.Link))
+				}
 			}
 		}
 
 		// Summary
-		fmt.Println()
-		PrintInfo("Total: %s (%s active, %s broken)",
-			Bold(fmt.Sprintf("%d links", len(links))),
-			Green(fmt.Sprintf("%d", len(activeLinks))),
-			Red(fmt.Sprintf("%d", len(brokenLinks))))
+		if !ShouldSimplifyOutput() {
+			fmt.Println()
+			PrintInfo("Total: %s (%s active, %s broken)",
+				Bold(fmt.Sprintf("%d links", len(links))),
+				Green(fmt.Sprintf("%d", len(activeLinks))),
+				Red(fmt.Sprintf("%d", len(brokenLinks))))
+		}
 	} else {
 		PrintInfo("No active links found.")
 	}

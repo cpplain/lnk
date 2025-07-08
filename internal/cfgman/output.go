@@ -27,13 +27,23 @@ func PrintSkip(format string, args ...interface{}) {
 		return
 	}
 	message := fmt.Sprintf(format, args...)
-	fmt.Printf("%s %s\n", Yellow("○"), message)
+	if ShouldSimplifyOutput() {
+		// For piped output, use simple text marker
+		fmt.Printf("skip %s\n", message)
+	} else {
+		fmt.Printf("%s %s\n", Yellow("○"), message)
+	}
 }
 
 // PrintWarning prints a warning message to stderr with the warning icon
 func PrintWarning(format string, args ...interface{}) {
 	message := fmt.Sprintf(format, args...)
-	fmt.Fprintf(os.Stderr, "%s %s\n", Yellow(WarningIcon), message)
+	if ShouldSimplifyOutput() {
+		// For piped output, use simple text marker
+		fmt.Fprintf(os.Stderr, "warning: %s\n", message)
+	} else {
+		fmt.Fprintf(os.Stderr, "%s %s\n", Yellow(WarningIcon), message)
+	}
 }
 
 // PrintSuccess prints a success message with the success icon
@@ -42,7 +52,12 @@ func PrintSuccess(format string, args ...interface{}) {
 		return
 	}
 	message := fmt.Sprintf(format, args...)
-	fmt.Printf("%s %s\n", Green(SuccessIcon), message)
+	if ShouldSimplifyOutput() {
+		// For piped output, use simple text marker
+		fmt.Printf("success %s\n", message)
+	} else {
+		fmt.Printf("%s %s\n", Green(SuccessIcon), message)
+	}
 }
 
 // PrintDryRun prints a dry-run message with the dry-run prefix
@@ -51,23 +66,41 @@ func PrintDryRun(format string, args ...interface{}) {
 		return
 	}
 	message := fmt.Sprintf(format, args...)
-	fmt.Printf("%s %s\n", Yellow(DryRunPrefix), message)
+	if ShouldSimplifyOutput() {
+		// For piped output, use simple text marker
+		fmt.Printf("dry-run: %s\n", message)
+	} else {
+		fmt.Printf("%s %s\n", Yellow(DryRunPrefix), message)
+	}
 }
 
 // PrintError prints an error message to stderr with the error icon
 func PrintError(format string, args ...interface{}) {
 	message := fmt.Sprintf(format, args...)
-	fmt.Fprintf(os.Stderr, "%s Error: %s\n", Red(FailureIcon), message)
+	if ShouldSimplifyOutput() {
+		// For piped output, use simple text marker
+		fmt.Fprintf(os.Stderr, "error: %s\n", message)
+	} else {
+		fmt.Fprintf(os.Stderr, "%s Error: %s\n", Red(FailureIcon), message)
+	}
 }
 
 // PrintErrorWithHint prints an error message with an optional hint
 func PrintErrorWithHint(err error) {
-	// First print the error message
-	fmt.Fprintf(os.Stderr, "%s Error: %v\n", Red(FailureIcon), err)
+	if ShouldSimplifyOutput() {
+		// For piped output, use simple format
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		if hint := GetErrorHint(err); hint != "" {
+			fmt.Fprintf(os.Stderr, "hint: %s\n", hint)
+		}
+	} else {
+		// First print the error message
+		fmt.Fprintf(os.Stderr, "%s Error: %v\n", Red(FailureIcon), err)
 
-	// Check if there's a hint
-	if hint := GetErrorHint(err); hint != "" {
-		fmt.Fprintf(os.Stderr, "  %s %s\n", Cyan("Try:"), hint)
+		// Check if there's a hint
+		if hint := GetErrorHint(err); hint != "" {
+			fmt.Fprintf(os.Stderr, "  %s %s\n", Cyan("Try:"), hint)
+		}
 	}
 }
 
