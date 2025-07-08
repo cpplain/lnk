@@ -41,7 +41,7 @@ func TestAdopt(t *testing.T) {
 		{
 			name:          "adopt non-existent file",
 			expectError:   true,
-			errorContains: "does not exist",
+			errorContains: "no such file",
 		},
 		{
 			name:          "adopt already managed file",
@@ -112,7 +112,7 @@ func TestAdopt(t *testing.T) {
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("expected error but got none")
-				} else if !strings.Contains(err.Error(), tt.errorContains) {
+				} else if !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(tt.errorContains)) {
 					t.Errorf("expected error containing '%s', got: %v", tt.errorContains, err)
 				}
 				return

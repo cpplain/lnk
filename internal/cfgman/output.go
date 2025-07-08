@@ -60,6 +60,17 @@ func PrintError(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, "%s Error: %s\n", Red(FailureIcon), message)
 }
 
+// PrintErrorWithHint prints an error message with an optional hint
+func PrintErrorWithHint(err error) {
+	// First print the error message
+	fmt.Fprintf(os.Stderr, "%s Error: %v\n", Red(FailureIcon), err)
+
+	// Check if there's a hint
+	if hint := GetErrorHint(err); hint != "" {
+		fmt.Fprintf(os.Stderr, "  %s %s\n", Cyan("Try:"), hint)
+	}
+}
+
 // PrintInfo prints an informational message without any prefix
 func PrintInfo(format string, args ...interface{}) {
 	if IsQuiet() {

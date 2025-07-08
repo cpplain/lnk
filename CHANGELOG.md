@@ -32,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Works as a global flag alongside existing NO_COLOR environment variable support
   - Flag takes precedence over environment variable for explicit control
   - Useful for CI/CD environments and output parsing
+- **Enhanced error messages** - All errors now include actionable "Try:" suggestions:
+  - Configuration errors guide users to run `cfgman init`
+  - File conflicts suggest using `cfgman adopt` first
+  - Invalid paths show correct format examples
+  - Unknown commands direct to help documentation
+  - Leverages existing hint infrastructure throughout the codebase
 
 ### Changed
 

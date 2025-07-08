@@ -80,7 +80,9 @@ func main() {
 
 	// Set verbosity level based on flags
 	if globalQuiet && globalVerbose {
-		cfgman.PrintError("Cannot use --quiet and --verbose together")
+		cfgman.PrintErrorWithHint(cfgman.WithHint(
+			fmt.Errorf("cannot use --quiet and --verbose together"),
+			"Use either --quiet or --verbose, not both"))
 		os.Exit(1)
 	}
 	if globalQuiet {
@@ -135,8 +137,9 @@ func main() {
 	case "version":
 		handleVersion(commandArgs)
 	default:
-		cfgman.PrintError("Unknown command: %s", command)
-		printUsage()
+		cfgman.PrintErrorWithHint(cfgman.WithHint(
+			fmt.Errorf("unknown command: %s", command),
+			"Run 'cfgman --help' to see available commands"))
 		os.Exit(1)
 	}
 }
@@ -153,12 +156,12 @@ func handleStatus(args []string) {
 
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
-		cfgman.PrintError("%v", err)
+		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
 
 	if err := cfgman.Status(".", config); err != nil {
-		cfgman.PrintError("%v", err)
+		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
 }
@@ -192,12 +195,12 @@ func handleAdopt(args []string) {
 
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
-		cfgman.PrintError("%v", err)
+		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
 
 	if err := cfgman.Adopt(path, ".", config, sourceDir, *dryRun); err != nil {
-		cfgman.PrintError("%v", err)
+		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
 }
@@ -229,12 +232,12 @@ func handleOrphan(args []string) {
 	path := fs.Arg(0)
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
-		cfgman.PrintError("%v", err)
+		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
 
 	if err := cfgman.Orphan(path, ".", config, *dryRun); err != nil {
-		cfgman.PrintError("%v", err)
+		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
 }
@@ -257,12 +260,12 @@ func handleCreateLinks(args []string) {
 
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
-		cfgman.PrintError("%v", err)
+		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
 
 	if err := cfgman.CreateLinks(".", config, *dryRun); err != nil {
-		cfgman.PrintError("%v", err)
+		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
 }
@@ -285,12 +288,12 @@ func handleRemoveLinks(args []string) {
 
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
-		cfgman.PrintError("%v", err)
+		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
 
 	if err := cfgman.RemoveLinks(".", config, *dryRun); err != nil {
-		cfgman.PrintError("%v", err)
+		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
 }
@@ -313,12 +316,12 @@ func handlePruneLinks(args []string) {
 
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
-		cfgman.PrintError("%v", err)
+		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
 
 	if err := cfgman.PruneLinks(".", config, *dryRun); err != nil {
-		cfgman.PrintError("%v", err)
+		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
 }
@@ -359,7 +362,9 @@ func handleInit(args []string) {
 	cfgmanPath := filepath.Join(".", cfgman.ConfigFileName)
 	if !*force {
 		if _, err := os.Stat(cfgmanPath); err == nil {
-			cfgman.PrintError("%s already exists. Use --force to overwrite.", cfgman.ConfigFileName)
+			cfgman.PrintErrorWithHint(cfgman.WithHint(
+				fmt.Errorf("%s already exists", cfgman.ConfigFileName),
+				"Use '--force' to overwrite the existing configuration"))
 			os.Exit(1)
 		}
 	}
@@ -378,12 +383,14 @@ func handleInit(args []string) {
 	// Write the config file
 	data, err := json.MarshalIndent(defaultConfig, "", "  ")
 	if err != nil {
-		cfgman.PrintError("%v", err)
+		cfgman.PrintErrorWithHint(err)
 		os.Exit(1)
 	}
 
 	if err := os.WriteFile(cfgmanPath, data, 0644); err != nil {
-		cfgman.PrintError("Failed to write %s: %v", cfgman.ConfigFileName, err)
+		cfgman.PrintErrorWithHint(cfgman.WithHint(
+			fmt.Errorf("failed to write %s: %v", cfgman.ConfigFileName, err),
+			"Check that you have write permissions in this directory"))
 		os.Exit(1)
 	}
 
@@ -454,7 +461,8 @@ func printCommandHelp(command string) {
 	case "version":
 		handleVersion([]string{"-h"})
 	default:
-		cfgman.PrintError("Unknown command: %s", command)
-		printUsage()
+		cfgman.PrintErrorWithHint(cfgman.WithHint(
+			fmt.Errorf("unknown command: %s", command),
+			"Run 'cfgman --help' to see available commands"))
 	}
 }

@@ -24,7 +24,8 @@ func CreateLinks(configRepo string, config *Config, dryRun bool) error {
 
 	// Require LinkMappings to be defined
 	if len(config.LinkMappings) == 0 {
-		return ErrNoLinkMappings
+		return NewValidationErrorWithHint("link mappings", "", "no link mappings defined",
+			"Add at least one mapping to your .cfgman.json file. Example: {\"source\": \"home\", \"target\": \"~/\"}")
 	}
 
 	// Phase 1: Collect all files to link
@@ -355,17 +356,21 @@ func createLink(source, target string) error {
 			}
 			// Remove existing symlink pointing elsewhere
 			if err := os.Remove(target); err != nil {
-				return fmt.Errorf("failed to remove existing link: %w", err)
+				return NewLinkErrorWithHint("remove existing link", source, target, err,
+					"Check file permissions and ensure you have write access to the target directory")
 			}
 		} else {
 			// Target exists and is not a symlink
-			return fmt.Errorf("failed to create symlink: %s already exists and is not a symlink. Use 'cfgman adopt' to adopt this file first", target)
+			return NewLinkErrorWithHint("create symlink", source, target,
+				fmt.Errorf("file already exists and is not a symlink"),
+				fmt.Sprintf("Use 'cfgman adopt %s <source-dir>' to adopt this file first", target))
 		}
 	}
 
 	// Create new symlink
 	if err := os.Symlink(source, target); err != nil {
-		return fmt.Errorf("failed to create symlink: %w", err)
+		return NewLinkErrorWithHint("create symlink", source, target, err,
+			"Check that the parent directory exists and you have write permissions")
 	}
 
 	PrintSuccess("Created: %s", ContractPath(target))

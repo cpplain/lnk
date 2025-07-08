@@ -52,7 +52,9 @@ func ValidateNoCircularSymlink(source, target string) error {
 	absTarget, _ := filepath.Abs(target)
 
 	if strings.HasPrefix(absSource, absTarget+string(filepath.Separator)) {
-		return fmt.Errorf("failed to validate: source is inside target directory, would create circular reference")
+		return NewValidationErrorWithHint("symlink", absSource,
+			"source is inside target directory, would create circular reference",
+			"Move the source file to a different location first")
 	}
 
 	return nil
@@ -72,17 +74,23 @@ func ValidateNoOverlappingPaths(source, target string) error {
 
 	// Check if paths are the same
 	if absSource == absTarget {
-		return fmt.Errorf("failed to validate: source and target are the same path")
+		return NewValidationErrorWithHint("symlink", absSource,
+			"source and target are the same path",
+			"Ensure source and target paths are different")
 	}
 
 	// Check if source is inside target
 	if strings.HasPrefix(absSource, absTarget+string(filepath.Separator)) {
-		return fmt.Errorf("failed to validate: source path is inside target path")
+		return NewValidationErrorWithHint("path overlap", absSource,
+			"source path is inside target path",
+			"Choose paths that don't overlap")
 	}
 
 	// Check if target is inside source
 	if strings.HasPrefix(absTarget, absSource+string(filepath.Separator)) {
-		return fmt.Errorf("failed to validate: target path is inside source path")
+		return NewValidationErrorWithHint("path overlap", absTarget,
+			"target path is inside source path",
+			"Choose paths that don't overlap")
 	}
 
 	return nil

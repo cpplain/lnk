@@ -41,7 +41,8 @@ func LoadConfig(configRepo string) (*Config, error) {
 	if _, err := os.Stat(cfgmanPath); err != nil {
 		// Config file doesn't exist
 		if os.IsNotExist(err) {
-			return nil, NewPathError("load config", cfgmanPath, ErrConfigNotFound)
+			return nil, NewPathErrorWithHint("load config", cfgmanPath, ErrConfigNotFound,
+				fmt.Sprintf("Run 'cfgman init' to create a new %s file", ConfigFileName))
 		}
 		return nil, NewPathError("stat config", cfgmanPath, err)
 	}
@@ -50,14 +51,17 @@ func LoadConfig(configRepo string) (*Config, error) {
 	data, err := os.ReadFile(cfgmanPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("failed to read %s: file not found. Run 'cfgman init' to create a config file", ConfigFileName)
+			return nil, NewPathErrorWithHint("read config", cfgmanPath, err,
+				fmt.Sprintf("Run 'cfgman init' to create a new %s file", ConfigFileName))
 		}
 		return nil, fmt.Errorf("failed to read %s: %w", ConfigFileName, err)
 	}
 
 	var config Config
 	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, NewPathError("failed to parse config", cfgmanPath, fmt.Errorf("%w: %v", ErrInvalidConfig, err))
+		return nil, NewPathErrorWithHint("parse config", cfgmanPath,
+			fmt.Errorf("%w: %v", ErrInvalidConfig, err),
+			"Check your JSON syntax. Common issues: missing commas, unclosed brackets, or trailing commas")
 	}
 
 	// Validate configuration
@@ -120,20 +124,28 @@ func (c *Config) Validate() error {
 	// Validate link mappings
 	for i, mapping := range c.LinkMappings {
 		if mapping.Source == "" {
-			return NewValidationError("link mapping source", "", fmt.Sprintf("empty source in mapping %d", i+1))
+			return NewValidationErrorWithHint("link mapping source", "",
+				fmt.Sprintf("empty source in mapping %d", i+1),
+				"Set source to a directory in your repo (e.g., 'home' or 'config')")
 		}
 		if mapping.Target == "" {
-			return NewValidationError("link mapping target", "", fmt.Sprintf("empty target in mapping %d", i+1))
+			return NewValidationErrorWithHint("link mapping target", "",
+				fmt.Sprintf("empty target in mapping %d", i+1),
+				"Set target to where files should be linked (e.g., '~/' for home directory)")
 		}
 
 		// Source should not contain ".." or absolute paths
 		if strings.Contains(mapping.Source, "..") || filepath.IsAbs(mapping.Source) {
-			return NewValidationError("link mapping source", mapping.Source, "must be a relative path without '..'")
+			return NewValidationErrorWithHint("link mapping source", mapping.Source,
+				"must be a relative path without '..'",
+				"Use a simple directory name like 'home' or 'config/work'")
 		}
 
 		// Target should be a valid path (can be absolute or start with ~/)
 		if mapping.Target != "~/" && !strings.HasPrefix(mapping.Target, "~/") && !filepath.IsAbs(mapping.Target) {
-			return NewValidationError("link mapping target", mapping.Target, "must be an absolute path or start with ~/")
+			return NewValidationErrorWithHint("link mapping target", mapping.Target,
+				"must be an absolute path or start with ~/",
+				"Examples: '~/' for home, '~/.config' for config directory")
 		}
 	}
 

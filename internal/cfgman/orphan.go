@@ -41,13 +41,16 @@ func Orphan(link string, configRepo string, config *Config, dryRun bool) error {
 	} else {
 		// For single files, validate it's a managed symlink
 		if linkInfo.Mode()&os.ModeSymlink == 0 {
-			return NewPathError("orphan", absLink, ErrNotSymlink)
+			return NewPathErrorWithHint("orphan", absLink, ErrNotSymlink,
+				"Only symlinks can be orphaned. Use 'rm' to remove regular files")
 		}
 
 		if link := checkManagedLink(absLink, absConfigRepo, config); link != nil {
 			// Check if the link is broken
 			if link.IsBroken {
-				return fmt.Errorf("failed to orphan: symlink target does not exist: %s", ContractPath(link.Target))
+				return WithHint(
+					fmt.Errorf("failed to orphan: symlink target does not exist: %s", ContractPath(link.Target)),
+					"The file in the repository has been deleted. Use 'rm' to remove the broken symlink")
 			}
 			managedLinks = []ManagedLink{*link}
 		} else {
@@ -56,7 +59,9 @@ func Orphan(link string, configRepo string, config *Config, dryRun bool) error {
 			if err != nil {
 				return fmt.Errorf("failed to read symlink: %w", err)
 			}
-			return fmt.Errorf("failed to orphan: symlink is not managed by this repository: %s -> %s", absLink, target)
+			return WithHint(
+				fmt.Errorf("failed to orphan: symlink is not managed by this repository: %s -> %s", absLink, target),
+				"This symlink was not created by cfgman. Use 'rm' to remove it manually")
 		}
 	}
 
@@ -112,7 +117,9 @@ func orphanManagedLink(link ManagedLink) error {
 	targetInfo, err := os.Stat(link.Target)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("failed to orphan: symlink target does not exist: %s", ContractPath(link.Target))
+			return WithHint(
+				fmt.Errorf("failed to orphan: symlink target does not exist: %s", ContractPath(link.Target)),
+				"The file in the repository has been deleted. Use 'rm' to remove the broken symlink")
 		}
 		return fmt.Errorf("failed to check target: %w", err)
 	}

@@ -156,7 +156,7 @@ func TestValidateNoOverlappingPaths(t *testing.T) {
 				return path, path, func() { os.RemoveAll(tmpDir) }
 			},
 			expectError:   true,
-			errorContains: "failed to validate: source and target are the same path",
+			errorContains: "source and target are the same path",
 		},
 		{
 			name: "source inside target",
@@ -168,7 +168,7 @@ func TestValidateNoOverlappingPaths(t *testing.T) {
 				return source, target, func() { os.RemoveAll(tmpDir) }
 			},
 			expectError:   true,
-			errorContains: "failed to validate: source path is inside target path",
+			errorContains: "source path is inside target path",
 		},
 		{
 			name: "target inside source",
@@ -180,7 +180,7 @@ func TestValidateNoOverlappingPaths(t *testing.T) {
 				return source, target, func() { os.RemoveAll(tmpDir) }
 			},
 			expectError:   true,
-			errorContains: "failed to validate: target path is inside source path",
+			errorContains: "target path is inside source path",
 		},
 		{
 			name: "sibling paths",
@@ -350,8 +350,8 @@ func TestValidationErrorHandling(t *testing.T) {
 	t.Run("validation with relative paths", func(t *testing.T) {
 		// ValidateNoOverlappingPaths should handle relative paths by converting to absolute
 		err := ValidateNoOverlappingPaths("./source", "./source")
-		if err == nil || !containsString(err.Error(), "failed to validate: source and target are the same path") {
-			t.Errorf("Expected 'failed to validate: source and target are the same path' error, got: %v", err)
+		if err == nil || !containsString(err.Error(), "source and target are the same path") {
+			t.Errorf("Expected 'source and target are the same path' error, got: %v", err)
 		}
 	})
 }

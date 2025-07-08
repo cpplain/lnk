@@ -13,7 +13,8 @@ func validateAdoptSource(absSource, absConfigRepo string) error {
 	sourceInfo, err := os.Lstat(absSource)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("failed to adopt: source does not exist: %s", ContractPath(absSource))
+			return NewPathErrorWithHint("adopt", absSource, err,
+				"Check that the file path is correct and the file exists")
 		}
 		return fmt.Errorf("failed to check source: %w", err)
 	}
@@ -32,7 +33,8 @@ func validateAdoptSource(absSource, absConfigRepo string) error {
 		}
 		if cleanTarget, err := filepath.Abs(absTarget); err == nil {
 			if relPath, err := filepath.Rel(absConfigRepo, cleanTarget); err == nil && !strings.HasPrefix(relPath, "..") && relPath != "." {
-				return NewLinkError("adopt", absSource, target, ErrAlreadyAdopted)
+				return NewLinkErrorWithHint("adopt", absSource, target, ErrAlreadyAdopted,
+					"This file is already managed by cfgman. Use 'cfgman status' to see managed files")
 			}
 		}
 	}
@@ -48,7 +50,9 @@ func determineRelativePath(absSource string) (string, string, error) {
 
 	relPath, err := getRelativePathFromHome(absSource, homeDir)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to adopt: source must be within home directory: %w", err)
+		return "", "", NewPathErrorWithHint("adopt", absSource,
+			fmt.Errorf("source must be within home directory: %w", err),
+			"cfgman can only manage files within your home directory")
 	}
 
 	return relPath, homeDir, nil
@@ -63,7 +67,7 @@ func getRelativePathFromHome(absSource, homeDir string) (string, error) {
 
 	// Ensure the path doesn't escape the home directory
 	if strings.HasPrefix(relPath, "..") {
-		return "", fmt.Errorf("failed to adopt: path is outside home directory")
+		return "", fmt.Errorf("path is outside home directory")
 	}
 
 	return relPath, nil
@@ -74,7 +78,9 @@ func ensureSourceDirExists(configRepo, sourceDir string, config *Config) (*LinkM
 	// Validate sourceDir exists in config mappings
 	mapping := config.GetMapping(sourceDir)
 	if mapping == nil {
-		return nil, fmt.Errorf("failed to adopt: source directory '%s' not found in config mappings. Add it to .cfgman.json first with a mapping like: {\"source\": \"%s\", \"target\": \"~/\"}", sourceDir, sourceDir)
+		return nil, NewValidationErrorWithHint("source directory", sourceDir,
+			"not found in config mappings",
+			fmt.Sprintf("Add it to .cfgman.json first with a mapping like: {\"source\": \"%s\", \"target\": \"~/\"}", sourceDir))
 	}
 
 	// Check if source directory exists in the repository
@@ -336,7 +342,9 @@ func Adopt(source string, configRepo string, config *Config, sourceDir string, d
 	// Check if destination already exists (only for files, not directories)
 	if !sourceInfo.IsDir() {
 		if _, err := os.Stat(destPath); err == nil {
-			return fmt.Errorf("failed to adopt: destination already exists in repo: %s. Remove the existing file first or choose a different source directory", destPath)
+			return NewPathErrorWithHint("adopt", destPath,
+				fmt.Errorf("destination already exists in repo"),
+				"Remove the existing file first or choose a different source directory")
 		}
 	}
 
