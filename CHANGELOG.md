@@ -49,6 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Assumes "yes" to all confirmation prompts
   - Can be used instead of or in addition to command-specific `--force` flags
   - Follows common CLI conventions (similar to apt-get -y, npm -y)
+- **Default value support in help text** - Enhanced flag help formatting:
+  - Updated `formatFlags()` function to display default values when meaningful
+  - Boolean flags that default to false don't show defaults (implied behavior)
+  - Prepared infrastructure for future non-boolean flags to show defaults
+  - Maintains clean, uncluttered help text for current boolean-only flags
 
 ### Changed
 

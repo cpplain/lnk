@@ -26,7 +26,13 @@ func formatFlags(fs *flag.FlagSet) string {
 	var b strings.Builder
 	count := 0
 	fs.VisitAll(func(f *flag.Flag) {
-		fmt.Fprintf(&b, "  --%s\t%s\n", f.Name, f.Usage)
+		// For boolean flags that default to false, we don't show the default
+		// as it's implied. For other types, we would show: (default: value)
+		if f.DefValue != "" && f.DefValue != "false" {
+			fmt.Fprintf(&b, "  --%s\t%s (default: %s)\n", f.Name, f.Usage, f.DefValue)
+		} else {
+			fmt.Fprintf(&b, "  --%s\t%s\n", f.Name, f.Usage)
+		}
 		count++
 	})
 	if count == 0 {
