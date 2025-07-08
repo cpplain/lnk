@@ -77,6 +77,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Makes cfgman compatible with grep, awk, and other text processing tools
   - JSON output (--json) takes precedence over automatic adaptation
   - Follows CLI best practices for human-first, machine-friendly design
+- **Specific exit codes for different error types** - Following GNU/POSIX conventions:
+  - Exit code 0: Success
+  - Exit code 1: General runtime errors (file operations, config issues, etc.)
+  - Exit code 2: Command usage errors (unknown command, wrong arguments, invalid flags)
+  - Makes it easier for scripts to distinguish between usage and operational errors
+  - Follows standard CLI conventions for better automation support
 
 ### Changed
 

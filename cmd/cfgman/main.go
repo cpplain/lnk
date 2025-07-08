@@ -91,7 +91,7 @@ func main() {
 		cfgman.PrintErrorWithHint(cfgman.WithHint(
 			fmt.Errorf("cannot use --quiet and --verbose together"),
 			"Use either --quiet or --verbose, not both"))
-		os.Exit(1)
+		os.Exit(cfgman.ExitUsage)
 	}
 	if globalQuiet {
 		cfgman.SetVerbosity(cfgman.VerbosityQuiet)
@@ -110,7 +110,7 @@ func main() {
 
 	if len(remainingArgs) < 1 {
 		printUsage()
-		os.Exit(1)
+		os.Exit(cfgman.ExitUsage)
 	}
 
 	command := remainingArgs[0]
@@ -148,7 +148,7 @@ func main() {
 		cfgman.PrintErrorWithHint(cfgman.WithHint(
 			fmt.Errorf("unknown command: %s", command),
 			"Run 'cfgman --help' to see available commands"))
-		os.Exit(1)
+		os.Exit(cfgman.ExitUsage)
 	}
 }
 
@@ -199,7 +199,7 @@ func handleAdopt(args []string) {
 
 	if fs.NArg() != 2 {
 		fs.Usage()
-		os.Exit(1)
+		os.Exit(cfgman.ExitUsage)
 	}
 
 	path := fs.Arg(0)
@@ -241,7 +241,7 @@ func handleOrphan(args []string, globalYes bool) {
 
 	if fs.NArg() != 1 {
 		fs.Usage()
-		os.Exit(1)
+		os.Exit(cfgman.ExitUsage)
 	}
 
 	path := fs.Arg(0)
