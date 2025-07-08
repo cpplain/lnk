@@ -98,3 +98,88 @@ func TestColorConstants(t *testing.T) {
 		t.Errorf("ColorBold has incorrect value")
 	}
 }
+
+func TestSetNoColor(t *testing.T) {
+	// Save original state
+	origNoColor := os.Getenv("NO_COLOR")
+	defer func() {
+		if origNoColor == "" {
+			os.Unsetenv("NO_COLOR")
+		} else {
+			os.Setenv("NO_COLOR", origNoColor)
+		}
+		// Reset global state
+		SetNoColor(false)
+		colorEnabledOnce = sync.Once{}
+	}()
+
+	tests := []struct {
+		name       string
+		noColorEnv string
+		flagValue  bool
+		wantColor  bool
+	}{
+		{
+			name:       "no flag, no env",
+			noColorEnv: "",
+			flagValue:  false,
+			wantColor:  true, // Assuming terminal
+		},
+		{
+			name:       "flag set",
+			noColorEnv: "",
+			flagValue:  true,
+			wantColor:  false,
+		},
+		{
+			name:       "env set",
+			noColorEnv: "1",
+			flagValue:  false,
+			wantColor:  false,
+		},
+		{
+			name:       "both flag and env set",
+			noColorEnv: "1",
+			flagValue:  true,
+			wantColor:  false,
+		},
+		{
+			name:       "flag takes precedence over missing env",
+			noColorEnv: "",
+			flagValue:  true,
+			wantColor:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset state
+			colorEnabledOnce = sync.Once{}
+
+			// Set environment
+			if tt.noColorEnv == "" {
+				os.Unsetenv("NO_COLOR")
+			} else {
+				os.Setenv("NO_COLOR", tt.noColorEnv)
+			}
+
+			// Set flag
+			SetNoColor(tt.flagValue)
+
+			// Test color functions
+			if tt.wantColor {
+				// If we want color, output should be different
+				red := Red("test")
+				if red == "test" && isTerminal() {
+					t.Errorf("Expected colored output, got plain text")
+				}
+			} else {
+				// If we don't want color, output should be plain
+				red := Red("test")
+				if red != "test" {
+					t.Errorf("Expected plain text, got colored output: %q", red)
+				}
+			}
+		})
+	}
+}

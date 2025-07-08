@@ -36,16 +36,8 @@ func formatFlags(fs *flag.FlagSet) string {
 }
 
 func main() {
-	// Handle --version flag before any other parsing
-	for _, arg := range os.Args[1:] {
-		if arg == "--version" {
-			cfgman.PrintInfo("%s %s", cfgman.Bold("cfgman version"), cfgman.Green(version))
-			return
-		}
-	}
-
 	// Parse global flags first
-	var globalVerbose, globalQuiet, globalJSON bool
+	var globalVerbose, globalQuiet, globalJSON, globalNoColor, globalVersion bool
 	remainingArgs := []string{}
 
 	// Manual parsing to extract global flags before command
@@ -63,12 +55,27 @@ func main() {
 			globalQuiet = true
 		case "--json":
 			globalJSON = true
+		case "--no-color":
+			globalNoColor = true
+		case "--version":
+			globalVersion = true
 		case "-h", "--help":
 			// Let it pass through to be handled later
 			remainingArgs = append(remainingArgs, arg)
 		default:
 			remainingArgs = append(remainingArgs, arg)
 		}
+	}
+
+	// Set color preference first
+	if globalNoColor {
+		cfgman.SetNoColor(true)
+	}
+
+	// Handle --version after processing color settings
+	if globalVersion {
+		cfgman.PrintInfo("%s %s", cfgman.Bold("cfgman version"), cfgman.Green(version))
+		return
 	}
 
 	// Set verbosity level based on flags
@@ -402,6 +409,7 @@ func printUsage() {
 	fmt.Printf("  -v, --verbose        Enable verbose output\n")
 	fmt.Printf("  -q, --quiet          Suppress all non-error output\n")
 	fmt.Printf("      --json           Output in JSON format (where supported)\n")
+	fmt.Printf("      --no-color       Disable colored output\n")
 	fmt.Printf("      --version        Show version information\n")
 	fmt.Printf("  -h, --help           Show this help message\n")
 	fmt.Println()

@@ -28,7 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatically appears after 1 second (following CLI best practices)
   - Shows progress for: searching managed links (status/remove/prune), creating multiple symlinks, adopting directories
   - Respects terminal detection, quiet mode, and JSON output settings
-  - Thread-safe implementation with smooth 100ms update intervals
+- **Color control** - Added `--no-color` flag to disable colored output:
+  - Works as a global flag alongside existing NO_COLOR environment variable support
+  - Flag takes precedence over environment variable for explicit control
+  - Useful for CI/CD environments and output parsing
 
 ### Changed
 
