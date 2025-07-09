@@ -129,11 +129,11 @@ func main() {
 	case "orphan":
 		handleOrphan(commandArgs, globalYes)
 	case "create":
-		handleCreateLinks(commandArgs)
+		handleCreate(commandArgs)
 	case "remove":
-		handleRemoveLinks(commandArgs, globalYes)
+		handleRemove(commandArgs, globalYes)
 	case "prune":
-		handlePruneLinks(commandArgs, globalYes)
+		handlePrune(commandArgs, globalYes)
 	case "init":
 		handleInit(commandArgs)
 	case "version":
@@ -251,7 +251,7 @@ func handleOrphan(args []string, globalYes bool) {
 	}
 }
 
-func handleCreateLinks(args []string) {
+func handleCreate(args []string) {
 	fs := flag.NewFlagSet("create", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 
@@ -281,7 +281,7 @@ func handleCreateLinks(args []string) {
 	}
 }
 
-func handleRemoveLinks(args []string, globalYes bool) {
+func handleRemove(args []string, globalYes bool) {
 	fs := flag.NewFlagSet("remove", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 	force := fs.Bool("force", false, "Skip confirmation prompt")
@@ -312,7 +312,7 @@ func handleRemoveLinks(args []string, globalYes bool) {
 	}
 }
 
-func handlePruneLinks(args []string, globalYes bool) {
+func handlePrune(args []string, globalYes bool) {
 	fs := flag.NewFlagSet("prune", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 	force := fs.Bool("force", false, "Skip confirmation prompt")
@@ -483,11 +483,11 @@ func printCommandHelp(command string) {
 	case "orphan":
 		handleOrphan([]string{"-h"}, false)
 	case "create":
-		handleCreateLinks([]string{"-h"})
+		handleCreate([]string{"-h"})
 	case "remove":
-		handleRemoveLinks([]string{"-h"}, false)
+		handleRemove([]string{"-h"}, false)
 	case "prune":
-		handlePruneLinks([]string{"-h"}, false)
+		handlePrune([]string{"-h"}, false)
 	case "init":
 		handleInit([]string{"-h"})
 	case "version":

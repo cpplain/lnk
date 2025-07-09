@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enhanced error messages with more actionable hints and structured error types
   - Cleaned up global flag handling by removing unused code
   - All commands now provide comprehensive examples and usage guidance
+  - Fixed function naming consistency: `handleCreateLinks` → `handleCreate`, `handleRemoveLinks` → `handleRemove`, `handlePruneLinks` → `handlePrune`
 
 - **BREAKING: Standardized command naming** - Renamed hyphenated commands to single-word verbs:
   - `create-links` → `create` (context makes it clear we're creating symlinks)
