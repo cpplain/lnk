@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **CLI design conformance improvements** - Enhanced CLI to better follow established design guidelines:
+  - Standardized exit code usage to use constants consistently instead of hard-coded values
+  - Improved help text examples for `status` and `version` commands
+  - Added common workflow section to main help text for better discoverability
+  - Enhanced error messages with more actionable hints and structured error types
+  - Cleaned up global flag handling by removing unused code
+  - All commands now provide comprehensive examples and usage guidance
+
 ### Changed
 
 - **BREAKING: Standardized command naming** - Renamed hyphenated commands to single-word verbs:

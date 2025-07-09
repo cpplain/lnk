@@ -47,13 +47,7 @@ func main() {
 	remainingArgs := []string{}
 
 	// Manual parsing to extract global flags before command
-	skipNext := false
 	for _, arg := range os.Args[1:] {
-		if skipNext {
-			skipNext = false
-			continue
-		}
-
 		switch arg {
 		case "--verbose", "-v":
 			globalVerbose = true
@@ -159,6 +153,9 @@ func handleStatus(args []string) {
 		fmt.Printf("\n%s\n", cfgman.Cyan("Show status of all managed symlinks"))
 		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
 		fmt.Print(formatFlags(fs))
+		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
+		fmt.Println(cfgman.Cyan("  cfgman status"))
+		fmt.Println(cfgman.Cyan("  cfgman status --json"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
 		fmt.Printf("  %s\n", cfgman.Cyan("create, prune"))
 	}
@@ -167,12 +164,12 @@ func handleStatus(args []string) {
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
 		cfgman.PrintErrorWithHint(err)
-		os.Exit(1)
+		os.Exit(cfgman.ExitError)
 	}
 
 	if err := cfgman.Status(".", config); err != nil {
 		cfgman.PrintErrorWithHint(err)
-		os.Exit(1)
+		os.Exit(cfgman.ExitError)
 	}
 }
 
@@ -208,12 +205,12 @@ func handleAdopt(args []string) {
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
 		cfgman.PrintErrorWithHint(err)
-		os.Exit(1)
+		os.Exit(cfgman.ExitError)
 	}
 
 	if err := cfgman.Adopt(path, ".", config, sourceDir, *dryRun); err != nil {
 		cfgman.PrintErrorWithHint(err)
-		os.Exit(1)
+		os.Exit(cfgman.ExitError)
 	}
 }
 
@@ -248,12 +245,12 @@ func handleOrphan(args []string, globalYes bool) {
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
 		cfgman.PrintErrorWithHint(err)
-		os.Exit(1)
+		os.Exit(cfgman.ExitError)
 	}
 
 	if err := cfgman.Orphan(path, ".", config, *dryRun, *force || globalYes); err != nil {
 		cfgman.PrintErrorWithHint(err)
-		os.Exit(1)
+		os.Exit(cfgman.ExitError)
 	}
 }
 
@@ -278,12 +275,12 @@ func handleCreateLinks(args []string) {
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
 		cfgman.PrintErrorWithHint(err)
-		os.Exit(1)
+		os.Exit(cfgman.ExitError)
 	}
 
 	if err := cfgman.CreateLinks(".", config, *dryRun); err != nil {
 		cfgman.PrintErrorWithHint(err)
-		os.Exit(1)
+		os.Exit(cfgman.ExitError)
 	}
 }
 
@@ -309,12 +306,12 @@ func handleRemoveLinks(args []string, globalYes bool) {
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
 		cfgman.PrintErrorWithHint(err)
-		os.Exit(1)
+		os.Exit(cfgman.ExitError)
 	}
 
 	if err := cfgman.RemoveLinks(".", config, *dryRun, *force || globalYes); err != nil {
 		cfgman.PrintErrorWithHint(err)
-		os.Exit(1)
+		os.Exit(cfgman.ExitError)
 	}
 }
 
@@ -340,12 +337,12 @@ func handlePruneLinks(args []string, globalYes bool) {
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
 		cfgman.PrintErrorWithHint(err)
-		os.Exit(1)
+		os.Exit(cfgman.ExitError)
 	}
 
 	if err := cfgman.PruneLinks(".", config, *dryRun, *force || globalYes); err != nil {
 		cfgman.PrintErrorWithHint(err)
-		os.Exit(1)
+		os.Exit(cfgman.ExitError)
 	}
 }
 
@@ -356,6 +353,9 @@ func handleVersion(args []string) {
 		fmt.Printf("\n%s\n", cfgman.Cyan("Show version information"))
 		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
 		fmt.Print(formatFlags(fs))
+		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
+		fmt.Println(cfgman.Cyan("  cfgman version"))
+		fmt.Println(cfgman.Cyan("  cfgman --version"))
 	}
 	fs.Parse(args)
 
@@ -390,7 +390,7 @@ func handleInit(args []string) {
 			cfgman.PrintErrorWithHint(cfgman.WithHint(
 				fmt.Errorf("%s already exists", cfgman.ConfigFileName),
 				"Use '--force' to overwrite the existing configuration"))
-			os.Exit(1)
+			os.Exit(cfgman.ExitError)
 		}
 	}
 
@@ -409,14 +409,14 @@ func handleInit(args []string) {
 	data, err := json.MarshalIndent(defaultConfig, "", "  ")
 	if err != nil {
 		cfgman.PrintErrorWithHint(err)
-		os.Exit(1)
+		os.Exit(cfgman.ExitError)
 	}
 
 	if err := os.WriteFile(cfgmanPath, data, 0644); err != nil {
 		cfgman.PrintErrorWithHint(cfgman.WithHint(
 			fmt.Errorf("failed to write %s: %v", cfgman.ConfigFileName, err),
 			"Check that you have write permissions in this directory"))
-		os.Exit(1)
+		os.Exit(cfgman.ExitError)
 	}
 
 	cfgman.PrintSuccess("Created %s with a minimal template.", cfgman.ConfigFileName)
@@ -463,6 +463,12 @@ func printUsage() {
 	fmt.Printf("    %-20s Show help for a command\n", cfgman.Bold("help"))
 	fmt.Println()
 	fmt.Printf("Use '%s' for more information about a command.\n", cfgman.Bold("cfgman help <command>"))
+	fmt.Println()
+	fmt.Printf("%s\n", cfgman.Bold("Common workflow:"))
+	fmt.Println(cfgman.Cyan("  cfgman init              # Create configuration template"))
+	fmt.Println(cfgman.Cyan("  cfgman adopt ~/.gitconfig home  # Adopt existing files"))
+	fmt.Println(cfgman.Cyan("  cfgman create            # Create symlinks"))
+	fmt.Println(cfgman.Cyan("  cfgman status            # Check link status"))
 	fmt.Println()
 	fmt.Printf("%s cfgman must be run from within a cfgman-managed directory\n", cfgman.Bold("Note:"))
 	fmt.Printf("      (a directory containing %s)\n", cfgman.Cyan(cfgman.ConfigFileName))

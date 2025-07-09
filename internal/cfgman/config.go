@@ -31,7 +31,8 @@ func LoadConfig(configRepo string) (*Config, error) {
 	// Convert to absolute path
 	absConfigRepo, err := filepath.Abs(configRepo)
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve config directory: %w", err)
+		return nil, NewPathErrorWithHint("resolve config directory", configRepo, err,
+			"Ensure the directory path is valid and accessible")
 	}
 	PrintVerbose("Resolved config directory: %s", absConfigRepo)
 
@@ -86,7 +87,8 @@ func (c *Config) Save(configRepo string) error {
 	}
 
 	if err := os.WriteFile(cfgmanPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
+		return NewPathErrorWithHint("write config", cfgmanPath, err,
+			"Check that you have write permissions in this directory")
 	}
 
 	return nil
@@ -112,7 +114,8 @@ func ExpandPath(path string) (string, error) {
 	if strings.HasPrefix(path, "~/") {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			return "", fmt.Errorf("failed to get home directory: %w", err)
+			return "", NewPathErrorWithHint("get home directory", path, err,
+				"Check that the HOME environment variable is set correctly")
 		}
 		return filepath.Join(homeDir, path[2:]), nil
 	}

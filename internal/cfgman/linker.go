@@ -18,7 +18,8 @@ func CreateLinks(configRepo string, config *Config, dryRun bool) error {
 	// Convert to absolute path
 	absConfigRepo, err := filepath.Abs(configRepo)
 	if err != nil {
-		return fmt.Errorf("failed to resolve repository path: %w", err)
+		return NewPathErrorWithHint("resolve repository path", configRepo, err,
+			"Ensure the repository directory path is valid and accessible")
 	}
 	PrintHeader("Creating Symlinks")
 
@@ -97,7 +98,8 @@ func RemoveLinks(configRepo string, config *Config, dryRun bool, force bool) err
 	// Convert to absolute path
 	absConfigRepo, err := filepath.Abs(configRepo)
 	if err != nil {
-		return fmt.Errorf("failed to resolve repository path: %w", err)
+		return NewPathErrorWithHint("resolve repository path", configRepo, err,
+			"Ensure the repository directory path is valid and accessible")
 	}
 	return removeLinks(absConfigRepo, config, dryRun, !force)
 }
@@ -108,7 +110,8 @@ func removeLinks(configRepo string, config *Config, dryRun bool, skipConfirm boo
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
+		return NewPathErrorWithHint("get home directory", "~", err,
+			"Check that the HOME environment variable is set correctly")
 	}
 
 	// Find all symlinks pointing to our repo
@@ -181,13 +184,15 @@ func PruneLinks(configRepo string, config *Config, dryRun bool, force bool) erro
 	// Convert to absolute path
 	absConfigRepo, err := filepath.Abs(configRepo)
 	if err != nil {
-		return fmt.Errorf("failed to resolve repository path: %w", err)
+		return NewPathErrorWithHint("resolve repository path", configRepo, err,
+			"Ensure the repository directory path is valid and accessible")
 	}
 	PrintHeader("Pruning Broken Symlinks")
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
+		return NewPathErrorWithHint("get home directory", "~", err,
+			"Check that the HOME environment variable is set correctly")
 	}
 
 	// Find all symlinks pointing to our repo
@@ -336,7 +341,8 @@ func executePlannedLinks(links []PlannedLink) error {
 			parentDir := filepath.Dir(link.Target)
 			if !createdDirs[parentDir] {
 				if err := os.MkdirAll(parentDir, 0755); err != nil {
-					return fmt.Errorf("failed to create directory %s: %w", parentDir, err)
+					return NewPathErrorWithHint("create directory", parentDir, err,
+						"Check that you have write permissions in the parent directory")
 				}
 				createdDirs[parentDir] = true
 			}
