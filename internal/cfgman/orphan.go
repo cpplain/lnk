@@ -117,6 +117,7 @@ func Orphan(link string, configRepo string, config *Config, dryRun bool, force b
 		fmt.Println()
 		if orphaned > 0 {
 			PrintSuccess("Successfully orphaned %d file(s)", orphaned)
+			PrintInfo("Next: Run 'cfgman status' to see remaining managed files")
 		}
 	}
 	if len(errors) > 0 {

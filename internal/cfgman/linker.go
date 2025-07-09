@@ -171,6 +171,7 @@ func removeLinks(configRepo string, config *Config, dryRun bool, skipConfirm boo
 	fmt.Println()
 	if removed > 0 {
 		PrintSuccess("Removed %d symlink(s) successfully", removed)
+		PrintInfo("Next: Run 'cfgman create' to recreate links or 'cfgman status' to see remaining links")
 	}
 	if failed > 0 {
 		PrintWarning("Failed to remove %d symlink(s)", failed)
@@ -262,6 +263,7 @@ func PruneLinks(configRepo string, config *Config, dryRun bool, force bool) erro
 	fmt.Println()
 	if pruned > 0 {
 		PrintSuccess("Pruned %d broken symlink(s) successfully", pruned)
+		PrintInfo("Next: Run 'cfgman status' to check remaining links")
 	}
 	if failed > 0 {
 		PrintWarning("Failed to prune %d symlink(s)", failed)
@@ -378,6 +380,7 @@ func executePlannedLinks(links []PlannedLink) error {
 	fmt.Println()
 	if created > 0 {
 		PrintSuccess("Created %d symlink(s) successfully", created)
+		PrintInfo("Next: Run 'cfgman status' to verify links")
 	}
 	if failed > 0 {
 		PrintWarning("Failed to create %d symlink(s)", failed)

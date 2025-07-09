@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING: Command argument structure** - Replaced positional arguments with explicit flags to follow CLI design best practices:
+  - `adopt PATH SOURCE_DIR` → `adopt --path PATH --source-dir SOURCE_DIR`
+  - `orphan PATH` → `orphan --path PATH`
+  - Follows "flags over positional arguments" principle for better usability
+  - Provides clearer error messages when required flags are missing
+  - All help text and workflow examples updated to reflect new syntax
+
+### Added
+
+- **Enhanced user guidance** - Added next-step suggestions after successful operations:
+  - `init` command now suggests editing config file and provides example adopt command
+  - `adopt` command suggests running `create` to establish symlinks
+  - `create` command suggests running `status` to verify links
+  - `remove` command suggests recreating links or checking status
+  - `prune` command suggests checking remaining links with status
+  - `orphan` command suggests checking remaining managed files
+  - Follows CLI design principle of being "Helpful Over Minimal"
+
 ### Fixed
 
 - **CLI design conformance improvements** - Enhanced CLI to better follow established design guidelines:
@@ -16,8 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enhanced error messages with more actionable hints and structured error types
   - Cleaned up global flag handling by removing unused code
   - All commands now provide comprehensive examples and usage guidance
-
-### Changed
 
 - **BREAKING: Standardized command naming** - Renamed hyphenated commands to single-word verbs:
   - `create-links` → `create` (context makes it clear we're creating symlinks)

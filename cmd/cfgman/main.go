@@ -176,31 +176,29 @@ func handleStatus(args []string) {
 func handleAdopt(args []string) {
 	fs := flag.NewFlagSet("adopt", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
+	path := fs.String("path", "", "The file or directory to adopt")
+	sourceDir := fs.String("source-dir", "", "The source directory in the repository (e.g., home, private/home)")
 
 	fs.Usage = func() {
-		fmt.Printf("%s cfgman adopt [options] PATH SOURCE_DIR\n", cfgman.Bold("Usage:"))
+		fmt.Printf("%s cfgman adopt [options]\n", cfgman.Bold("Usage:"))
 		fmt.Printf("\n%s\n", cfgman.Cyan("Adopt a file or directory into the repository"))
-		fmt.Printf("\n%s\n", cfgman.Bold("Arguments:"))
-		fmt.Printf("  %-20s The file or directory to adopt\n", cfgman.Bold("PATH"))
-		fmt.Printf("  %-20s The source directory in the repository (e.g., home, private/home)\n", cfgman.Bold("SOURCE_DIR"))
 		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
 		fmt.Print(formatFlags(fs))
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
-		fmt.Println(cfgman.Cyan("  cfgman adopt ~/.gitconfig home"))
-		fmt.Println(cfgman.Cyan("  cfgman adopt ~/.ssh/config private/home"))
+		fmt.Println(cfgman.Cyan("  cfgman adopt --path ~/.gitconfig --source-dir home"))
+		fmt.Println(cfgman.Cyan("  cfgman adopt --path ~/.ssh/config --source-dir private/home"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
 		fmt.Printf("  %s\n", cfgman.Cyan("orphan, create, status"))
 	}
 
 	fs.Parse(args)
 
-	if fs.NArg() != 2 {
-		fs.Usage()
+	if *path == "" || *sourceDir == "" {
+		cfgman.PrintErrorWithHint(cfgman.WithHint(
+			fmt.Errorf("both --path and --source-dir are required"),
+			"Run 'cfgman adopt --help' for usage examples"))
 		os.Exit(cfgman.ExitUsage)
 	}
-
-	path := fs.Arg(0)
-	sourceDir := fs.Arg(1)
 
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
@@ -208,7 +206,7 @@ func handleAdopt(args []string) {
 		os.Exit(cfgman.ExitError)
 	}
 
-	if err := cfgman.Adopt(path, ".", config, sourceDir, *dryRun); err != nil {
+	if err := cfgman.Adopt(*path, ".", config, *sourceDir, *dryRun); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(cfgman.ExitError)
 	}
@@ -218,37 +216,36 @@ func handleOrphan(args []string, globalYes bool) {
 	fs := flag.NewFlagSet("orphan", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 	force := fs.Bool("force", false, "Skip confirmation prompt")
+	path := fs.String("path", "", "The file or directory to orphan")
 
 	fs.Usage = func() {
-		fmt.Printf("%s cfgman orphan [options] PATH\n", cfgman.Bold("Usage:"))
+		fmt.Printf("%s cfgman orphan [options]\n", cfgman.Bold("Usage:"))
 		fmt.Printf("\n%s\n", cfgman.Cyan("Remove a file or directory from repository management"))
 		fmt.Println("For directories, recursively orphans all managed symlinks within")
-		fmt.Printf("\n%s\n", cfgman.Bold("Arguments:"))
-		fmt.Printf("  %-20s The file or directory to orphan\n", cfgman.Bold("PATH"))
 		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
 		fmt.Print(formatFlags(fs))
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
-		fmt.Println(cfgman.Cyan("  cfgman orphan ~/.gitconfig"))
-		fmt.Println(cfgman.Cyan("  cfgman orphan ~/.config/nvim"))
+		fmt.Println(cfgman.Cyan("  cfgman orphan --path ~/.gitconfig"))
+		fmt.Println(cfgman.Cyan("  cfgman orphan --path ~/.config/nvim"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
 		fmt.Printf("  %s\n", cfgman.Cyan("adopt, status"))
 	}
 
 	fs.Parse(args)
 
-	if fs.NArg() != 1 {
-		fs.Usage()
+	if *path == "" {
+		cfgman.PrintErrorWithHint(cfgman.WithHint(
+			fmt.Errorf("--path is required"),
+			"Run 'cfgman orphan --help' for usage examples"))
 		os.Exit(cfgman.ExitUsage)
 	}
-
-	path := fs.Arg(0)
 	config, err := cfgman.LoadConfig(".")
 	if err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(cfgman.ExitError)
 	}
 
-	if err := cfgman.Orphan(path, ".", config, *dryRun, *force || globalYes); err != nil {
+	if err := cfgman.Orphan(*path, ".", config, *dryRun, *force || globalYes); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(cfgman.ExitError)
 	}
@@ -432,6 +429,9 @@ func handleInit(args []string) {
 	fmt.Println(cfgman.Cyan("      \"target\": \"~/\""))
 	fmt.Println(cfgman.Cyan("    }]"))
 	fmt.Println(cfgman.Cyan("  }"))
+	fmt.Printf("\n%s After editing the config file:\n", cfgman.Bold("Next steps:"))
+	fmt.Printf("  %s\n", cfgman.Cyan("cfgman adopt --path ~/.gitconfig --source-dir home"))
+	fmt.Printf("  %s\n", cfgman.Cyan("cfgman create                                      # Create symlinks"))
 }
 
 func printUsage() {
@@ -465,10 +465,10 @@ func printUsage() {
 	fmt.Printf("Use '%s' for more information about a command.\n", cfgman.Bold("cfgman help <command>"))
 	fmt.Println()
 	fmt.Printf("%s\n", cfgman.Bold("Common workflow:"))
-	fmt.Println(cfgman.Cyan("  cfgman init              # Create configuration template"))
-	fmt.Println(cfgman.Cyan("  cfgman adopt ~/.gitconfig home  # Adopt existing files"))
-	fmt.Println(cfgman.Cyan("  cfgman create            # Create symlinks"))
-	fmt.Println(cfgman.Cyan("  cfgman status            # Check link status"))
+	fmt.Println(cfgman.Cyan("  cfgman init                                             # Create configuration template"))
+	fmt.Println(cfgman.Cyan("  cfgman adopt --path ~/.gitconfig --source-dir home     # Adopt existing files"))
+	fmt.Println(cfgman.Cyan("  cfgman create                                           # Create symlinks"))
+	fmt.Println(cfgman.Cyan("  cfgman status                                           # Check link status"))
 	fmt.Println()
 	fmt.Printf("%s cfgman must be run from within a cfgman-managed directory\n", cfgman.Bold("Note:"))
 	fmt.Printf("      (a directory containing %s)\n", cfgman.Cyan(cfgman.ConfigFileName))
