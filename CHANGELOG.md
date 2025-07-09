@@ -7,47 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **BREAKING: Command argument structure** - Replaced positional arguments with explicit flags to follow CLI design best practices:
-  - `adopt PATH SOURCE_DIR` → `adopt --path PATH --source-dir SOURCE_DIR`
-  - `orphan PATH` → `orphan --path PATH`
-  - Follows "flags over positional arguments" principle for better usability
-  - Provides clearer error messages when required flags are missing
-  - All help text and workflow examples updated to reflect new syntax
-
 ### Added
 
+- **BREAKING: Works without configuration** - cfgman now works from any directory without requiring a config file:
+  - Added configuration discovery system with precedence order: --config flag > repo dir > XDG config > user config > home > current dir > built-in defaults
+  - Added global configuration flags: --config, --repo-dir, --source-dir, --target-dir, --ignore
+  - Added environment variable support: CFGMAN_CONFIG, CFGMAN_REPO_DIR, CFGMAN_SOURCE_DIR, CFGMAN_TARGET_DIR, CFGMAN_IGNORE
+  - Added built-in sensible defaults (home->~/, config->~/.config/, common ignore patterns)
+  - Added XDG Base Directory Specification support ($XDG_CONFIG_HOME/cfgman/config.json)
+  - Removed requirement to run from cfgman-managed directory
+  - All commands now work with flexible configuration loading and override system
+  - Updated help text to document new configuration discovery and examples
 - **Enhanced user guidance** - Added next-step suggestions after successful operations:
-  - `init` command now suggests editing config file and provides example adopt command
   - `adopt` command suggests running `create` to establish symlinks
   - `create` command suggests running `status` to verify links
   - `remove` command suggests recreating links or checking status
   - `prune` command suggests checking remaining links with status
   - `orphan` command suggests checking remaining managed files
   - Follows CLI design principle of being "Helpful Over Minimal"
-
-### Fixed
-
-- **CLI design conformance improvements** - Enhanced CLI to better follow established design guidelines:
-  - Standardized exit code usage to use constants consistently instead of hard-coded values
-  - Improved help text examples for `status` and `version` commands
-  - Added common workflow section to main help text for better discoverability
-  - Enhanced error messages with more actionable hints and structured error types
-  - Cleaned up global flag handling by removing unused code
-  - All commands now provide comprehensive examples and usage guidance
-  - Fixed function naming consistency: `handleCreateLinks` → `handleCreate`, `handleRemoveLinks` → `handleRemove`, `handlePruneLinks` → `handlePrune`
-
-- **BREAKING: Standardized command naming** - Renamed hyphenated commands to single-word verbs:
-  - `create-links` → `create` (context makes it clear we're creating symlinks)
-  - `remove-links` → `remove` (context makes it clear we're removing symlinks)  
-  - `prune-links` → `prune` (already implies removing broken symlinks)
-  - All commands now follow consistent single-word verb pattern
-  - Simplifies command usage and improves consistency
-  - Updated all documentation and help text to reflect new names
-
-### Added
-
 - CLI design documentation following [cpplain/cli-design](https://github.com/cpplain/cli-design) principles
   - Added CLI Design Guidelines section to CONTRIBUTING.md for contributors
   - Added CLI Design Principles section to CLAUDE.md for implementation guidance
@@ -72,19 +49,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Flag takes precedence over environment variable for explicit control
   - Useful for CI/CD environments and output parsing
 - **Enhanced error messages** - All errors now include actionable "Try:" suggestions:
-  - Configuration errors guide users to run `cfgman init`
+  - Configuration errors guide users to create config files or use built-in defaults
   - File conflicts suggest using `cfgman adopt` first
   - Invalid paths show correct format examples
   - Unknown commands direct to help documentation
   - Leverages existing hint infrastructure throughout the codebase
 - **Confirmation prompts for destructive operations** - Added interactive confirmation prompts:
-  - `orphan`, `remove-links`, and `prune-links` now ask for confirmation before proceeding
+  - `orphan`, `remove`, and `prune` now ask for confirmation before proceeding
   - Prompts clearly indicate what will be affected (e.g., "This will remove 3 symlink(s). Continue? (y/N): ")
   - Default answer is "No" for safety
   - Added `--force` flag to all three commands to skip confirmation prompts
   - Automatically skips prompts when not in a terminal (safe for scripts)
 - **Global --yes flag** - Added `--yes`/`-y` global flag for automation:
-  - Works with all destructive commands (orphan, remove-links, prune-links)
+  - Works with all destructive commands (orphan, remove, prune)
   - Assumes "yes" to all confirmation prompts
   - Can be used instead of or in addition to command-specific `--force` flags
   - Follows common CLI conventions (similar to apt-get -y, npm -y)
@@ -95,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Maintains clean, uncluttered help text for current boolean-only flags
 - **"See also" sections in command help** - Added cross-references between related commands:
   - Each command's help text now includes a "See also" section listing related commands
-  - Helps users discover complementary functionality (e.g., adopt ↔ orphan, create-links ↔ remove-links)
+  - Helps users discover complementary functionality (e.g., adopt ↔ orphan, create ↔ remove)
   - Improves command discoverability and navigation
   - Follows CLI best practices for help text organization
 - **Automatic output format adaptation for piping** - Output adapts based on TTY detection:
@@ -115,6 +92,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: Command argument structure** - Replaced positional arguments with explicit flags to follow CLI design best practices:
+  - `adopt PATH SOURCE_DIR` → `adopt --path PATH --source-dir SOURCE_DIR`
+  - `orphan PATH` → `orphan --path PATH`
+  - Follows "flags over positional arguments" principle for better usability
+  - Provides clearer error messages when required flags are missing
+  - All help text and workflow examples updated to reflect new syntax
+- **BREAKING: Standardized command naming** - Renamed hyphenated commands to single-word verbs:
+  - `create-links` → `create` (context makes it clear we're creating symlinks)
+  - `remove-links` → `remove` (context makes it clear we're removing symlinks)
+  - `prune-links` → `prune` (already implies removing broken symlinks)
+  - All commands now follow consistent single-word verb pattern
+  - Simplifies command usage and improves consistency
+  - Updated all documentation and help text to reflect new names
 - **Major refactoring for better maintainability** - Simplified codebase architecture:
   - Removed logger abstraction (`logger.go`) in favor of direct output functions
   - Removed unnecessary interface abstractions (`interfaces.go`) for cleaner, more idiomatic Go code
@@ -133,11 +123,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Standardized all output helpers** - All commands now use consistent output helper functions (PrintError, PrintSuccess, PrintWarning, etc.) for uniform formatting across the entire CLI
 - **Simplified status output** - Status command now uses the same single-line format as other commands (e.g., "✓ Active: ~/.bashrc") for consistency
 - **Standardized error messages** - All error messages now follow consistent "Failed to <action>: <reason>" format with lowercase actions for better readability
-- **Enhanced error context** - Error messages now include actionable suggestions where appropriate (e.g., "Use 'cfgman adopt' to adopt this file first", "Run 'cfgman init' to create a config file")
+- **Enhanced error context** - Error messages now include actionable suggestions where appropriate (e.g., "Use 'cfgman adopt' to adopt this file first", "Create a config file or use built-in defaults")
 - **Added summary output for bulk operations** - Commands that operate on multiple files now show clear summaries:
-  - `create-links` shows "Created X symlink(s) successfully" and failure counts
-  - `remove-links` shows "Removed X symlink(s) successfully" and failure counts  
-  - `prune-links` shows "Pruned X broken symlink(s) successfully" and failure counts
+  - `create` shows "Created X symlink(s) successfully" and failure counts
+  - `remove` shows "Removed X symlink(s) successfully" and failure counts
+  - `prune` shows "Pruned X broken symlink(s) successfully" and failure counts
   - `adopt` (directories) shows "Successfully adopted X file(s)" with skip counts
   - `orphan` (directories) shows "Successfully orphaned X file(s)"
 - **Improved skip messages** - Skip messages now clearly explain why files were skipped (e.g., "file already exists in repository at <path>")
@@ -146,10 +136,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Command descriptions use cyan color for better readability
   - Arguments and options are properly aligned with bold formatting
   - Added "(none)" placeholder when commands have no options
-  - Main usage output organized into clear sections: Configuration, Link Management, Other
+  - Main usage output organized into clear sections: Link Management, Other
+
+### Removed
+
+- **BREAKING: Removed `init` command** - Following advanced CLI tool patterns, cfgman no longer provides config file creation:
+  - Advanced users can create `.cfgman.json` manually when customization is needed
+  - cfgman works with built-in defaults and doesn't require a config file
+  - Removed all `init` command references from help text and documentation
+  - Updated error messages to suggest using built-in defaults instead of init
+  - Simplified CLI interface by removing unnecessary config template generation
 
 ### Fixed
 
+- **CLI design conformance improvements** - Enhanced CLI to better follow established design guidelines:
+  - Standardized exit code usage to use constants consistently instead of hard-coded values
+  - Improved help text examples for `status` and `version` commands
+  - Added common workflow section to main help text for better discoverability
+  - Enhanced error messages with more actionable hints and structured error types
+  - Cleaned up global flag handling by removing unused code
+  - All commands now provide comprehensive examples and usage guidance
+  - Fixed function naming consistency: `handleCreateLinks` → `handleCreate`, `handleRemoveLinks` → `handleRemove`, `handlePruneLinks` → `handlePrune`
 - **Circular symlink validation** - Fixed incorrect circular reference error when symlinks already exist and point to the correct target. The validation now properly allows existing symlinks that point to their intended source.
 - **Test expectations** - Updated validation tests to reflect the new behavior where relinking (creating a symlink that already points to the correct location) is considered valid and not an error.
 - **Error message consistency** - Fixed inconsistent error message formats across different commands (e.g., "could not" vs "Failed to")
@@ -210,7 +217,6 @@ Initial release of cfgman.
   - Confirmation prompts for destructive actions
   - Cross-repository symlink protection
 - **Core commands**:
-  - `init` - Create minimal configuration template
   - `status` - Show all managed symlinks with their state
   - `adopt` - Move existing files into repository management
   - `orphan` - Remove files from management (restore to original location)

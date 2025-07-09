@@ -24,6 +24,51 @@ type Config struct {
 	LinkMappings   []LinkMapping `json:"link_mappings"`   // Flexible mapping system
 }
 
+// ConfigOptions represents all configuration options that can be overridden by flags/env vars
+type ConfigOptions struct {
+	ConfigPath     string   // Path to config file
+	RepoDir        string   // Repository directory
+	SourceDir      string   // Source directory override
+	TargetDir      string   // Target directory override
+	IgnorePatterns []string // Ignore patterns override
+}
+
+// getXDGConfigDir returns the XDG config directory for cfgman
+func getXDGConfigDir() string {
+	// Check XDG_CONFIG_HOME first
+	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" {
+		return filepath.Join(xdgConfigHome, "cfgman")
+	}
+
+	// Fall back to ~/.config/cfgman
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(homeDir, ".config", "cfgman")
+}
+
+// getDefaultConfig returns the built-in default configuration
+func getDefaultConfig() *Config {
+	return &Config{
+		IgnorePatterns: []string{
+			".git",
+			".gitignore",
+			".DS_Store",
+			"*.swp",
+			"*.tmp",
+			"README*",
+			"LICENSE*",
+			"CHANGELOG*",
+			".cfgman.json",
+		},
+		LinkMappings: []LinkMapping{
+			{Source: "home", Target: "~/"},
+			{Source: "config", Target: "~/.config/"},
+		},
+	}
+}
+
 // LoadConfig reads the configuration from a JSON file in the specified directory
 func LoadConfig(configRepo string) (*Config, error) {
 	PrintVerbose("Loading configuration from directory: %s", configRepo)
@@ -43,7 +88,7 @@ func LoadConfig(configRepo string) (*Config, error) {
 		// Config file doesn't exist
 		if os.IsNotExist(err) {
 			return nil, NewPathErrorWithHint("load config", cfgmanPath, ErrConfigNotFound,
-				fmt.Sprintf("Run 'cfgman init' to create a new %s file", ConfigFileName))
+				"Create a configuration file or use built-in defaults with command-line options")
 		}
 		return nil, NewPathError("stat config", cfgmanPath, err)
 	}
@@ -53,7 +98,7 @@ func LoadConfig(configRepo string) (*Config, error) {
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, NewPathErrorWithHint("read config", cfgmanPath, err,
-				fmt.Sprintf("Run 'cfgman init' to create a new %s file", ConfigFileName))
+				"Create a configuration file or use built-in defaults with command-line options")
 		}
 		return nil, fmt.Errorf("failed to read %s: %w", ConfigFileName, err)
 	}
@@ -74,6 +119,140 @@ func LoadConfig(configRepo string) (*Config, error) {
 		len(config.LinkMappings), len(config.IgnorePatterns))
 
 	return &config, nil
+}
+
+// loadConfigFromFile loads configuration from a specific file path
+func loadConfigFromFile(filePath string) (*Config, error) {
+	if filePath == "" {
+		return nil, fmt.Errorf("config file path is empty")
+	}
+
+	PrintVerbose("Attempting to load config from: %s", filePath)
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("config file does not exist: %s", filePath)
+	}
+
+	// Read and parse config file
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file %s: %w", filePath, err)
+	}
+
+	var config Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse config file %s: %w", filePath, err)
+	}
+
+	// Validate configuration
+	if err := config.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid configuration in %s: %w", filePath, err)
+	}
+
+	PrintVerbose("Successfully loaded config from: %s", filePath)
+	return &config, nil
+}
+
+// applyEnvironmentVariables applies environment variable overrides to options
+func applyEnvironmentVariables(options *ConfigOptions) {
+	if envConfig := os.Getenv("CFGMAN_CONFIG"); envConfig != "" && options.ConfigPath == "" {
+		options.ConfigPath = envConfig
+		PrintVerbose("Using config path from CFGMAN_CONFIG: %s", envConfig)
+	}
+
+	if envRepoDir := os.Getenv("CFGMAN_REPO_DIR"); envRepoDir != "" && options.RepoDir == "" {
+		options.RepoDir = envRepoDir
+		PrintVerbose("Using repo directory from CFGMAN_REPO_DIR: %s", envRepoDir)
+	}
+
+	if envSourceDir := os.Getenv("CFGMAN_SOURCE_DIR"); envSourceDir != "" && options.SourceDir == "" {
+		options.SourceDir = envSourceDir
+		PrintVerbose("Using source directory from CFGMAN_SOURCE_DIR: %s", envSourceDir)
+	}
+
+	if envTargetDir := os.Getenv("CFGMAN_TARGET_DIR"); envTargetDir != "" && options.TargetDir == "" {
+		options.TargetDir = envTargetDir
+		PrintVerbose("Using target directory from CFGMAN_TARGET_DIR: %s", envTargetDir)
+	}
+
+	if envIgnore := os.Getenv("CFGMAN_IGNORE"); envIgnore != "" && len(options.IgnorePatterns) == 0 {
+		// Split by comma for multiple patterns
+		options.IgnorePatterns = strings.Split(envIgnore, ",")
+		for i := range options.IgnorePatterns {
+			options.IgnorePatterns[i] = strings.TrimSpace(options.IgnorePatterns[i])
+		}
+		PrintVerbose("Using ignore patterns from CFGMAN_IGNORE: %v", options.IgnorePatterns)
+	}
+}
+
+// LoadConfigWithOptions loads configuration using the precedence system
+func LoadConfigWithOptions(options *ConfigOptions) (*Config, string, error) {
+	PrintVerbose("Loading configuration with options: %+v", options)
+
+	// Apply environment variables (only if not already set by flags)
+	applyEnvironmentVariables(options)
+
+	// Set default repo directory if not specified
+	if options.RepoDir == "" {
+		options.RepoDir = "."
+	}
+
+	var config *Config
+	var configSource string
+
+	// Try to load config from various sources in precedence order
+	configPaths := []struct {
+		path   string
+		source string
+	}{
+		{options.ConfigPath, "command line flag"},
+		{filepath.Join(options.RepoDir, ConfigFileName), "repo directory"},
+		{filepath.Join(getXDGConfigDir(), "config.json"), "XDG config directory"},
+		{filepath.Join(os.ExpandEnv("$HOME"), ".config", "cfgman", "config.json"), "user config directory"},
+		{filepath.Join(os.ExpandEnv("$HOME"), ".cfgman.json"), "user home directory"},
+		{filepath.Join(".", ConfigFileName), "current directory"},
+	}
+
+	for _, configPath := range configPaths {
+		if configPath.path == "" {
+			continue
+		}
+
+		loadedConfig, err := loadConfigFromFile(configPath.path)
+		if err == nil {
+			config = loadedConfig
+			configSource = configPath.source
+			PrintVerbose("Using config from: %s (%s)", configPath.path, configSource)
+			break
+		}
+		PrintVerbose("Config not found at: %s (%s)", configPath.path, configPath.source)
+	}
+
+	// If no config file found, use defaults
+	if config == nil {
+		config = getDefaultConfig()
+		configSource = "built-in defaults"
+		PrintVerbose("Using built-in default configuration")
+	}
+
+	// Apply overrides from options
+	if options.SourceDir != "" || options.TargetDir != "" {
+		// Create a custom mapping if source/target dirs are specified
+		if options.SourceDir != "" && options.TargetDir != "" {
+			config.LinkMappings = []LinkMapping{
+				{Source: options.SourceDir, Target: options.TargetDir},
+			}
+			PrintVerbose("Overriding link mappings with: %s -> %s", options.SourceDir, options.TargetDir)
+		}
+	}
+
+	if len(options.IgnorePatterns) > 0 {
+		config.IgnorePatterns = options.IgnorePatterns
+		PrintVerbose("Overriding ignore patterns with: %v", options.IgnorePatterns)
+	}
+
+	return config, configSource, nil
 }
 
 // Save writes the configuration to a JSON file

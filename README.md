@@ -28,13 +28,19 @@ mkdir -p ~/dotfiles/{home,private/home}
 cd ~/dotfiles
 git init
 
-# 2. Initialize cfgman in your repository
-cfgman init
-# Edit .cfgman.json to configure your mappings
+# 2. Create configuration file (optional - cfgman works with built-in defaults)
+# Create .cfgman.json if you need custom mappings:
+# {
+#   "ignore_patterns": [".DS_Store", "*.swp"],
+#   "link_mappings": [
+#     {"source": "home", "target": "~/"},
+#     {"source": "private/home", "target": "~/"}
+#   ]
+# }
 
 # 3. Adopt existing configs
-cfgman adopt ~/.gitconfig home
-cfgman adopt ~/.ssh/config private/home
+cfgman adopt --path ~/.gitconfig --source-dir home
+cfgman adopt --path ~/.ssh/config --source-dir private/home
 
 # 4. Create symlinks on new machines
 cfgman create
@@ -44,11 +50,11 @@ cfgman create
 
 cfgman uses a single configuration file `.cfgman.json` in your dotfiles repository that controls linking behavior.
 
-**Important**: cfgman must be run from within the repository directory containing `.cfgman.json`.
+**Note**: cfgman works with built-in defaults and doesn't require a config file. Create `.cfgman.json` only if you need custom ignore patterns or complex link mappings.
 
 ### Configuration File (.cfgman.json)
 
-Example configuration (after editing the template created by `cfgman init`):
+Example configuration:
 
 ```json
 {
@@ -72,12 +78,6 @@ Example configuration (after editing the template created by `cfgman init`):
 
 ## Commands
 
-### Configuration Commands
-
-```bash
-cfgman init                          # Create a minimal .cfgman.json template
-```
-
 ### Basic Commands
 
 ```bash
@@ -91,13 +91,13 @@ cfgman prune [--dry-run]             # Remove broken symlinks
 
 ```bash
 # Adopt a file/directory into your repository
-cfgman adopt <path> [source_dir] [--dry-run]
-cfgman adopt ~/.gitconfig home                    # Adopt to public repo
-cfgman adopt ~/.ssh/config private/home           # Adopt to private repo
+cfgman adopt --path <path> --source-dir <source_dir> [--dry-run]
+cfgman adopt --path ~/.gitconfig --source-dir home                    # Adopt to public repo
+cfgman adopt --path ~/.ssh/config --source-dir private/home           # Adopt to private repo
 
 # Orphan a file/directory (remove from management)
-cfgman orphan <path> [--dry-run]
-cfgman orphan ~/.config/oldapp                    # Stop managing a config
+cfgman orphan --path <path> [--dry-run]
+cfgman orphan --path ~/.config/oldapp                    # Stop managing a config
 ```
 
 ### Global Options
@@ -125,7 +125,7 @@ For example, with source `home` mapped to `~/`:
 
 ### Ignore Patterns
 
-cfgman supports gitignore-style patterns in the `ignore_patterns` field to exclude files from linking. The `cfgman init` command creates an empty `ignore_patterns` array that you can populate with patterns like `.DS_Store`, `*.swp`, and other files you want to exclude.
+cfgman supports gitignore-style patterns in the `ignore_patterns` field to exclude files from linking. You can add patterns like `.DS_Store`, `*.swp`, and other files you want to exclude.
 
 ## Common Workflows
 
@@ -146,7 +146,7 @@ cfgman create
 ```bash
 # Adopt a new app config (from repository directory)
 cd ~/dotfiles
-cfgman adopt ~/.config/newapp home
+cfgman adopt --path ~/.config/newapp --source-dir home
 
 # This will move the entire directory tree to your repo
 # and create symlinks for each individual file
@@ -156,8 +156,8 @@ cfgman adopt ~/.config/newapp home
 
 ```bash
 # Keep work/private configs separate
-cfgman adopt ~/.ssh/config private/home
-cfgman adopt ~/.config/work-vpn.conf private/home
+cfgman adopt --path ~/.ssh/config --source-dir private/home
+cfgman adopt --path ~/.config/work-vpn.conf --source-dir private/home
 ```
 
 ## Tips
