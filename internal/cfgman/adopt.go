@@ -251,7 +251,7 @@ func performDirectoryAdoption(absSource, destPath string) error {
 		fmt.Println()
 		if adopted > 0 {
 			PrintSuccess("Successfully adopted %d file(s)", adopted)
-			PrintInfo("Next: Run 'cfgman create' to create symlinks")
+			PrintInfo("Next: Run 'cfgman link' to create symlinks")
 		}
 		if skipped > 0 {
 			PrintInfo("Skipped %d file(s) (already adopted or exist in repo)", skipped)
@@ -373,7 +373,7 @@ func Adopt(source string, configRepo string, config *Config, sourceDir string, d
 
 	if !sourceInfo.IsDir() {
 		PrintSuccess("Adopted: %s", ContractPath(absSource))
-		PrintInfo("Next: Run 'cfgman create' to create symlinks")
+		PrintInfo("Next: Run 'cfgman link' to create symlinks")
 	}
 
 	return nil

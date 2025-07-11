@@ -52,6 +52,80 @@ func parseIgnorePatterns(patterns string) []string {
 	return result
 }
 
+// levenshteinDistance calculates the minimum edit distance between two strings
+func levenshteinDistance(s1, s2 string) int {
+	if len(s1) == 0 {
+		return len(s2)
+	}
+	if len(s2) == 0 {
+		return len(s1)
+	}
+
+	// Create a 2D slice for dynamic programming
+	matrix := make([][]int, len(s1)+1)
+	for i := range matrix {
+		matrix[i] = make([]int, len(s2)+1)
+	}
+
+	// Initialize first row and column
+	for i := 0; i <= len(s1); i++ {
+		matrix[i][0] = i
+	}
+	for j := 0; j <= len(s2); j++ {
+		matrix[0][j] = j
+	}
+
+	// Fill the matrix
+	for i := 1; i <= len(s1); i++ {
+		for j := 1; j <= len(s2); j++ {
+			cost := 0
+			if s1[i-1] != s2[j-1] {
+				cost = 1
+			}
+			matrix[i][j] = min(
+				matrix[i-1][j]+1,      // deletion
+				matrix[i][j-1]+1,      // insertion
+				matrix[i-1][j-1]+cost, // substitution
+			)
+		}
+	}
+
+	return matrix[len(s1)][len(s2)]
+}
+
+// suggestCommand finds the closest matching command
+func suggestCommand(input string) string {
+	commands := []string{"status", "adopt", "orphan", "link", "unlink", "prune", "version", "help"}
+
+	bestMatch := ""
+	bestDistance := len(input) + 1
+
+	for _, cmd := range commands {
+		dist := levenshteinDistance(input, cmd)
+		// Only suggest if the distance is reasonable (less than half the input length)
+		if dist < bestDistance && dist <= len(input)/2+1 {
+			bestMatch = cmd
+			bestDistance = dist
+		}
+	}
+
+	return bestMatch
+}
+
+// min returns the minimum of three integers
+func min(a, b, c int) int {
+	if a < b {
+		if a < c {
+			return a
+		}
+		return c
+	}
+	if b < c {
+		return b
+	}
+	return c
+}
+
 func main() {
 	// Parse global flags first
 	var globalVerbose, globalQuiet, globalJSON, globalNoColor, globalVersion, globalYes bool
@@ -176,18 +250,25 @@ func main() {
 		handleAdopt(commandArgs, globalOptions)
 	case "orphan":
 		handleOrphan(commandArgs, globalOptions, globalYes)
-	case "create":
-		handleCreate(commandArgs, globalOptions)
-	case "remove":
-		handleRemove(commandArgs, globalOptions, globalYes)
+	case "link":
+		handleLink(commandArgs, globalOptions)
+	case "unlink":
+		handleUnlink(commandArgs, globalOptions, globalYes)
 	case "prune":
 		handlePrune(commandArgs, globalOptions, globalYes)
 	case "version":
 		handleVersion(commandArgs)
 	default:
-		cfgman.PrintErrorWithHint(cfgman.WithHint(
-			fmt.Errorf("unknown command: %s", command),
-			"Run 'cfgman --help' to see available commands"))
+		suggestion := suggestCommand(command)
+		if suggestion != "" {
+			cfgman.PrintErrorWithHint(cfgman.WithHint(
+				fmt.Errorf("unknown command: %s", command),
+				fmt.Sprintf("Did you mean '%s'? Run 'cfgman --help' to see available commands", suggestion)))
+		} else {
+			cfgman.PrintErrorWithHint(cfgman.WithHint(
+				fmt.Errorf("unknown command: %s", command),
+				"Run 'cfgman --help' to see available commands"))
+		}
 		os.Exit(cfgman.ExitUsage)
 	}
 }
@@ -204,7 +285,7 @@ func handleStatus(args []string, globalOptions *cfgman.ConfigOptions) {
 		fmt.Println(cfgman.Cyan("  cfgman status --json"))
 		fmt.Println(cfgman.Cyan("  cfgman status --repo-dir ~/dotfiles"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
-		fmt.Printf("  %s\n", cfgman.Cyan("create, prune"))
+		fmt.Printf("  %s\n", cfgman.Cyan("link, prune"))
 	}
 	fs.Parse(args)
 
@@ -239,7 +320,7 @@ func handleAdopt(args []string, globalOptions *cfgman.ConfigOptions) {
 		fmt.Println(cfgman.Cyan("  cfgman adopt --path ~/.ssh/config --source-dir private/home"))
 		fmt.Println(cfgman.Cyan("  cfgman adopt --path ~/.bashrc --source-dir home --repo-dir ~/dotfiles"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
-		fmt.Printf("  %s\n", cfgman.Cyan("orphan, create, status"))
+		fmt.Printf("  %s\n", cfgman.Cyan("orphan, link, status"))
 	}
 
 	fs.Parse(args)
@@ -310,21 +391,21 @@ func handleOrphan(args []string, globalOptions *cfgman.ConfigOptions, globalYes 
 	}
 }
 
-func handleCreate(args []string, globalOptions *cfgman.ConfigOptions) {
-	fs := flag.NewFlagSet("create", flag.ExitOnError)
+func handleLink(args []string, globalOptions *cfgman.ConfigOptions) {
+	fs := flag.NewFlagSet("link", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 
 	fs.Usage = func() {
-		fmt.Printf("%s cfgman create [options]\n", cfgman.Bold("Usage:"))
-		fmt.Printf("\n%s\n", cfgman.Cyan("Create symlinks from repository to home directory"))
+		fmt.Printf("%s cfgman link [options]\n", cfgman.Bold("Usage:"))
+		fmt.Printf("\n%s\n", cfgman.Cyan("Create symlinks from repository to target directories"))
 		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
 		fmt.Print(formatFlags(fs))
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
-		fmt.Println(cfgman.Cyan("  cfgman create"))
-		fmt.Println(cfgman.Cyan("  cfgman create --dry-run"))
-		fmt.Println(cfgman.Cyan("  cfgman create --repo-dir ~/dotfiles"))
+		fmt.Println(cfgman.Cyan("  cfgman link"))
+		fmt.Println(cfgman.Cyan("  cfgman link --dry-run"))
+		fmt.Println(cfgman.Cyan("  cfgman link --repo-dir ~/dotfiles"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
-		fmt.Printf("  %s\n", cfgman.Cyan("remove, status, adopt"))
+		fmt.Printf("  %s\n", cfgman.Cyan("unlink, status, adopt"))
 	}
 
 	fs.Parse(args)
@@ -344,22 +425,22 @@ func handleCreate(args []string, globalOptions *cfgman.ConfigOptions) {
 	}
 }
 
-func handleRemove(args []string, globalOptions *cfgman.ConfigOptions, globalYes bool) {
-	fs := flag.NewFlagSet("remove", flag.ExitOnError)
+func handleUnlink(args []string, globalOptions *cfgman.ConfigOptions, globalYes bool) {
+	fs := flag.NewFlagSet("unlink", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 	force := fs.Bool("force", false, "Skip confirmation prompt")
 
 	fs.Usage = func() {
-		fmt.Printf("%s cfgman remove [options]\n", cfgman.Bold("Usage:"))
+		fmt.Printf("%s cfgman unlink [options]\n", cfgman.Bold("Usage:"))
 		fmt.Printf("\n%s\n", cfgman.Cyan("Remove all managed symlinks"))
 		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
 		fmt.Print(formatFlags(fs))
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
-		fmt.Println(cfgman.Cyan("  cfgman remove"))
-		fmt.Println(cfgman.Cyan("  cfgman remove --dry-run"))
-		fmt.Println(cfgman.Cyan("  cfgman remove --repo-dir ~/dotfiles"))
+		fmt.Println(cfgman.Cyan("  cfgman unlink"))
+		fmt.Println(cfgman.Cyan("  cfgman unlink --dry-run"))
+		fmt.Println(cfgman.Cyan("  cfgman unlink --repo-dir ~/dotfiles"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
-		fmt.Printf("  %s\n", cfgman.Cyan("create, prune, orphan"))
+		fmt.Printf("  %s\n", cfgman.Cyan("link, prune, orphan"))
 	}
 
 	fs.Parse(args)
@@ -394,7 +475,7 @@ func handlePrune(args []string, globalOptions *cfgman.ConfigOptions, globalYes b
 		fmt.Println(cfgman.Cyan("  cfgman prune --dry-run"))
 		fmt.Println(cfgman.Cyan("  cfgman prune --repo-dir ~/dotfiles"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
-		fmt.Printf("  %s\n", cfgman.Cyan("remove, status"))
+		fmt.Printf("  %s\n", cfgman.Cyan("unlink, status"))
 	}
 
 	fs.Parse(args)
@@ -456,8 +537,8 @@ func printUsage() {
 	fmt.Printf("    %-20s Show status of all managed symlinks\n", cfgman.Bold("status"))
 	fmt.Printf("    %-20s Adopt file/directory into repository\n", cfgman.Bold("adopt"))
 	fmt.Printf("    %-20s Remove file/directory from repo management\n", cfgman.Bold("orphan"))
-	fmt.Printf("    %-20s Create symlinks from repo to home\n", cfgman.Bold("create"))
-	fmt.Printf("    %-20s Remove all managed symlinks\n", cfgman.Bold("remove"))
+	fmt.Printf("    %-20s Create symlinks from repo to target dirs\n", cfgman.Bold("link"))
+	fmt.Printf("    %-20s Remove all managed symlinks\n", cfgman.Bold("unlink"))
 	fmt.Printf("    %-20s Remove broken symlinks\n", cfgman.Bold("prune"))
 	fmt.Println()
 	fmt.Printf("  %s\n", cfgman.Cyan("Other:"))
@@ -468,7 +549,7 @@ func printUsage() {
 	fmt.Println()
 	fmt.Printf("%s\n", cfgman.Bold("Common workflow:"))
 	fmt.Println(cfgman.Cyan("  cfgman adopt --path ~/.gitconfig --source-dir home     # Adopt existing files"))
-	fmt.Println(cfgman.Cyan("  cfgman create                                           # Create symlinks"))
+	fmt.Println(cfgman.Cyan("  cfgman link                                             # Create symlinks"))
 	fmt.Println(cfgman.Cyan("  cfgman status                                           # Check link status"))
 	fmt.Println()
 	fmt.Printf("%s\n", cfgman.Bold("Configuration Discovery:"))
@@ -490,8 +571,8 @@ func printUsage() {
 	fmt.Println()
 	fmt.Printf("%s\n", cfgman.Bold("Examples:"))
 	fmt.Println(cfgman.Cyan("  cfgman --repo-dir ~/dotfiles status                    # Use specific repo"))
-	fmt.Println(cfgman.Cyan("  cfgman --config ~/.config/cfgman/work.json create     # Use specific config"))
-	fmt.Println(cfgman.Cyan("  cfgman --source-dir work --target-dir ~/.config create # Override directories"))
+	fmt.Println(cfgman.Cyan("  cfgman --config ~/.config/cfgman/work.json link       # Use specific config"))
+	fmt.Println(cfgman.Cyan("  cfgman --source-dir work --target-dir ~/.config link  # Override directories"))
 }
 
 func printCommandHelp(command string) {
@@ -505,17 +586,24 @@ func printCommandHelp(command string) {
 		handleAdopt([]string{"-h"}, emptyOptions)
 	case "orphan":
 		handleOrphan([]string{"-h"}, emptyOptions, false)
-	case "create":
-		handleCreate([]string{"-h"}, emptyOptions)
-	case "remove":
-		handleRemove([]string{"-h"}, emptyOptions, false)
+	case "link":
+		handleLink([]string{"-h"}, emptyOptions)
+	case "unlink":
+		handleUnlink([]string{"-h"}, emptyOptions, false)
 	case "prune":
 		handlePrune([]string{"-h"}, emptyOptions, false)
 	case "version":
 		handleVersion([]string{"-h"})
 	default:
-		cfgman.PrintErrorWithHint(cfgman.WithHint(
-			fmt.Errorf("unknown command: %s", command),
-			"Run 'cfgman --help' to see available commands"))
+		suggestion := suggestCommand(command)
+		if suggestion != "" {
+			cfgman.PrintErrorWithHint(cfgman.WithHint(
+				fmt.Errorf("unknown command: %s", command),
+				fmt.Sprintf("Did you mean 'cfgman help %s'?", suggestion)))
+		} else {
+			cfgman.PrintErrorWithHint(cfgman.WithHint(
+				fmt.Errorf("unknown command: %s", command),
+				"Run 'cfgman --help' to see available commands"))
+		}
 	}
 }
