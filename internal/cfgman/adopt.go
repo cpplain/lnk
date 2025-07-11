@@ -8,7 +8,7 @@ import (
 )
 
 // validateAdoptSource validates the source path and checks if it's already adopted
-func validateAdoptSource(absSource, absConfigRepo string) error {
+func validateAdoptSource(absSource, absSourceDir string) error {
 	// Check if source exists
 	sourceInfo, err := os.Lstat(absSource)
 	if err != nil {
@@ -32,7 +32,7 @@ func validateAdoptSource(absSource, absConfigRepo string) error {
 			absTarget = filepath.Join(filepath.Dir(absSource), target)
 		}
 		if cleanTarget, err := filepath.Abs(absTarget); err == nil {
-			if relPath, err := filepath.Rel(absConfigRepo, cleanTarget); err == nil && !strings.HasPrefix(relPath, "..") && relPath != "." {
+			if relPath, err := filepath.Rel(absSourceDir, cleanTarget); err == nil && !strings.HasPrefix(relPath, "..") && relPath != "." {
 				return NewLinkErrorWithHint("adopt", absSource, target, ErrAlreadyAdopted,
 					"This file is already managed by cfgman. Use 'cfgman status' to see managed files")
 			}
@@ -302,21 +302,42 @@ func copyAndVerify(absSource, destPath string) error {
 	return nil
 }
 
-// Adopt moves a file or directory into the configuration repository and creates a symlink back
-func Adopt(source string, configRepo string, config *Config, sourceDir string, dryRun bool) error {
+// Adopt moves a file or directory into the source directory and creates a symlink back
+func Adopt(source string, config *Config, sourceDir string, dryRun bool) error {
 	// Convert to absolute paths
-	absConfigRepo, err := filepath.Abs(configRepo)
-	if err != nil {
-		return fmt.Errorf("failed to resolve repository path: %w", err)
-	}
 	absSource, err := filepath.Abs(source)
 	if err != nil {
 		return fmt.Errorf("failed to resolve source path: %w", err)
 	}
 	PrintHeader("Adopting Files")
 
+	// Ensure sourceDir is absolute
+	absSourceDir, err := ExpandPath(sourceDir)
+	if err != nil {
+		return fmt.Errorf("failed to expand source directory: %w", err)
+	}
+
+	// Validate that sourceDir exists in config mappings
+	var mapping *LinkMapping
+	for i := range config.LinkMappings {
+		expandedSource, err := ExpandPath(config.LinkMappings[i].Source)
+		if err != nil {
+			continue
+		}
+		if expandedSource == absSourceDir {
+			mapping = &config.LinkMappings[i]
+			break
+		}
+	}
+
+	if mapping == nil {
+		return NewValidationErrorWithHint("source directory", sourceDir,
+			"not found in config mappings",
+			fmt.Sprintf("Add it to .cfgman.json first with a mapping like: {\"source\": \"%s\", \"target\": \"~/\"}", sourceDir))
+	}
+
 	// Validate source and check if already adopted
-	if err := validateAdoptSource(absSource, absConfigRepo); err != nil {
+	if err := validateAdoptSource(absSource, absSourceDir); err != nil {
 		return err
 	}
 
@@ -326,13 +347,14 @@ func Adopt(source string, configRepo string, config *Config, sourceDir string, d
 		return err
 	}
 
-	// Ensure source directory exists in repository
-	_, err = ensureSourceDirExists(configRepo, sourceDir, config)
-	if err != nil {
-		return err
+	// Create source directory if it doesn't exist
+	if _, err := os.Stat(absSourceDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(absSourceDir, 0755); err != nil {
+			return fmt.Errorf("failed to create source directory %s: %w", absSourceDir, err)
+		}
 	}
 
-	destPath := filepath.Join(absConfigRepo, sourceDir, relPath)
+	destPath := filepath.Join(absSourceDir, relPath)
 
 	// Check if source is a directory for proper dry-run output
 	sourceInfo, err := os.Stat(absSource)

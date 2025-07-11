@@ -33,14 +33,14 @@ git init
 # {
 #   "ignore_patterns": [".DS_Store", "*.swp"],
 #   "link_mappings": [
-#     {"source": "home", "target": "~/"},
-#     {"source": "private/home", "target": "~/"}
+#     {"source": "~/dotfiles/home", "target": "~/"},
+#     {"source": "~/dotfiles/private/home", "target": "~/"}
 #   ]
 # }
 
 # 3. Adopt existing configs
-cfgman adopt --path ~/.gitconfig --source-dir home
-cfgman adopt --path ~/.ssh/config --source-dir private/home
+cfgman adopt --path ~/.gitconfig --source-dir ~/dotfiles/home
+cfgman adopt --path ~/.ssh/config --source-dir ~/dotfiles/private/home
 
 # 4. Create symlinks on new machines
 cfgman link
@@ -61,11 +61,11 @@ Example configuration:
   "ignore_patterns": [".DS_Store", "*.swp", "*~", "Thumbs.db"],
   "link_mappings": [
     {
-      "source": "home",
+      "source": "~/dotfiles/home",
       "target": "~/"
     },
     {
-      "source": "private/home",
+      "source": "~/dotfiles/private/home",
       "target": "~/"
     }
   ]
@@ -73,7 +73,7 @@ Example configuration:
 ```
 
 - **ignore_patterns**: Gitignore-style patterns for files to never link
-- **source**: Directory in your repo containing configs
+- **source**: Absolute path to directory containing configs (supports `~/` expansion)
 - **target**: Where symlinks are created (usually `~/`)
 
 ## Commands
@@ -92,8 +92,8 @@ cfgman prune [--dry-run]             # Remove broken symlinks
 ```bash
 # Adopt a file/directory into your repository
 cfgman adopt --path <path> --source-dir <source_dir> [--dry-run]
-cfgman adopt --path ~/.gitconfig --source-dir home                    # Adopt to public repo
-cfgman adopt --path ~/.ssh/config --source-dir private/home           # Adopt to private repo
+cfgman adopt --path ~/.gitconfig --source-dir ~/dotfiles/home                    # Adopt to public repo
+cfgman adopt --path ~/.ssh/config --source-dir ~/dotfiles/private/home           # Adopt to private repo
 
 # Orphan a file/directory (remove from management)
 cfgman orphan --path <path> [--dry-run]
@@ -117,10 +117,10 @@ cfgman recursively traverses your source directories and creates individual syml
 - Preserves your ability to have local-only files alongside managed configs
 - Creates parent directories as needed (never as symlinks)
 
-For example, with source `home` mapped to `~/`:
+For example, with source `~/dotfiles/home` mapped to `~/`:
 
-- `home/.config/git/config` → `~/.config/git/config` (file symlink)
-- `home/.config/nvim/init.vim` → `~/.config/nvim/init.vim` (file symlink)
+- `~/dotfiles/home/.config/git/config` → `~/.config/git/config` (file symlink)
+- `~/dotfiles/home/.config/nvim/init.vim` → `~/.config/nvim/init.vim` (file symlink)
 - The directories `.config`, `.config/git`, and `.config/nvim` are created as regular directories, not symlinks
 
 ### Ignore Patterns
@@ -136,17 +136,15 @@ cfgman supports gitignore-style patterns in the `ignore_patterns` field to exclu
 git clone https://github.com/you/dotfiles.git ~/dotfiles
 cd ~/dotfiles && git submodule update --init  # If using private submodule
 
-# 2. Create links (must be run from repository directory)
-cd ~/dotfiles
+# 2. Create links
 cfgman link
 ```
 
 ### Adding New Configurations
 
 ```bash
-# Adopt a new app config (from repository directory)
-cd ~/dotfiles
-cfgman adopt --path ~/.config/newapp --source-dir home
+# Adopt a new app config
+cfgman adopt --path ~/.config/newapp --source-dir ~/dotfiles/home
 
 # This will move the entire directory tree to your repo
 # and create symlinks for each individual file
@@ -156,15 +154,15 @@ cfgman adopt --path ~/.config/newapp --source-dir home
 
 ```bash
 # Keep work/private configs separate
-cfgman adopt --path ~/.ssh/config --source-dir private/home
-cfgman adopt --path ~/.config/work-vpn.conf --source-dir private/home
+cfgman adopt --path ~/.ssh/config --source-dir ~/dotfiles/private/home
+cfgman adopt --path ~/.config/work-vpn.conf --source-dir ~/dotfiles/private/home
 ```
 
 ## Tips
 
-- Always run cfgman commands from your repository directory
 - Use `--dry-run` to preview changes before making them
 - Keep sensitive configs in a separate private directory or git submodule
 - Run `cfgman status` regularly to check for broken links
 - Use `ignore_patterns` in `.cfgman.json` to exclude unwanted files
 - Consider separate source directories for different contexts (work, personal)
+- Source paths can use `~/` for home directory expansion

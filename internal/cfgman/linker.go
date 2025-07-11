@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // PlannedLink represents a source file and its target symlink location
@@ -13,14 +12,8 @@ type PlannedLink struct {
 	Target string
 }
 
-// CreateLinks creates symlinks from the repository to the home directory
-func CreateLinks(configRepo string, config *Config, dryRun bool) error {
-	// Convert to absolute path
-	absConfigRepo, err := filepath.Abs(configRepo)
-	if err != nil {
-		return NewPathErrorWithHint("resolve repository path", configRepo, err,
-			"Ensure the repository directory path is valid and accessible")
-	}
+// CreateLinks creates symlinks from the source directories to the target directories
+func CreateLinks(config *Config, dryRun bool) error {
 	PrintHeader("Creating Symlinks")
 
 	// Require LinkMappings to be defined
@@ -35,16 +28,19 @@ func CreateLinks(configRepo string, config *Config, dryRun bool) error {
 	for _, mapping := range config.LinkMappings {
 		PrintVerbose("Processing mapping: %s -> %s", mapping.Source, mapping.Target)
 
+		// Expand the source path (handle ~/)
+		sourcePath, err := ExpandPath(mapping.Source)
+		if err != nil {
+			return fmt.Errorf("expanding source path for mapping %s: %w", mapping.Source, err)
+		}
+		PrintVerbose("Source path: %s", sourcePath)
+
 		// Expand the target path (handle ~/)
 		targetPath, err := ExpandPath(mapping.Target)
 		if err != nil {
 			return fmt.Errorf("expanding target path for mapping %s: %w", mapping.Source, err)
 		}
 		PrintVerbose("Expanded target path: %s", targetPath)
-
-		// Build the source path
-		sourcePath := filepath.Join(absConfigRepo, mapping.Source)
-		PrintVerbose("Source path: %s", sourcePath)
 
 		// Check if source directory exists
 		if info, err := os.Stat(sourcePath); err != nil {
@@ -60,7 +56,7 @@ func CreateLinks(configRepo string, config *Config, dryRun bool) error {
 		Debug("Processing mapping: %s -> %s", mapping.Source, mapping.Target)
 
 		// Collect files from this mapping
-		links, err := collectPlannedLinks(sourcePath, targetPath, absConfigRepo, &mapping, config)
+		links, err := collectPlannedLinks(sourcePath, targetPath, &mapping, config)
 		if err != nil {
 			return fmt.Errorf("collecting files for mapping %s: %w", mapping.Source, err)
 		}
@@ -94,18 +90,12 @@ func CreateLinks(configRepo string, config *Config, dryRun bool) error {
 }
 
 // RemoveLinks removes all symlinks pointing to the config repository
-func RemoveLinks(configRepo string, config *Config, dryRun bool, force bool) error {
-	// Convert to absolute path
-	absConfigRepo, err := filepath.Abs(configRepo)
-	if err != nil {
-		return NewPathErrorWithHint("resolve repository path", configRepo, err,
-			"Ensure the repository directory path is valid and accessible")
-	}
-	return removeLinks(absConfigRepo, config, dryRun, !force)
+func RemoveLinks(config *Config, dryRun bool, force bool) error {
+	return removeLinks(config, dryRun, !force)
 }
 
 // removeLinks is the internal implementation that allows skipping confirmation
-func removeLinks(configRepo string, config *Config, dryRun bool, skipConfirm bool) error {
+func removeLinks(config *Config, dryRun bool, skipConfirm bool) error {
 	PrintHeader("Removing Symlinks")
 
 	homeDir, err := os.UserHomeDir()
@@ -114,8 +104,8 @@ func removeLinks(configRepo string, config *Config, dryRun bool, skipConfirm boo
 			"Check that the HOME environment variable is set correctly")
 	}
 
-	// Find all symlinks pointing to our repo
-	links, err := FindManagedLinks(homeDir, configRepo, config)
+	// Find all symlinks pointing to configured source directories
+	links, err := FindManagedLinks(homeDir, config)
 	if err != nil {
 		return fmt.Errorf("failed to find managed links: %w", err)
 	}
@@ -180,14 +170,8 @@ func removeLinks(configRepo string, config *Config, dryRun bool, skipConfirm boo
 	return nil
 }
 
-// PruneLinks removes broken symlinks pointing to the config repository
-func PruneLinks(configRepo string, config *Config, dryRun bool, force bool) error {
-	// Convert to absolute path
-	absConfigRepo, err := filepath.Abs(configRepo)
-	if err != nil {
-		return NewPathErrorWithHint("resolve repository path", configRepo, err,
-			"Ensure the repository directory path is valid and accessible")
-	}
+// PruneLinks removes broken symlinks pointing to configured source directories
+func PruneLinks(config *Config, dryRun bool, force bool) error {
 	PrintHeader("Pruning Broken Symlinks")
 
 	homeDir, err := os.UserHomeDir()
@@ -196,8 +180,8 @@ func PruneLinks(configRepo string, config *Config, dryRun bool, force bool) erro
 			"Check that the HOME environment variable is set correctly")
 	}
 
-	// Find all symlinks pointing to our repo
-	links, err := FindManagedLinks(homeDir, absConfigRepo, config)
+	// Find all symlinks pointing to configured source directories
+	links, err := FindManagedLinks(homeDir, config)
 	if err != nil {
 		return fmt.Errorf("failed to find managed links: %w", err)
 	}
@@ -273,16 +257,18 @@ func PruneLinks(configRepo string, config *Config, dryRun bool, force bool) erro
 }
 
 // shouldIgnoreEntry determines if an entry should be ignored based on patterns
-func shouldIgnoreEntry(sourceItem, repoRoot string, mapping *LinkMapping, config *Config) bool {
-	relPathForIgnore := strings.TrimPrefix(sourceItem, repoRoot+"/")
-	if mapping != nil && mapping.Source != "." {
-		relPathForIgnore = strings.TrimPrefix(relPathForIgnore, mapping.Source+"/")
+func shouldIgnoreEntry(sourceItem, sourcePath string, mapping *LinkMapping, config *Config) bool {
+	// Get relative path from source directory
+	relPath, err := filepath.Rel(sourcePath, sourceItem)
+	if err != nil {
+		// If we can't get relative path, don't ignore
+		return false
 	}
-	return config.ShouldIgnore(relPathForIgnore)
+	return config.ShouldIgnore(relPath)
 }
 
 // collectPlannedLinks walks a source directory and collects all files that should be linked
-func collectPlannedLinks(sourcePath, targetPath, repoRoot string, mapping *LinkMapping, config *Config) ([]PlannedLink, error) {
+func collectPlannedLinks(sourcePath, targetPath string, mapping *LinkMapping, config *Config) ([]PlannedLink, error) {
 	var links []PlannedLink
 
 	err := filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
@@ -296,7 +282,7 @@ func collectPlannedLinks(sourcePath, targetPath, repoRoot string, mapping *LinkM
 		}
 
 		// Check if this file should be ignored
-		if shouldIgnoreEntry(path, repoRoot, mapping, config) {
+		if shouldIgnoreEntry(path, sourcePath, mapping, config) {
 			return nil
 		}
 

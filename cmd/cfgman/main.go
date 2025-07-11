@@ -145,7 +145,7 @@ func min(a, b, c int) int {
 func main() {
 	// Parse global flags first
 	var globalVerbose, globalQuiet, globalNoColor, globalVersion, globalYes bool
-	var globalConfig, globalRepoDir, globalSourceDir, globalTargetDir, globalIgnore, globalOutput string
+	var globalConfig, globalSourceDir, globalTargetDir, globalIgnore, globalOutput string
 	remainingArgs := []string{}
 
 	// Manual parsing to extract global flags before command
@@ -175,11 +175,6 @@ func main() {
 		case "--config":
 			if hasValue {
 				globalConfig = value
-				i += consumed
-			}
-		case "--repo-dir":
-			if hasValue {
-				globalRepoDir = value
 				i += consumed
 			}
 		case "--source-dir":
@@ -266,7 +261,6 @@ func main() {
 	// Create global config options from parsed flags
 	globalOptions := &cfgman.ConfigOptions{
 		ConfigPath:     globalConfig,
-		RepoDir:        globalRepoDir,
 		SourceDir:      globalSourceDir,
 		TargetDir:      globalTargetDir,
 		IgnorePatterns: parseIgnorePatterns(globalIgnore),
@@ -314,7 +308,6 @@ func handleStatus(args []string, globalOptions *cfgman.ConfigOptions) {
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
 		fmt.Println(cfgman.Cyan("  cfgman status"))
 		fmt.Println(cfgman.Cyan("  cfgman status --output json"))
-		fmt.Println(cfgman.Cyan("  cfgman status --repo-dir ~/dotfiles"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
 		fmt.Printf("  %s\n", cfgman.Cyan("link, prune"))
 	}
@@ -329,7 +322,7 @@ func handleStatus(args []string, globalOptions *cfgman.ConfigOptions) {
 	// Show config source in verbose mode
 	cfgman.PrintVerbose("Using configuration from: %s", configSource)
 
-	if err := cfgman.Status(globalOptions.RepoDir, config); err != nil {
+	if err := cfgman.Status(config); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(cfgman.ExitError)
 	}
@@ -339,7 +332,7 @@ func handleAdopt(args []string, globalOptions *cfgman.ConfigOptions) {
 	fs := flag.NewFlagSet("adopt", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 	path := fs.String("path", "", "The file or directory to adopt")
-	sourceDir := fs.String("source-dir", "", "The source directory in the repository (e.g., home, private/home)")
+	sourceDir := fs.String("source-dir", "", "The source directory (absolute path, e.g., ~/dotfiles/home)")
 
 	fs.Usage = func() {
 		fmt.Printf("%s cfgman adopt [options]\n", cfgman.Bold("Usage:"))
@@ -347,9 +340,9 @@ func handleAdopt(args []string, globalOptions *cfgman.ConfigOptions) {
 		fmt.Printf("\n%s\n", cfgman.Bold("Options:"))
 		fmt.Print(formatFlags(fs))
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
-		fmt.Println(cfgman.Cyan("  cfgman adopt --path ~/.gitconfig --source-dir home"))
-		fmt.Println(cfgman.Cyan("  cfgman adopt --path ~/.ssh/config --source-dir private/home"))
-		fmt.Println(cfgman.Cyan("  cfgman adopt --path ~/.bashrc --source-dir home --repo-dir ~/dotfiles"))
+		fmt.Println(cfgman.Cyan("  cfgman adopt --path ~/.gitconfig --source-dir ~/dotfiles/home"))
+		fmt.Println(cfgman.Cyan("  cfgman adopt --path ~/.ssh/config --source-dir ~/dotfiles/private/home"))
+		fmt.Println(cfgman.Cyan("  cfgman adopt --path ~/.bashrc --source-dir ~/dotfiles/home"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
 		fmt.Printf("  %s\n", cfgman.Cyan("orphan, link, status"))
 	}
@@ -372,7 +365,7 @@ func handleAdopt(args []string, globalOptions *cfgman.ConfigOptions) {
 	// Show config source in verbose mode
 	cfgman.PrintVerbose("Using configuration from: %s", configSource)
 
-	if err := cfgman.Adopt(*path, globalOptions.RepoDir, config, *sourceDir, *dryRun); err != nil {
+	if err := cfgman.Adopt(*path, config, *sourceDir, *dryRun); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(cfgman.ExitError)
 	}
@@ -392,7 +385,7 @@ func handleOrphan(args []string, globalOptions *cfgman.ConfigOptions, globalYes 
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
 		fmt.Println(cfgman.Cyan("  cfgman orphan --path ~/.gitconfig"))
 		fmt.Println(cfgman.Cyan("  cfgman orphan --path ~/.config/nvim"))
-		fmt.Println(cfgman.Cyan("  cfgman orphan --path ~/.bashrc --repo-dir ~/dotfiles"))
+		fmt.Println(cfgman.Cyan("  cfgman orphan --path ~/.bashrc"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
 		fmt.Printf("  %s\n", cfgman.Cyan("adopt, status"))
 	}
@@ -415,7 +408,7 @@ func handleOrphan(args []string, globalOptions *cfgman.ConfigOptions, globalYes 
 	// Show config source in verbose mode
 	cfgman.PrintVerbose("Using configuration from: %s", configSource)
 
-	if err := cfgman.Orphan(*path, globalOptions.RepoDir, config, *dryRun, globalYes); err != nil {
+	if err := cfgman.Orphan(*path, config, *dryRun, globalYes); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(cfgman.ExitError)
 	}
@@ -433,7 +426,7 @@ func handleLink(args []string, globalOptions *cfgman.ConfigOptions) {
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
 		fmt.Println(cfgman.Cyan("  cfgman link"))
 		fmt.Println(cfgman.Cyan("  cfgman link --dry-run"))
-		fmt.Println(cfgman.Cyan("  cfgman link --repo-dir ~/dotfiles"))
+		fmt.Println(cfgman.Cyan("  cfgman link --source-dir ~/dotfiles/home --target-dir ~/"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
 		fmt.Printf("  %s\n", cfgman.Cyan("unlink, status, adopt"))
 	}
@@ -449,7 +442,7 @@ func handleLink(args []string, globalOptions *cfgman.ConfigOptions) {
 	// Show config source in verbose mode
 	cfgman.PrintVerbose("Using configuration from: %s", configSource)
 
-	if err := cfgman.CreateLinks(globalOptions.RepoDir, config, *dryRun); err != nil {
+	if err := cfgman.CreateLinks(config, *dryRun); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(cfgman.ExitError)
 	}
@@ -467,7 +460,6 @@ func handleUnlink(args []string, globalOptions *cfgman.ConfigOptions, globalYes 
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
 		fmt.Println(cfgman.Cyan("  cfgman unlink"))
 		fmt.Println(cfgman.Cyan("  cfgman unlink --dry-run"))
-		fmt.Println(cfgman.Cyan("  cfgman unlink --repo-dir ~/dotfiles"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
 		fmt.Printf("  %s\n", cfgman.Cyan("link, prune, orphan"))
 	}
@@ -483,7 +475,7 @@ func handleUnlink(args []string, globalOptions *cfgman.ConfigOptions, globalYes 
 	// Show config source in verbose mode
 	cfgman.PrintVerbose("Using configuration from: %s", configSource)
 
-	if err := cfgman.RemoveLinks(globalOptions.RepoDir, config, *dryRun, globalYes); err != nil {
+	if err := cfgman.RemoveLinks(config, *dryRun, globalYes); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(cfgman.ExitError)
 	}
@@ -501,7 +493,6 @@ func handlePrune(args []string, globalOptions *cfgman.ConfigOptions, globalYes b
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
 		fmt.Println(cfgman.Cyan("  cfgman prune"))
 		fmt.Println(cfgman.Cyan("  cfgman prune --dry-run"))
-		fmt.Println(cfgman.Cyan("  cfgman prune --repo-dir ~/dotfiles"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
 		fmt.Printf("  %s\n", cfgman.Cyan("unlink, status"))
 	}
@@ -517,7 +508,7 @@ func handlePrune(args []string, globalOptions *cfgman.ConfigOptions, globalYes b
 	// Show config source in verbose mode
 	cfgman.PrintVerbose("Using configuration from: %s", configSource)
 
-	if err := cfgman.PruneLinks(globalOptions.RepoDir, config, *dryRun, globalYes); err != nil {
+	if err := cfgman.PruneLinks(config, *dryRun, globalYes); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(cfgman.ExitError)
 	}
@@ -555,9 +546,8 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println(cfgman.Bold("Configuration Options:"))
 	fmt.Printf("      --config PATH    Path to configuration file\n")
-	fmt.Printf("      --repo-dir PATH  Repository directory (default: current directory)\n")
-	fmt.Printf("      --source-dir DIR Override source directory for operations\n")
-	fmt.Printf("      --target-dir DIR Override target directory for operations\n")
+	fmt.Printf("      --source-dir DIR Source directory (absolute path)\n")
+	fmt.Printf("      --target-dir DIR Target directory for operations\n")
 	fmt.Printf("      --ignore LIST    Comma-separated list of ignore patterns\n")
 	fmt.Println()
 	fmt.Println(cfgman.Bold("Commands:"))
@@ -576,31 +566,29 @@ func printUsage() {
 	fmt.Printf("Use '%s' for more information about a command.\n", cfgman.Bold("cfgman help <command>"))
 	fmt.Println()
 	fmt.Printf("%s\n", cfgman.Bold("Common workflow:"))
-	fmt.Println(cfgman.Cyan("  cfgman adopt --path ~/.gitconfig --source-dir home     # Adopt existing files"))
-	fmt.Println(cfgman.Cyan("  cfgman link                                             # Create symlinks"))
-	fmt.Println(cfgman.Cyan("  cfgman status                                           # Check link status"))
+	fmt.Println(cfgman.Cyan("  cfgman adopt --path ~/.gitconfig --source-dir ~/dotfiles/home     # Adopt existing files"))
+	fmt.Println(cfgman.Cyan("  cfgman link                                                        # Create symlinks"))
+	fmt.Println(cfgman.Cyan("  cfgman status                                                      # Check link status"))
 	fmt.Println()
 	fmt.Printf("%s\n", cfgman.Bold("Configuration Discovery:"))
 	fmt.Println("  Configuration is loaded from the first available source:")
 	fmt.Printf("    1. %s flag\n", cfgman.Cyan("--config"))
-	fmt.Printf("    2. %s in repository directory\n", cfgman.Cyan(cfgman.ConfigFileName))
-	fmt.Printf("    3. %s\n", cfgman.Cyan("$XDG_CONFIG_HOME/cfgman/config.json"))
-	fmt.Printf("    4. %s\n", cfgman.Cyan("~/.config/cfgman/config.json"))
-	fmt.Printf("    5. %s\n", cfgman.Cyan("~/.cfgman.json"))
-	fmt.Printf("    6. %s in current directory\n", cfgman.Cyan(cfgman.ConfigFileName))
-	fmt.Printf("    7. %s\n", cfgman.Cyan("Built-in defaults"))
+	fmt.Printf("    2. %s\n", cfgman.Cyan("$XDG_CONFIG_HOME/cfgman/config.json"))
+	fmt.Printf("    3. %s\n", cfgman.Cyan("~/.config/cfgman/config.json"))
+	fmt.Printf("    4. %s\n", cfgman.Cyan("~/.cfgman.json"))
+	fmt.Printf("    5. %s in current directory\n", cfgman.Cyan(cfgman.ConfigFileName))
+	fmt.Printf("    6. %s\n", cfgman.Cyan("Built-in defaults"))
 	fmt.Println()
 	fmt.Printf("%s\n", cfgman.Bold("Environment Variables:"))
 	fmt.Printf("  %s      Configuration file path\n", cfgman.Cyan("CFGMAN_CONFIG"))
-	fmt.Printf("  %s    Repository directory\n", cfgman.Cyan("CFGMAN_REPO_DIR"))
-	fmt.Printf("  %s  Source directory override\n", cfgman.Cyan("CFGMAN_SOURCE_DIR"))
+	fmt.Printf("  %s  Source directory (absolute path)\n", cfgman.Cyan("CFGMAN_SOURCE_DIR"))
 	fmt.Printf("  %s  Target directory override\n", cfgman.Cyan("CFGMAN_TARGET_DIR"))
 	fmt.Printf("  %s       Ignore patterns (comma-separated)\n", cfgman.Cyan("CFGMAN_IGNORE"))
 	fmt.Println()
 	fmt.Printf("%s\n", cfgman.Bold("Examples:"))
-	fmt.Println(cfgman.Cyan("  cfgman --repo-dir ~/dotfiles status                    # Use specific repo"))
+	fmt.Println(cfgman.Cyan("  cfgman status                                          # Show status"))
 	fmt.Println(cfgman.Cyan("  cfgman --config ~/.config/cfgman/work.json link       # Use specific config"))
-	fmt.Println(cfgman.Cyan("  cfgman --source-dir work --target-dir ~/.config link  # Override directories"))
+	fmt.Println(cfgman.Cyan("  cfgman --source-dir ~/dotfiles/home --target-dir ~/ link  # Override directories"))
 }
 
 func printCommandHelp(command string) {

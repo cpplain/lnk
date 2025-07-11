@@ -50,7 +50,7 @@ func TestStatusJSON(t *testing.T) {
 	// Create config
 	config := &Config{
 		LinkMappings: []LinkMapping{
-			{Source: "home", Target: "~/"},
+			{Source: filepath.Join(repoDir, "home"), Target: "~/"},
 		},
 	}
 
@@ -60,7 +60,7 @@ func TestStatusJSON(t *testing.T) {
 	os.Stdout = w
 
 	// Run status
-	err := Status(repoDir, config)
+	err := Status(config)
 	if err != nil {
 		t.Fatalf("Status failed: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestStatusJSONEmpty(t *testing.T) {
 	os.Stdout = w
 
 	// Run status
-	err := Status(repoDir, config)
+	err := Status(config)
 	if err != nil {
 		t.Fatalf("Status failed: %v", err)
 	}

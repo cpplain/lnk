@@ -27,8 +27,7 @@ type Config struct {
 // ConfigOptions represents all configuration options that can be overridden by flags/env vars
 type ConfigOptions struct {
 	ConfigPath     string   // Path to config file
-	RepoDir        string   // Repository directory
-	SourceDir      string   // Source directory override
+	SourceDir      string   // Source directory (absolute path)
 	TargetDir      string   // Target directory override
 	IgnorePatterns []string // Ignore patterns override
 }
@@ -63,41 +62,22 @@ func getDefaultConfig() *Config {
 			".cfgman.json",
 		},
 		LinkMappings: []LinkMapping{
-			{Source: "home", Target: "~/"},
-			{Source: "config", Target: "~/.config/"},
+			{Source: "~/dotfiles/home", Target: "~/"},
+			{Source: "~/dotfiles/config", Target: "~/.config/"},
 		},
 	}
 }
 
-// LoadConfig reads the configuration from a JSON file in the specified directory
-func LoadConfig(configRepo string) (*Config, error) {
-	PrintVerbose("Loading configuration from directory: %s", configRepo)
-
-	// Convert to absolute path
-	absConfigRepo, err := filepath.Abs(configRepo)
-	if err != nil {
-		return nil, NewPathErrorWithHint("resolve config directory", configRepo, err,
-			"Ensure the directory path is valid and accessible")
-	}
-	PrintVerbose("Resolved config directory: %s", absConfigRepo)
-
-	// Check for .cfgman.json
-	cfgmanPath := filepath.Join(absConfigRepo, ConfigFileName)
-	PrintVerbose("Looking for config file: %s", cfgmanPath)
-	if _, err := os.Stat(cfgmanPath); err != nil {
-		// Config file doesn't exist
-		if os.IsNotExist(err) {
-			return nil, NewPathErrorWithHint("load config", cfgmanPath, ErrConfigNotFound,
-				"Create a configuration file or use built-in defaults with command-line options")
-		}
-		return nil, NewPathError("stat config", cfgmanPath, err)
-	}
+// LoadConfig reads the configuration from a JSON file
+// This function is now deprecated - use LoadConfigWithOptions instead
+func LoadConfig(configPath string) (*Config, error) {
+	PrintVerbose("Loading configuration from: %s", configPath)
 
 	// Load the config
-	data, err := os.ReadFile(cfgmanPath)
+	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, NewPathErrorWithHint("read config", cfgmanPath, err,
+			return nil, NewPathErrorWithHint("read config", configPath, err,
 				"Create a configuration file or use built-in defaults with command-line options")
 		}
 		return nil, fmt.Errorf("failed to read %s: %w", ConfigFileName, err)
@@ -105,7 +85,7 @@ func LoadConfig(configRepo string) (*Config, error) {
 
 	var config Config
 	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, NewPathErrorWithHint("parse config", cfgmanPath,
+		return nil, NewPathErrorWithHint("parse config", configPath,
 			fmt.Errorf("%w: %v", ErrInvalidConfig, err),
 			"Check your JSON syntax. Common issues: missing commas, unclosed brackets, or trailing commas")
 	}
@@ -161,11 +141,6 @@ func applyEnvironmentVariables(options *ConfigOptions) {
 		PrintVerbose("Using config path from CFGMAN_CONFIG: %s", envConfig)
 	}
 
-	if envRepoDir := os.Getenv("CFGMAN_REPO_DIR"); envRepoDir != "" && options.RepoDir == "" {
-		options.RepoDir = envRepoDir
-		PrintVerbose("Using repo directory from CFGMAN_REPO_DIR: %s", envRepoDir)
-	}
-
 	if envSourceDir := os.Getenv("CFGMAN_SOURCE_DIR"); envSourceDir != "" && options.SourceDir == "" {
 		options.SourceDir = envSourceDir
 		PrintVerbose("Using source directory from CFGMAN_SOURCE_DIR: %s", envSourceDir)
@@ -193,11 +168,6 @@ func LoadConfigWithOptions(options *ConfigOptions) (*Config, string, error) {
 	// Apply environment variables (only if not already set by flags)
 	applyEnvironmentVariables(options)
 
-	// Set default repo directory if not specified
-	if options.RepoDir == "" {
-		options.RepoDir = "."
-	}
-
 	var config *Config
 	var configSource string
 
@@ -207,7 +177,6 @@ func LoadConfigWithOptions(options *ConfigOptions) (*Config, string, error) {
 		source string
 	}{
 		{options.ConfigPath, "command line flag"},
-		{filepath.Join(options.RepoDir, ConfigFileName), "repo directory"},
 		{filepath.Join(getXDGConfigDir(), "config.json"), "XDG config directory"},
 		{filepath.Join(os.ExpandEnv("$HOME"), ".config", "cfgman", "config.json"), "user config directory"},
 		{filepath.Join(os.ExpandEnv("$HOME"), ".cfgman.json"), "user home directory"},
@@ -256,17 +225,14 @@ func LoadConfigWithOptions(options *ConfigOptions) (*Config, string, error) {
 }
 
 // Save writes the configuration to a JSON file
-func (c *Config) Save(configRepo string) error {
-	// Always save to .cfgman.json
-	cfgmanPath := filepath.Join(configRepo, ConfigFileName)
-
+func (c *Config) Save(configPath string) error {
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := os.WriteFile(cfgmanPath, data, 0644); err != nil {
-		return NewPathErrorWithHint("write config", cfgmanPath, err,
+	if err := os.WriteFile(configPath, data, 0644); err != nil {
+		return NewPathErrorWithHint("write config", configPath, err,
 			"Check that you have write permissions in this directory")
 	}
 
@@ -316,11 +282,11 @@ func (c *Config) Validate() error {
 				"Set target to where files should be linked (e.g., '~/' for home directory)")
 		}
 
-		// Source should not contain ".." or absolute paths
-		if strings.Contains(mapping.Source, "..") || filepath.IsAbs(mapping.Source) {
+		// Source should be an absolute path or start with ~/
+		if mapping.Source != "~/" && !strings.HasPrefix(mapping.Source, "~/") && !filepath.IsAbs(mapping.Source) {
 			return NewValidationErrorWithHint("link mapping source", mapping.Source,
-				"must be a relative path without '..'",
-				"Use a simple directory name like 'home' or 'config/work'")
+				"must be an absolute path or start with ~/",
+				"Examples: '~/dotfiles/home' for home configs, '/opt/configs' for system configs")
 		}
 
 		// Target should be a valid path (can be absolute or start with ~/)
@@ -348,22 +314,19 @@ func (c *Config) Validate() error {
 }
 
 // DetermineSourceMapping determines which source mapping a target path belongs to
-func DetermineSourceMapping(target, configRepo string, config *Config) string {
-	// Remove the config repo prefix to get the relative path
-	relPath := strings.TrimPrefix(target, configRepo)
-	relPath = strings.TrimPrefix(relPath, "/")
-
+func DetermineSourceMapping(target string, config *Config) string {
 	// Check each mapping to find which one contains this path
 	for _, mapping := range config.LinkMappings {
-		if strings.HasPrefix(relPath, mapping.Source+"/") || relPath == mapping.Source {
+		// Expand the source to get absolute path
+		absSource, err := ExpandPath(mapping.Source)
+		if err != nil {
+			continue
+		}
+
+		// Check if target is within this source directory
+		if strings.HasPrefix(target, absSource+"/") || target == absSource {
 			return mapping.Source
 		}
-	}
-
-	// Default to showing the first directory component
-	parts := strings.Split(relPath, "/")
-	if len(parts) > 0 {
-		return parts[0]
 	}
 
 	return "unknown"

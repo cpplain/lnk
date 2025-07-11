@@ -3,6 +3,7 @@ package cfgman
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -34,7 +35,7 @@ func TestFindManagedLinks(t *testing.T) {
 
 				config := &Config{
 					LinkMappings: []LinkMapping{
-						{Source: "home", Target: "~/"},
+						{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 					},
 				}
 
@@ -49,8 +50,8 @@ func TestFindManagedLinks(t *testing.T) {
 				if link.IsBroken {
 					t.Error("Link should not be broken")
 				}
-				if link.Source != "home" {
-					t.Errorf("Source = %q, want %q", link.Source, "home")
+				if !strings.HasSuffix(link.Source, "/home") {
+					t.Errorf("Source = %q, want suffix %q", link.Source, "/home")
 				}
 			},
 		},
@@ -76,7 +77,7 @@ func TestFindManagedLinks(t *testing.T) {
 
 				config := &Config{
 					LinkMappings: []LinkMapping{
-						{Source: "private/home", Target: "~/"},
+						{Source: filepath.Join(configRepo, "private/home"), Target: "~/"},
 					},
 				}
 
@@ -87,8 +88,8 @@ func TestFindManagedLinks(t *testing.T) {
 				if len(links) != 1 {
 					t.Fatalf("Expected 1 link, got %d", len(links))
 				}
-				if links[0].Source != "private/home" {
-					t.Errorf("Source = %q, want %q", links[0].Source, "private/home")
+				if !strings.HasSuffix(links[0].Source, "/private/home") {
+					t.Errorf("Source = %q, want suffix %q", links[0].Source, "/private/home")
 				}
 			},
 		},
@@ -107,7 +108,12 @@ func TestFindManagedLinks(t *testing.T) {
 				linkPath := filepath.Join(homeDir, "broken-link")
 				os.Symlink(targetPath, linkPath)
 
-				return homeDir, configRepo, nil, func() { os.RemoveAll(tmpDir) }
+				config := &Config{
+					LinkMappings: []LinkMapping{
+						{Source: filepath.Join(configRepo, "home"), Target: "~/"},
+					},
+				}
+				return homeDir, configRepo, config, func() { os.RemoveAll(tmpDir) }
 			},
 			expectedLinks: 1,
 			validateFunc: func(t *testing.T, links []ManagedLink) {
@@ -149,7 +155,12 @@ func TestFindManagedLinks(t *testing.T) {
 				os.WriteFile(sourceFile3, []byte("file3"), 0644)
 				os.Symlink(sourceFile3, filepath.Join(trashDir, "link3"))
 
-				return homeDir, configRepo, nil, func() { os.RemoveAll(tmpDir) }
+				config := &Config{
+					LinkMappings: []LinkMapping{
+						{Source: filepath.Join(configRepo, "home"), Target: "~/"},
+					},
+				}
+				return homeDir, configRepo, config, func() { os.RemoveAll(tmpDir) }
 			},
 			expectedLinks: 1, // Only the one outside system directories
 		},
@@ -176,7 +187,12 @@ func TestFindManagedLinks(t *testing.T) {
 				os.WriteFile(externalFile, []byte("external"), 0644)
 				os.Symlink(externalFile, filepath.Join(homeDir, "external-link"))
 
-				return homeDir, configRepo, nil, func() { os.RemoveAll(tmpDir) }
+				config := &Config{
+					LinkMappings: []LinkMapping{
+						{Source: filepath.Join(configRepo, "home"), Target: "~/"},
+					},
+				}
+				return homeDir, configRepo, config, func() { os.RemoveAll(tmpDir) }
 			},
 			expectedLinks: 1, // Only the managed link
 		},
@@ -184,10 +200,10 @@ func TestFindManagedLinks(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			startPath, configRepo, config, cleanup := tt.setupFunc(t)
+			startPath, _, config, cleanup := tt.setupFunc(t)
 			defer cleanup()
 
-			links, err := FindManagedLinks(startPath, configRepo, config)
+			links, err := FindManagedLinks(startPath, config)
 			if err != nil {
 				t.Fatalf("FindManagedLinks error: %v", err)
 			}
@@ -269,11 +285,11 @@ func TestCheckManagedLink(t *testing.T) {
 			linkPath := tt.setupFunc()
 			config := &Config{
 				LinkMappings: []LinkMapping{
-					{Source: "home", Target: "~/"},
+					{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 				},
 			}
 
-			result := checkManagedLink(linkPath, configRepo, config)
+			result := checkManagedLink(linkPath, config)
 
 			if tt.expectNil && result != nil {
 				t.Errorf("Expected nil, got %+v", result)

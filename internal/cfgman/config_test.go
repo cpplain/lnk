@@ -17,32 +17,34 @@ func TestConfigSaveAndLoad(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Create config with new LinkMappings format
+	sourceDir := filepath.Join(tmpDir, "source")
+	os.MkdirAll(sourceDir, 0755)
 	config := &Config{
 		LinkMappings: []LinkMapping{
 			{
-				Source: "home",
+				Source: filepath.Join(sourceDir, "home"),
 				Target: "~/",
 			},
 			{
-				Source: "private/home",
+				Source: filepath.Join(sourceDir, "private/home"),
 				Target: "~/",
 			},
 		},
 	}
 
 	// Save config
-	if err := config.Save(tmpDir); err != nil {
+	configPath := filepath.Join(tmpDir, ".cfgman.json")
+	if err := config.Save(configPath); err != nil {
 		t.Fatalf("Save() error = %v", err)
 	}
 
 	// Verify file exists - should be .cfgman.json for new format
-	configPath := filepath.Join(tmpDir, ".cfgman.json")
 	if _, err := os.Stat(configPath); err != nil {
 		t.Fatalf("Config file not created: %v", err)
 	}
 
 	// Load config
-	loaded, err := LoadConfig(tmpDir)
+	loaded, err := LoadConfig(configPath)
 	if err != nil {
 		t.Fatalf("LoadConfig() error = %v", err)
 	}
@@ -79,18 +81,21 @@ func TestConfigSaveNewFormat(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Create config with new format
+	sourceDir := filepath.Join(tmpDir, "source")
+	os.MkdirAll(sourceDir, 0755)
 	config := &Config{
 		IgnorePatterns: []string{"*.tmp", "backup/"},
 		LinkMappings: []LinkMapping{
 			{
-				Source: "home",
+				Source: filepath.Join(sourceDir, "home"),
 				Target: "~/",
 			},
 		},
 	}
 
 	// Save config - should create .cfgman.json
-	if err := config.Save(tmpDir); err != nil {
+	configPath := filepath.Join(tmpDir, ".cfgman.json")
+	if err := config.Save(configPath); err != nil {
 		t.Fatalf("Save() error = %v", err)
 	}
 
@@ -101,7 +106,7 @@ func TestConfigSaveNewFormat(t *testing.T) {
 	}
 
 	// Load and verify
-	loaded, err := LoadConfig(tmpDir)
+	loaded, err := LoadConfig(cfgmanPath)
 	if err != nil {
 		t.Fatalf("LoadConfig() error = %v", err)
 	}
@@ -120,13 +125,14 @@ func TestLoadConfigNonExistent(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Load config from directory without config file
-	_, err = LoadConfig(tmpDir)
+	configPath := filepath.Join(tmpDir, ".cfgman.json")
+	_, err = LoadConfig(configPath)
 	if err == nil {
 		t.Fatal("LoadConfig() should return error when no config file exists")
 	}
 
 	// Should return error about missing config file
-	if !strings.Contains(err.Error(), "configuration file not found") {
+	if !strings.Contains(err.Error(), "failed to read .cfgman.json") && !strings.Contains(err.Error(), "no such file") {
 		t.Errorf("LoadConfig() error = %v, want error about missing config file", err)
 	}
 }
@@ -140,11 +146,13 @@ func TestLoadConfigNewFormat(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Create new format config file
+	sourceDir := filepath.Join(tmpDir, "source")
+	os.MkdirAll(sourceDir, 0755)
 	newConfig := map[string]interface{}{
 		"ignore_patterns": []string{"*.tmp", "backup/", ".DS_Store"},
 		"link_mappings": []map[string]interface{}{
 			{
-				"source": "home",
+				"source": filepath.Join(sourceDir, "home"),
 				"target": "~/",
 			},
 		},
@@ -161,7 +169,7 @@ func TestLoadConfigNewFormat(t *testing.T) {
 	}
 
 	// Load config
-	loaded, err := LoadConfig(tmpDir)
+	loaded, err := LoadConfig(configPath)
 	if err != nil {
 		t.Fatalf("LoadConfig() error = %v", err)
 	}
@@ -271,9 +279,9 @@ func TestShouldIgnore(t *testing.T) {
 func TestGetMapping(t *testing.T) {
 	config := &Config{
 		LinkMappings: []LinkMapping{
-			{Source: "home", Target: "~/"},
-			{Source: "private/home", Target: "~/"},
-			{Source: "config", Target: "~/.config"},
+			{Source: "/tmp/source/home", Target: "~/"},
+			{Source: "/tmp/source/private/home", Target: "~/"},
+			{Source: "/tmp/source/config", Target: "~/.config"},
 		},
 	}
 
@@ -282,10 +290,10 @@ func TestGetMapping(t *testing.T) {
 		source string
 		want   bool
 	}{
-		{"existing home", "home", true},
-		{"existing private", "private/home", true},
-		{"existing config", "config", true},
-		{"non-existing", "other", false},
+		{"existing home", "/tmp/source/home", true},
+		{"existing private", "/tmp/source/private/home", true},
+		{"existing config", "/tmp/source/config", true},
+		{"non-existing", "/tmp/source/other", false},
 	}
 
 	for _, tt := range tests {
@@ -311,8 +319,8 @@ func TestConfigValidate(t *testing.T) {
 			name: "valid config",
 			config: &Config{
 				LinkMappings: []LinkMapping{
-					{Source: "home", Target: "~/"},
-					{Source: "private/home", Target: "~/"},
+					{Source: "/tmp/source/home", Target: "~/"},
+					{Source: "/tmp/source/private/home", Target: "~/"},
 				},
 				IgnorePatterns: []string{"*.tmp", "*.log"},
 			},
@@ -346,17 +354,26 @@ func TestConfigValidate(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			errContains: "must be a relative path without '..'",
+			errContains: "must be an absolute path",
 		},
 		{
-			name: "absolute source",
+			name: "valid absolute source",
 			config: &Config{
 				LinkMappings: []LinkMapping{
 					{Source: "/home", Target: "~/"},
 				},
 			},
+			wantErr: false,
+		},
+		{
+			name: "relative source",
+			config: &Config{
+				LinkMappings: []LinkMapping{
+					{Source: "home", Target: "~/"},
+				},
+			},
 			wantErr:     true,
-			errContains: "must be a relative path without '..'",
+			errContains: "must be an absolute path",
 		},
 		{
 			name: "invalid target",
@@ -372,7 +389,7 @@ func TestConfigValidate(t *testing.T) {
 			name: "empty ignore pattern",
 			config: &Config{
 				LinkMappings: []LinkMapping{
-					{Source: "home", Target: "~/"},
+					{Source: "/tmp/source/home", Target: "~/"},
 				},
 				IgnorePatterns: []string{"*.tmp", "", "*.log"},
 			},
@@ -383,7 +400,7 @@ func TestConfigValidate(t *testing.T) {
 			name: "invalid glob pattern",
 			config: &Config{
 				LinkMappings: []LinkMapping{
-					{Source: "home", Target: "~/"},
+					{Source: "/tmp/source/home", Target: "~/"},
 				},
 				IgnorePatterns: []string{"[invalid"},
 			},
@@ -394,7 +411,7 @@ func TestConfigValidate(t *testing.T) {
 			name: "valid absolute target",
 			config: &Config{
 				LinkMappings: []LinkMapping{
-					{Source: "home", Target: "/opt/configs"},
+					{Source: "/tmp/source/home", Target: "/opt/configs"},
 				},
 			},
 			wantErr: false,
@@ -442,8 +459,8 @@ func TestLoadConfigWithOptions_DefaultConfig(t *testing.T) {
 	}
 
 	expectedMappings := []LinkMapping{
-		{Source: "home", Target: "~/"},
-		{Source: "config", Target: "~/.config/"},
+		{Source: "~/dotfiles/home", Target: "~/"},
+		{Source: "~/dotfiles/config", Target: "~/.config/"},
 	}
 
 	for i, expected := range expectedMappings {
@@ -501,7 +518,7 @@ func TestLoadConfigWithOptions_ConfigFilePrecedence(t *testing.T) {
 	// Create repo config
 	repoConfig := &Config{
 		IgnorePatterns: []string{"*.repo"},
-		LinkMappings:   []LinkMapping{{Source: "repo", Target: "~/"}},
+		LinkMappings:   []LinkMapping{{Source: "/tmp/test/repo", Target: "~/"}},
 	}
 	repoConfigPath := filepath.Join(repoDir, ".cfgman.json")
 	if err := writeConfigFile(repoConfigPath, repoConfig); err != nil {
@@ -511,7 +528,7 @@ func TestLoadConfigWithOptions_ConfigFilePrecedence(t *testing.T) {
 	// Create XDG config
 	xdgConfig := &Config{
 		IgnorePatterns: []string{"*.xdg"},
-		LinkMappings:   []LinkMapping{{Source: "xdg", Target: "~/"}},
+		LinkMappings:   []LinkMapping{{Source: "/tmp/test/xdg", Target: "~/"}},
 	}
 	xdgConfigPath := filepath.Join(xdgConfigDir, "config.json")
 	if err := writeConfigFile(xdgConfigPath, xdgConfig); err != nil {
@@ -521,7 +538,7 @@ func TestLoadConfigWithOptions_ConfigFilePrecedence(t *testing.T) {
 	// Create explicit config file
 	explicitConfig := &Config{
 		IgnorePatterns: []string{"*.explicit"},
-		LinkMappings:   []LinkMapping{{Source: "explicit", Target: "~/"}},
+		LinkMappings:   []LinkMapping{{Source: "/tmp/test/explicit", Target: "~/"}},
 	}
 	explicitConfigPath := filepath.Join(tmpDir, "explicit.json")
 	if err := writeConfigFile(explicitConfigPath, explicitConfig); err != nil {
@@ -531,7 +548,6 @@ func TestLoadConfigWithOptions_ConfigFilePrecedence(t *testing.T) {
 	// Test 1: --config flag has highest precedence
 	options := &ConfigOptions{
 		ConfigPath: explicitConfigPath,
-		RepoDir:    repoDir,
 	}
 
 	// Set XDG_CONFIG_HOME to our test directory
@@ -558,25 +574,40 @@ func TestLoadConfigWithOptions_ConfigFilePrecedence(t *testing.T) {
 		t.Errorf("Expected explicit config to be loaded, got ignore patterns: %v", config.IgnorePatterns)
 	}
 
-	// Test 2: Repo directory has second precedence
+	// Test 2: Current directory config
 	options.ConfigPath = ""
+
+	// Temporarily unset XDG_CONFIG_HOME to test current directory precedence
+	os.Unsetenv("XDG_CONFIG_HOME")
+
+	// Change to repo directory to test current directory loading
+	originalDir, _ := os.Getwd()
+	os.Chdir(repoDir)
+	defer os.Chdir(originalDir)
+
 	config, source, err = LoadConfigWithOptions(options)
 	if err != nil {
 		t.Fatalf("LoadConfigWithOptions() error = %v", err)
 	}
 
-	if source != "repo directory" {
-		t.Errorf("Expected source 'repo directory', got %s", source)
+	if source != "current directory" {
+		t.Errorf("Expected source 'current directory', got %s", source)
 	}
 
 	if len(config.IgnorePatterns) != 1 || config.IgnorePatterns[0] != "*.repo" {
 		t.Errorf("Expected repo config to be loaded, got ignore patterns: %v", config.IgnorePatterns)
 	}
 
-	// Test 3: XDG config has third precedence (remove repo config)
+	// Test 3: XDG config precedence (remove current dir config)
 	if err := os.Remove(repoConfigPath); err != nil {
 		t.Fatal(err)
 	}
+
+	// Change back to original directory
+	os.Chdir(originalDir)
+
+	// Restore XDG_CONFIG_HOME
+	os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
 
 	config, source, err = LoadConfigWithOptions(options)
 	if err != nil {
@@ -603,7 +634,7 @@ func TestLoadConfigWithOptions_EnvironmentVariables(t *testing.T) {
 	// Create test config file
 	testConfig := &Config{
 		IgnorePatterns: []string{"*.env"},
-		LinkMappings:   []LinkMapping{{Source: "env", Target: "~/"}},
+		LinkMappings:   []LinkMapping{{Source: "/tmp/test/env", Target: "~/"}},
 	}
 	configPath := filepath.Join(tmpDir, "env.json")
 	if err := writeConfigFile(configPath, testConfig); err != nil {
@@ -613,7 +644,6 @@ func TestLoadConfigWithOptions_EnvironmentVariables(t *testing.T) {
 	// Set environment variables
 	originalEnvs := map[string]string{
 		"CFGMAN_CONFIG":     os.Getenv("CFGMAN_CONFIG"),
-		"CFGMAN_REPO_DIR":   os.Getenv("CFGMAN_REPO_DIR"),
 		"CFGMAN_SOURCE_DIR": os.Getenv("CFGMAN_SOURCE_DIR"),
 		"CFGMAN_TARGET_DIR": os.Getenv("CFGMAN_TARGET_DIR"),
 		"CFGMAN_IGNORE":     os.Getenv("CFGMAN_IGNORE"),
@@ -632,7 +662,6 @@ func TestLoadConfigWithOptions_EnvironmentVariables(t *testing.T) {
 
 	// Test environment variables
 	os.Setenv("CFGMAN_CONFIG", configPath)
-	os.Setenv("CFGMAN_REPO_DIR", tmpDir)
 	os.Setenv("CFGMAN_SOURCE_DIR", "env-source")
 	os.Setenv("CFGMAN_TARGET_DIR", "~/.env/")
 	os.Setenv("CFGMAN_IGNORE", "*.env1,*.env2,*.env3")
@@ -681,7 +710,7 @@ func TestLoadConfigWithOptions_FlagOverrides(t *testing.T) {
 	// Create test config file
 	testConfig := &Config{
 		IgnorePatterns: []string{"*.original"},
-		LinkMappings:   []LinkMapping{{Source: "original", Target: "~/"}},
+		LinkMappings:   []LinkMapping{{Source: "/tmp/test/original", Target: "~/"}},
 	}
 	configPath := filepath.Join(tmpDir, "test.json")
 	if err := writeConfigFile(configPath, testConfig); err != nil {
@@ -691,7 +720,6 @@ func TestLoadConfigWithOptions_FlagOverrides(t *testing.T) {
 	// Test flag overrides
 	options := &ConfigOptions{
 		ConfigPath:     configPath,
-		RepoDir:        tmpDir,
 		SourceDir:      "override-source",
 		TargetDir:      "~/.override/",
 		IgnorePatterns: []string{"*.flag1", "*.flag2"},
@@ -738,7 +766,6 @@ func TestLoadConfigWithOptions_FlagsPrecedeEnvironment(t *testing.T) {
 
 	// Set environment variables
 	originalEnvs := map[string]string{
-		"CFGMAN_REPO_DIR":   os.Getenv("CFGMAN_REPO_DIR"),
 		"CFGMAN_SOURCE_DIR": os.Getenv("CFGMAN_SOURCE_DIR"),
 		"CFGMAN_TARGET_DIR": os.Getenv("CFGMAN_TARGET_DIR"),
 		"CFGMAN_IGNORE":     os.Getenv("CFGMAN_IGNORE"),
@@ -754,14 +781,12 @@ func TestLoadConfigWithOptions_FlagsPrecedeEnvironment(t *testing.T) {
 		}
 	}()
 
-	os.Setenv("CFGMAN_REPO_DIR", "env-repo")
 	os.Setenv("CFGMAN_SOURCE_DIR", "env-source")
 	os.Setenv("CFGMAN_TARGET_DIR", "~/.env/")
 	os.Setenv("CFGMAN_IGNORE", "*.env")
 
 	// Test with flags that should override environment
 	options := &ConfigOptions{
-		RepoDir:        tmpDir,             // Should override CFGMAN_REPO_DIR
 		SourceDir:      "flag-source",      // Should override CFGMAN_SOURCE_DIR
 		TargetDir:      "~/.flag/",         // Should override CFGMAN_TARGET_DIR
 		IgnorePatterns: []string{"*.flag"}, // Should override CFGMAN_IGNORE
@@ -797,7 +822,6 @@ func TestLoadConfigWithOptions_PartialOverrides(t *testing.T) {
 
 	// Test partial overrides (only source dir specified)
 	options := &ConfigOptions{
-		RepoDir:   tmpDir,
 		SourceDir: "partial-source",
 		// TargetDir not specified - should use defaults
 	}
@@ -818,8 +842,8 @@ func TestLoadConfigWithOptions_PartialOverrides(t *testing.T) {
 
 	// Verify default mappings are preserved
 	expectedMappings := []LinkMapping{
-		{Source: "home", Target: "~/"},
-		{Source: "config", Target: "~/.config/"},
+		{Source: "~/dotfiles/home", Target: "~/"},
+		{Source: "~/dotfiles/config", Target: "~/.config/"},
 	}
 
 	for i, expected := range expectedMappings {

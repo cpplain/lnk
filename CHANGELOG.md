@@ -19,13 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Replaced `--json` flag with `--output FORMAT` flag (supports text and json formats)
   - Added support for `--flag=value` syntax in addition to `--flag value`
   - Improved flag consistency across all commands
-- **BREAKING: Works without configuration** - cfgman now works from any directory without requiring a config file:
-  - Added configuration discovery system with precedence order: --config flag > repo dir > XDG config > user config > home > current dir > built-in defaults
-  - Added global configuration flags: --config, --repo-dir, --source-dir, --target-dir, --ignore
-  - Added environment variable support: CFGMAN_CONFIG, CFGMAN_REPO_DIR, CFGMAN_SOURCE_DIR, CFGMAN_TARGET_DIR, CFGMAN_IGNORE
-  - Added built-in sensible defaults (home->~/, config->~/.config/, common ignore patterns)
+  - **BREAKING**: Removed `--repo-dir` flag and `CFGMAN_REPO_DIR` environment variable
+- **BREAKING: Directory-based architecture** - cfgman now uses absolute paths for source directories:
+  - Changed from repository-based to directory-based tool
+  - Source directories in config must now be absolute paths (e.g., `~/dotfiles/home` instead of `home`)
+  - Adopt command now requires absolute path for --source-dir (e.g., `--source-dir ~/dotfiles/home`)
+  - Removed concept of "repository directory" - cfgman can be run from anywhere
+  - Each source directory is independent - you can manage configs from multiple locations
+- **Works without configuration** - cfgman works from any directory without requiring a config file:
+  - Added configuration discovery system with precedence order: --config flag > XDG config > user config > home > current dir > built-in defaults
+  - Added global configuration flags: --config, --source-dir, --target-dir, --ignore
+  - Added environment variable support: CFGMAN_CONFIG, CFGMAN_SOURCE_DIR, CFGMAN_TARGET_DIR, CFGMAN_IGNORE
+  - Added built-in sensible defaults (~/dotfiles/home->~/, ~/dotfiles/config->~/.config/, common ignore patterns)
   - Added XDG Base Directory Specification support ($XDG_CONFIG_HOME/cfgman/config.json)
-  - Removed requirement to run from cfgman-managed directory
   - All commands now work with flexible configuration loading and override system
   - Updated help text to document new configuration discovery and examples
 - **Enhanced user guidance** - Added next-step suggestions after successful operations:

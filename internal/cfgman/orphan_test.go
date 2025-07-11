@@ -134,8 +134,8 @@ func TestOrphanSingle(t *testing.T) {
 			// Create config
 			config := &Config{
 				LinkMappings: []LinkMapping{
-					{Source: "home", Target: "~/"},
-					{Source: "private/home", Target: "~/"},
+					{Source: filepath.Join(configRepo, "home"), Target: "~/"},
+					{Source: filepath.Join(configRepo, "private/home"), Target: "~/"},
 				},
 			}
 
@@ -156,7 +156,7 @@ func TestOrphanSingle(t *testing.T) {
 			defer func() { os.Stdin = oldStdin }()
 
 			// Run orphan
-			err = Orphan(link, configRepo, config, false, true)
+			err = Orphan(link, config, false, true)
 
 			// Check error expectation
 			if tt.expectError {
@@ -193,7 +193,7 @@ func TestOrphanDirectoryFull(t *testing.T) {
 	// Create config
 	config := &Config{
 		LinkMappings: []LinkMapping{
-			{Source: "home", Target: "~/"},
+			{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 		},
 	}
 
@@ -231,7 +231,7 @@ func TestOrphanDirectoryFull(t *testing.T) {
 	defer func() { os.Stdin = oldStdin }()
 
 	// Test orphan directory
-	err = Orphan(targetDir, configRepo, config, false, true)
+	err = Orphan(targetDir, config, false, true)
 	if err != nil {
 		t.Fatalf("Orphan directory failed: %v", err)
 	}
@@ -285,7 +285,7 @@ func TestOrphanDryRunAdditional(t *testing.T) {
 	// Create config
 	config := &Config{
 		LinkMappings: []LinkMapping{
-			{Source: "home", Target: "~/"},
+			{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 		},
 	}
 
@@ -298,7 +298,7 @@ func TestOrphanDryRunAdditional(t *testing.T) {
 	os.Symlink(sourceFile, linkPath)
 
 	// Test dry run
-	err = Orphan(linkPath, configRepo, config, true, true)
+	err = Orphan(linkPath, config, true, true)
 	if err != nil {
 		t.Fatalf("Dry run failed: %v", err)
 	}
@@ -347,7 +347,7 @@ func TestOrphanErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			config := &Config{}
 
-			err := Orphan(tt.link, tt.configRepo, config, false, true)
+			err := Orphan(tt.link, config, false, true)
 
 			if tt.expectError {
 				if err == nil {
@@ -367,7 +367,7 @@ func TestOrphanErrors(t *testing.T) {
 func TestOrphanDirectoryNoSymlinks(t *testing.T) {
 	tempDir := t.TempDir()
 	homeDir := filepath.Join(tempDir, "home")
-	configRepo := filepath.Join(tempDir, "repo")
+	_ = filepath.Join(tempDir, "repo")
 
 	// Create directories
 	os.MkdirAll(homeDir, 0755)
@@ -378,7 +378,7 @@ func TestOrphanDirectoryNoSymlinks(t *testing.T) {
 
 	// Test orphaning - should fail
 	config := &Config{}
-	err := Orphan(filepath.Join(homeDir, ".config"), configRepo, config, false, true)
+	err := Orphan(filepath.Join(homeDir, ".config"), config, false, true)
 	if err == nil {
 		t.Errorf("expected error when orphaning directory with no symlinks")
 	}
@@ -419,8 +419,12 @@ func TestOrphanUntrackedFile(t *testing.T) {
 	}()
 
 	// Run orphan
-	config := &Config{}
-	err := Orphan(linkPath, configRepo, config, false, true)
+	config := &Config{
+		LinkMappings: []LinkMapping{
+			{Source: filepath.Join(configRepo, "home"), Target: "~/"},
+		},
+	}
+	err := Orphan(linkPath, config, false, true)
 	if err != nil {
 		t.Fatalf("orphan failed: %v", err)
 	}

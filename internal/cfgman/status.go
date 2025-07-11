@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 )
 
@@ -27,13 +26,7 @@ type StatusOutput struct {
 }
 
 // Status displays the status of all managed symlinks
-func Status(configRepo string, config *Config) error {
-	// Convert to absolute path
-	absConfigRepo, err := filepath.Abs(configRepo)
-	if err != nil {
-		return fmt.Errorf("failed to resolve repository path: %w", err)
-	}
-
+func Status(config *Config) error {
 	// Only print header in human format
 	if !IsJSONFormat() {
 		PrintHeader("Dotfile Status")
@@ -45,8 +38,8 @@ func Status(configRepo string, config *Config) error {
 		return fmt.Errorf("failed to get home directory: %w", err)
 	}
 
-	// Find all symlinks pointing to our repo
-	managedLinks, err := FindManagedLinks(homeDir, absConfigRepo, config)
+	// Find all symlinks pointing to configured source directories
+	managedLinks, err := FindManagedLinks(homeDir, config)
 	if err != nil {
 		return fmt.Errorf("failed to find managed links: %w", err)
 	}

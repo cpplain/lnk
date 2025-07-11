@@ -7,12 +7,8 @@ import (
 )
 
 // Orphan removes a file or directory from repository management
-func Orphan(link string, configRepo string, config *Config, dryRun bool, force bool) error {
+func Orphan(link string, config *Config, dryRun bool, force bool) error {
 	// Convert to absolute paths
-	absConfigRepo, err := filepath.Abs(configRepo)
-	if err != nil {
-		return fmt.Errorf("failed to resolve repository path: %w", err)
-	}
 	absLink, err := filepath.Abs(link)
 	if err != nil {
 		return fmt.Errorf("failed to resolve link path: %w", err)
@@ -30,7 +26,7 @@ func Orphan(link string, configRepo string, config *Config, dryRun bool, force b
 
 	if linkInfo.IsDir() && linkInfo.Mode()&os.ModeSymlink == 0 {
 		// For directories, find all managed symlinks within
-		managed, err := FindManagedLinks(absLink, absConfigRepo, config)
+		managed, err := FindManagedLinks(absLink, config)
 		if err != nil {
 			return fmt.Errorf("failed to find managed links: %w", err)
 		}
@@ -45,7 +41,7 @@ func Orphan(link string, configRepo string, config *Config, dryRun bool, force b
 				"Only symlinks can be orphaned. Use 'rm' to remove regular files")
 		}
 
-		if link := checkManagedLink(absLink, absConfigRepo, config); link != nil {
+		if link := checkManagedLink(absLink, config); link != nil {
 			// Check if the link is broken
 			if link.IsBroken {
 				return WithHint(

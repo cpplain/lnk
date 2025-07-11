@@ -33,15 +33,15 @@ func TestStatusWithLinkMappings(t *testing.T) {
 	os.Setenv("HOME", homeDir)
 	defer os.Setenv("HOME", oldHome)
 
-	// Create config with mappings
+	// Create config with mappings using absolute paths
 	config := &Config{
 		LinkMappings: []LinkMapping{
 			{
-				Source: "home",
+				Source: filepath.Join(configRepo, "home"),
 				Target: "~/",
 			},
 			{
-				Source: "work",
+				Source: filepath.Join(configRepo, "work"),
 				Target: "~/",
 			},
 		},
@@ -49,7 +49,7 @@ func TestStatusWithLinkMappings(t *testing.T) {
 
 	// Capture output
 	output := CaptureOutput(t, func() {
-		err := Status(configRepo, config)
+		err := Status(config)
 		if err != nil {
 			t.Fatalf("Status failed: %v", err)
 		}
@@ -82,9 +82,9 @@ func TestDetermineSourceMapping(t *testing.T) {
 	configRepo := "/tmp/dotfiles"
 	config := &Config{
 		LinkMappings: []LinkMapping{
-			{Source: "home", Target: "~/"},
-			{Source: "work", Target: "~/"},
-			{Source: "private/home", Target: "~/"},
+			{Source: filepath.Join(configRepo, "home"), Target: "~/"},
+			{Source: filepath.Join(configRepo, "work"), Target: "~/"},
+			{Source: filepath.Join(configRepo, "private/home"), Target: "~/"},
 		},
 	}
 
@@ -96,28 +96,28 @@ func TestDetermineSourceMapping(t *testing.T) {
 		{
 			name:     "home mapping",
 			target:   "/tmp/dotfiles/home/.bashrc",
-			expected: "home",
+			expected: filepath.Join(configRepo, "home"),
 		},
 		{
 			name:     "work mapping",
 			target:   "/tmp/dotfiles/work/.gitconfig",
-			expected: "work",
+			expected: filepath.Join(configRepo, "work"),
 		},
 		{
 			name:     "private/home mapping",
 			target:   "/tmp/dotfiles/private/home/.ssh/config",
-			expected: "private/home",
+			expected: filepath.Join(configRepo, "private/home"),
 		},
 		{
 			name:     "unknown mapping",
 			target:   "/tmp/dotfiles/other/file",
-			expected: "other",
+			expected: "unknown",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := DetermineSourceMapping(tt.target, configRepo, config)
+			result := DetermineSourceMapping(tt.target, config)
 			if result != tt.expected {
 				t.Errorf("DetermineSourceMapping(%s) = %s; want %s", tt.target, result, tt.expected)
 			}

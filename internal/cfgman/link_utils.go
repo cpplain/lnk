@@ -14,8 +14,8 @@ type ManagedLink struct {
 	Source   string // Source mapping name (e.g., "home", "work")
 }
 
-// FindManagedLinks finds all symlinks within a directory that point to the config repo
-func FindManagedLinks(startPath, configRepo string, config *Config) ([]ManagedLink, error) {
+// FindManagedLinks finds all symlinks within a directory that point to configured source directories
+func FindManagedLinks(startPath string, config *Config) ([]ManagedLink, error) {
 	var links []ManagedLink
 	var fileCount int
 
@@ -47,7 +47,7 @@ func FindManagedLinks(startPath, configRepo string, config *Config) ([]ManagedLi
 
 			// Check if it's a symlink
 			if info.Mode()&os.ModeSymlink != 0 {
-				if link := checkManagedLink(path, configRepo, config); link != nil {
+				if link := checkManagedLink(path, config); link != nil {
 					links = append(links, *link)
 				}
 			}
@@ -59,15 +59,15 @@ func FindManagedLinks(startPath, configRepo string, config *Config) ([]ManagedLi
 	return links, err
 }
 
-// checkManagedLink checks if a symlink points to the config repo and returns its info
-func checkManagedLink(linkPath, configRepo string, config *Config) *ManagedLink {
+// checkManagedLink checks if a symlink points to any configured source directory and returns its info
+func checkManagedLink(linkPath string, config *Config) *ManagedLink {
 	target, err := os.Readlink(linkPath)
 	if err != nil {
 		Debug("Failed to read symlink %s: %v", linkPath, err)
 		return nil
 	}
 
-	// Check if it points to our config repo using proper path comparison
+	// Get absolute target path
 	absTarget := target
 	if !filepath.IsAbs(target) {
 		absTarget = filepath.Join(filepath.Dir(linkPath), target)
@@ -78,20 +78,31 @@ func checkManagedLink(linkPath, configRepo string, config *Config) *ManagedLink 
 		return nil
 	}
 
-	relPath, err := filepath.Rel(configRepo, cleanTarget)
-	if err != nil || strings.HasPrefix(relPath, "..") || relPath == "." {
-		// Not managed by this repo
+	// Check if it points to any of our configured source directories
+	var managedBySource string
+	for _, mapping := range config.LinkMappings {
+		absSource, err := ExpandPath(mapping.Source)
+		if err != nil {
+			continue
+		}
+
+		relPath, err := filepath.Rel(absSource, cleanTarget)
+		if err == nil && !strings.HasPrefix(relPath, "..") && relPath != "." {
+			// This link is managed by this source directory
+			managedBySource = mapping.Source
+			break
+		}
+	}
+
+	// Not managed by any configured source
+	if managedBySource == "" {
 		return nil
 	}
 
 	link := &ManagedLink{
 		Path:   linkPath,
 		Target: target,
-	}
-
-	// Determine source mapping based on target path
-	if config != nil {
-		link.Source = DetermineSourceMapping(target, configRepo, config)
+		Source: managedBySource,
 	}
 
 	// Check if link is broken by checking if the target exists

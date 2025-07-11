@@ -26,7 +26,7 @@ func TestCreateLinks(t *testing.T) {
 				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc content")
 				return configRepo, &Config{
 					LinkMappings: []LinkMapping{
-						{Source: "home", Target: "~/"},
+						{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 					},
 				}
 			},
@@ -45,7 +45,7 @@ func TestCreateLinks(t *testing.T) {
 				createTestFile(t, filepath.Join(configRepo, "home", ".config", "nvim", "init.vim"), "# nvim config")
 				return configRepo, &Config{
 					LinkMappings: []LinkMapping{
-						{Source: "home", Target: "~/"},
+						{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 					},
 				}
 			},
@@ -66,7 +66,7 @@ func TestCreateLinks(t *testing.T) {
 				createTestFile(t, filepath.Join(configRepo, "home", ".config", "nvim", "lua", "config.lua"), "-- lua config")
 				return configRepo, &Config{
 					LinkMappings: []LinkMapping{
-						{Source: "home", Target: "~/"},
+						{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 					},
 				}
 			},
@@ -98,7 +98,7 @@ func TestCreateLinks(t *testing.T) {
 				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc content")
 				return configRepo, &Config{
 					LinkMappings: []LinkMapping{
-						{Source: "home", Target: "~/"},
+						{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 					},
 				}
 			},
@@ -122,7 +122,7 @@ func TestCreateLinks(t *testing.T) {
 				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# repo bashrc")
 				return configRepo, &Config{
 					LinkMappings: []LinkMapping{
-						{Source: "home", Target: "~/"},
+						{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 					},
 				}
 			},
@@ -149,8 +149,8 @@ func TestCreateLinks(t *testing.T) {
 				createTestFile(t, filepath.Join(configRepo, "private", "home", ".ssh", "config"), "# ssh config")
 				return configRepo, &Config{
 					LinkMappings: []LinkMapping{
-						{Source: "home", Target: "~/"},
-						{Source: "private/home", Target: "~/"},
+						{Source: filepath.Join(configRepo, "home"), Target: "~/"},
+						{Source: filepath.Join(configRepo, "private/home"), Target: "~/"},
 					},
 				}
 			},
@@ -172,7 +172,7 @@ func TestCreateLinks(t *testing.T) {
 				createTestFile(t, filepath.Join(configRepo, "private", "home", ".config", "work", "secrets", "api.key"), "secret-key")
 				return configRepo, &Config{
 					LinkMappings: []LinkMapping{
-						{Source: "private/home", Target: "~/"},
+						{Source: filepath.Join(configRepo, "private/home"), Target: "~/"},
 					},
 				}
 			},
@@ -207,7 +207,7 @@ func TestCreateLinks(t *testing.T) {
 				createTestFile(t, filepath.Join(configRepo, "home", ".otherapp", "settings.ini"), "[settings]")
 				return configRepo, &Config{
 					LinkMappings: []LinkMapping{
-						{Source: "home", Target: "~/"},
+						{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 					},
 				}
 			},
@@ -234,7 +234,7 @@ func TestCreateLinks(t *testing.T) {
 				createTestFile(t, filepath.Join(configRepo, "private", "home", ".personal", "notes.txt"), "notes")
 				return configRepo, &Config{
 					LinkMappings: []LinkMapping{
-						{Source: "private/home", Target: "~/"},
+						{Source: filepath.Join(configRepo, "private/home"), Target: "~/"},
 					},
 				}
 			},
@@ -268,15 +268,15 @@ func TestCreateLinks(t *testing.T) {
 				return configRepo, &Config{
 					LinkMappings: []LinkMapping{
 						{
-							Source: "home",
+							Source: filepath.Join(configRepo, "home"),
 							Target: "~/",
 						},
 						{
-							Source: "work",
+							Source: filepath.Join(configRepo, "work"),
 							Target: "~/",
 						},
 						{
-							Source: "dotfiles",
+							Source: filepath.Join(configRepo, "dotfiles"),
 							Target: "~/",
 						},
 					},
@@ -320,7 +320,7 @@ func TestCreateLinks(t *testing.T) {
 				return configRepo, &Config{
 					IgnorePatterns: []string{".DS_Store", "*.swp"},
 					LinkMappings: []LinkMapping{
-						{Source: "home", Target: "~/"},
+						{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 					},
 				}
 			},
@@ -353,11 +353,11 @@ func TestCreateLinks(t *testing.T) {
 				return configRepo, &Config{
 					LinkMappings: []LinkMapping{
 						{
-							Source: "home",
+							Source: filepath.Join(configRepo, "home"),
 							Target: "~/",
 						},
 						{
-							Source: "missing", // This directory doesn't exist
+							Source: filepath.Join(configRepo, "missing"), // This directory doesn't exist
 							Target: "~/",
 						},
 					},
@@ -388,7 +388,7 @@ func TestCreateLinks(t *testing.T) {
 
 			configRepo, config := tt.setup(t, tmpDir)
 
-			err := CreateLinks(configRepo, config, tt.dryRun)
+			err := CreateLinks(config, tt.dryRun)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CreateLinks() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -524,8 +524,12 @@ func TestRemoveLinks(t *testing.T) {
 			configRepo := tt.setup(t, tmpDir)
 
 			// Use the internal function that skips confirmation for testing
-			config := &Config{}
-			err := removeLinks(configRepo, config, tt.dryRun, true)
+			config := &Config{
+				LinkMappings: []LinkMapping{
+					{Source: filepath.Join(configRepo, "home"), Target: "~/"},
+				},
+			}
+			err := removeLinks(config, tt.dryRun, true)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RemoveLinks() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -650,8 +654,12 @@ func TestPruneLinks(t *testing.T) {
 
 			configRepo := tt.setup(t, tmpDir)
 
-			config := &Config{}
-			err := PruneLinks(configRepo, config, tt.dryRun, true)
+			config := &Config{
+				LinkMappings: []LinkMapping{
+					{Source: filepath.Join(configRepo, "home"), Target: "~/"},
+				},
+			}
+			err := PruneLinks(config, tt.dryRun, true)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("PruneLinks() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -684,7 +692,7 @@ func TestLinkerEdgeCases(t *testing.T) {
 		defer os.Setenv("HOME", oldHome)
 
 		// Should not error on empty repo with no mappings
-		err := CreateLinks(configRepo, &Config{
+		err := CreateLinks(&Config{
 			LinkMappings: []LinkMapping{},
 		}, false)
 		if err == nil {
@@ -708,9 +716,9 @@ func TestLinkerEdgeCases(t *testing.T) {
 		os.Setenv("HOME", homeDir)
 		defer os.Setenv("HOME", oldHome)
 
-		err := CreateLinks(configRepo, &Config{
+		err := CreateLinks(&Config{
 			LinkMappings: []LinkMapping{
-				{Source: "home", Target: "~/"},
+				{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 			},
 		}, false)
 		if err != nil {
@@ -740,9 +748,9 @@ func TestLinkerEdgeCases(t *testing.T) {
 		os.Setenv("HOME", homeDir)
 		defer os.Setenv("HOME", oldHome)
 
-		err := CreateLinks(configRepo, &Config{
+		err := CreateLinks(&Config{
 			LinkMappings: []LinkMapping{
-				{Source: "home", Target: "~/"},
+				{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 			},
 		}, false)
 		if err != nil {
@@ -778,9 +786,9 @@ func TestLinkerEdgeCases(t *testing.T) {
 		os.Setenv("HOME", homeDir)
 		defer os.Setenv("HOME", oldHome)
 
-		err := CreateLinks(configRepo, &Config{
+		err := CreateLinks(&Config{
 			LinkMappings: []LinkMapping{
-				{Source: "home", Target: "~/"},
+				{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 			},
 		}, false)
 		if err != nil {
@@ -812,9 +820,9 @@ func TestLinkerEdgeCases(t *testing.T) {
 		os.Setenv("HOME", homeDir)
 		defer os.Setenv("HOME", oldHome)
 
-		err := CreateLinks(configRepo, &Config{
+		err := CreateLinks(&Config{
 			LinkMappings: []LinkMapping{
-				{Source: "home", Target: "~/"},
+				{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 			},
 		}, false)
 		if err != nil {
@@ -846,9 +854,9 @@ func TestLinkerEdgeCases(t *testing.T) {
 		defer os.Setenv("HOME", oldHome)
 
 		// Should skip non-existent source directories
-		err := CreateLinks(configRepo, &Config{
+		err := CreateLinks(&Config{
 			LinkMappings: []LinkMapping{
-				{Source: "home", Target: "~/"},
+				{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 			},
 		}, false)
 		if err != nil {
@@ -880,7 +888,7 @@ func TestLinkerEdgeCases(t *testing.T) {
 		defer os.Setenv("HOME", oldHome)
 
 		// Should handle permission error gracefully
-		err := CreateLinks(configRepo, &Config{}, false)
+		err := CreateLinks(&Config{}, false)
 		if err == nil {
 			// If no error, it might have succeeded somehow, check if link exists
 			if _, err := os.Lstat(filepath.Join(restrictedDir, "test.conf")); err == nil {

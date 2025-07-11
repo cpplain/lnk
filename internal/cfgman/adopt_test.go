@@ -67,8 +67,8 @@ func TestAdopt(t *testing.T) {
 			// Create test config with default mappings
 			config := &Config{
 				LinkMappings: []LinkMapping{
-					{Source: "home", Target: "~/"},
-					{Source: "private/home", Target: "~/"},
+					{Source: filepath.Join(configRepo, "home"), Target: "~/"},
+					{Source: filepath.Join(configRepo, "private/home"), Target: "~/"},
 				},
 			}
 
@@ -102,11 +102,11 @@ func TestAdopt(t *testing.T) {
 			defer os.Setenv("HOME", oldHome)
 
 			// Determine source directory based on isPrivate flag
-			sourceDir := "home"
+			sourceDir := filepath.Join(configRepo, "home")
 			if tt.isPrivate {
-				sourceDir = "private/home"
+				sourceDir = filepath.Join(configRepo, "private/home")
 			}
-			err := Adopt(testPath, configRepo, config, sourceDir, false)
+			err := Adopt(testPath, config, sourceDir, false)
 
 			// Check error
 			if tt.expectError {
@@ -209,7 +209,7 @@ func TestAdoptDryRun(t *testing.T) {
 
 	config := &Config{
 		LinkMappings: []LinkMapping{
-			{Source: "home", Target: "~/"},
+			{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 		},
 	}
 
@@ -218,7 +218,7 @@ func TestAdoptDryRun(t *testing.T) {
 	os.Setenv("HOME", homeDir)
 	defer os.Setenv("HOME", oldHome)
 
-	err := Adopt(testFile, configRepo, config, "home", true)
+	err := Adopt(testFile, config, filepath.Join(configRepo, "home"), true)
 	if err != nil {
 		t.Fatalf("dry-run failed: %v", err)
 	}
@@ -253,7 +253,7 @@ func TestAdoptComplexDirectory(t *testing.T) {
 	// Create test config
 	config := &Config{
 		LinkMappings: []LinkMapping{
-			{Source: "home", Target: "~/"},
+			{Source: filepath.Join(configRepo, "home"), Target: "~/"},
 		},
 	}
 
@@ -283,7 +283,7 @@ func TestAdoptComplexDirectory(t *testing.T) {
 	defer os.Setenv("HOME", oldHome)
 
 	// Adopt the directory
-	err := Adopt(testDir, configRepo, config, "home", false)
+	err := Adopt(testDir, config, filepath.Join(configRepo, "home"), false)
 	if err != nil {
 		t.Fatalf("failed to adopt complex directory: %v", err)
 	}
