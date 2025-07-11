@@ -52,6 +52,22 @@ func parseIgnorePatterns(patterns string) []string {
 	return result
 }
 
+// parseFlagValue parses a flag that might be in --flag=value or --flag value format
+// Returns the flag name, value, and whether a value was found
+func parseFlagValue(arg string, args []string, index int) (flag string, value string, hasValue bool, consumed int) {
+	// Check for --flag=value format
+	if idx := strings.Index(arg, "="); idx > 0 {
+		return arg[:idx], arg[idx+1:], true, 0
+	}
+
+	// Check for --flag value format
+	if index+1 < len(args) && !strings.HasPrefix(args[index+1], "-") {
+		return arg, args[index+1], true, 1
+	}
+
+	return arg, "", false, 0
+}
+
 // levenshteinDistance calculates the minimum edit distance between two strings
 func levenshteinDistance(s1, s2 string) int {
 	if len(s1) == 0 {
@@ -128,53 +144,60 @@ func min(a, b, c int) int {
 
 func main() {
 	// Parse global flags first
-	var globalVerbose, globalQuiet, globalJSON, globalNoColor, globalVersion, globalYes bool
-	var globalConfig, globalRepoDir, globalSourceDir, globalTargetDir, globalIgnore string
+	var globalVerbose, globalQuiet, globalNoColor, globalVersion, globalYes bool
+	var globalConfig, globalRepoDir, globalSourceDir, globalTargetDir, globalIgnore, globalOutput string
 	remainingArgs := []string{}
 
 	// Manual parsing to extract global flags before command
 	args := os.Args[1:]
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		switch {
-		case arg == "--verbose" || arg == "-v":
+
+		// Parse potential flag with value
+		flag, value, hasValue, consumed := parseFlagValue(arg, args, i)
+
+		switch flag {
+		case "--verbose", "-v":
 			globalVerbose = true
-		case arg == "--quiet" || arg == "-q":
+		case "--quiet", "-q":
 			globalQuiet = true
-		case arg == "--json":
-			globalJSON = true
-		case arg == "--no-color":
+		case "--output":
+			if hasValue {
+				globalOutput = value
+				i += consumed
+			}
+		case "--no-color":
 			globalNoColor = true
-		case arg == "--version":
+		case "--version":
 			globalVersion = true
-		case arg == "--yes" || arg == "-y":
+		case "--yes", "-y":
 			globalYes = true
-		case arg == "--config":
-			if i+1 < len(args) {
-				globalConfig = args[i+1]
-				i++ // Skip next argument as it's the value
+		case "--config":
+			if hasValue {
+				globalConfig = value
+				i += consumed
 			}
-		case arg == "--repo-dir":
-			if i+1 < len(args) {
-				globalRepoDir = args[i+1]
-				i++ // Skip next argument as it's the value
+		case "--repo-dir":
+			if hasValue {
+				globalRepoDir = value
+				i += consumed
 			}
-		case arg == "--source-dir":
-			if i+1 < len(args) {
-				globalSourceDir = args[i+1]
-				i++ // Skip next argument as it's the value
+		case "--source-dir":
+			if hasValue {
+				globalSourceDir = value
+				i += consumed
 			}
-		case arg == "--target-dir":
-			if i+1 < len(args) {
-				globalTargetDir = args[i+1]
-				i++ // Skip next argument as it's the value
+		case "--target-dir":
+			if hasValue {
+				globalTargetDir = value
+				i += consumed
 			}
-		case arg == "--ignore":
-			if i+1 < len(args) {
-				globalIgnore = args[i+1]
-				i++ // Skip next argument as it's the value
+		case "--ignore":
+			if hasValue {
+				globalIgnore = value
+				i += consumed
 			}
-		case arg == "-h" || arg == "--help":
+		case "-h", "--help":
 			// Let it pass through to be handled later
 			remainingArgs = append(remainingArgs, arg)
 		default:
@@ -207,12 +230,20 @@ func main() {
 	}
 
 	// Set output format
-	if globalJSON {
+	switch globalOutput {
+	case "json":
 		cfgman.SetOutputFormat(cfgman.FormatJSON)
 		// JSON output implies quiet mode for non-data output
 		if !globalVerbose {
 			cfgman.SetVerbosity(cfgman.VerbosityQuiet)
 		}
+	case "text", "":
+		// Default is already text/human format
+	default:
+		cfgman.PrintErrorWithHint(cfgman.WithHint(
+			fmt.Errorf("invalid output format: %s", globalOutput),
+			"Valid formats are: text, json"))
+		os.Exit(cfgman.ExitUsage)
 	}
 
 	if len(remainingArgs) < 1 {
@@ -282,7 +313,7 @@ func handleStatus(args []string, globalOptions *cfgman.ConfigOptions) {
 		fmt.Print(formatFlags(fs))
 		fmt.Printf("\n%s\n", cfgman.Bold("Examples:"))
 		fmt.Println(cfgman.Cyan("  cfgman status"))
-		fmt.Println(cfgman.Cyan("  cfgman status --json"))
+		fmt.Println(cfgman.Cyan("  cfgman status --output json"))
 		fmt.Println(cfgman.Cyan("  cfgman status --repo-dir ~/dotfiles"))
 		fmt.Printf("\n%s\n", cfgman.Bold("See also:"))
 		fmt.Printf("  %s\n", cfgman.Cyan("link, prune"))
@@ -350,7 +381,6 @@ func handleAdopt(args []string, globalOptions *cfgman.ConfigOptions) {
 func handleOrphan(args []string, globalOptions *cfgman.ConfigOptions, globalYes bool) {
 	fs := flag.NewFlagSet("orphan", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
-	force := fs.Bool("force", false, "Skip confirmation prompt")
 	path := fs.String("path", "", "The file or directory to orphan")
 
 	fs.Usage = func() {
@@ -385,7 +415,7 @@ func handleOrphan(args []string, globalOptions *cfgman.ConfigOptions, globalYes 
 	// Show config source in verbose mode
 	cfgman.PrintVerbose("Using configuration from: %s", configSource)
 
-	if err := cfgman.Orphan(*path, globalOptions.RepoDir, config, *dryRun, *force || globalYes); err != nil {
+	if err := cfgman.Orphan(*path, globalOptions.RepoDir, config, *dryRun, globalYes); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(cfgman.ExitError)
 	}
@@ -428,7 +458,6 @@ func handleLink(args []string, globalOptions *cfgman.ConfigOptions) {
 func handleUnlink(args []string, globalOptions *cfgman.ConfigOptions, globalYes bool) {
 	fs := flag.NewFlagSet("unlink", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
-	force := fs.Bool("force", false, "Skip confirmation prompt")
 
 	fs.Usage = func() {
 		fmt.Printf("%s cfgman unlink [options]\n", cfgman.Bold("Usage:"))
@@ -454,7 +483,7 @@ func handleUnlink(args []string, globalOptions *cfgman.ConfigOptions, globalYes 
 	// Show config source in verbose mode
 	cfgman.PrintVerbose("Using configuration from: %s", configSource)
 
-	if err := cfgman.RemoveLinks(globalOptions.RepoDir, config, *dryRun, *force || globalYes); err != nil {
+	if err := cfgman.RemoveLinks(globalOptions.RepoDir, config, *dryRun, globalYes); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(cfgman.ExitError)
 	}
@@ -463,7 +492,6 @@ func handleUnlink(args []string, globalOptions *cfgman.ConfigOptions, globalYes 
 func handlePrune(args []string, globalOptions *cfgman.ConfigOptions, globalYes bool) {
 	fs := flag.NewFlagSet("prune", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
-	force := fs.Bool("force", false, "Skip confirmation prompt")
 
 	fs.Usage = func() {
 		fmt.Printf("%s cfgman prune [options]\n", cfgman.Bold("Usage:"))
@@ -489,7 +517,7 @@ func handlePrune(args []string, globalOptions *cfgman.ConfigOptions, globalYes b
 	// Show config source in verbose mode
 	cfgman.PrintVerbose("Using configuration from: %s", configSource)
 
-	if err := cfgman.PruneLinks(globalOptions.RepoDir, config, *dryRun, *force || globalYes); err != nil {
+	if err := cfgman.PruneLinks(globalOptions.RepoDir, config, *dryRun, globalYes); err != nil {
 		cfgman.PrintErrorWithHint(err)
 		os.Exit(cfgman.ExitError)
 	}
@@ -520,7 +548,7 @@ func printUsage() {
 	fmt.Printf("  -v, --verbose        Enable verbose output\n")
 	fmt.Printf("  -q, --quiet          Suppress all non-error output\n")
 	fmt.Printf("  -y, --yes            Assume yes to all prompts\n")
-	fmt.Printf("      --json           Output in JSON format (where supported)\n")
+	fmt.Printf("      --output FORMAT  Output format: text (default), json\n")
 	fmt.Printf("      --no-color       Disable colored output\n")
 	fmt.Printf("      --version        Show version information\n")
 	fmt.Printf("  -h, --help           Show this help message\n")

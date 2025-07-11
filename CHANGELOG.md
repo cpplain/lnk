@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Renamed `remove` command to `unlink` to be more specific about removing symlinks
   - Added "did you mean?" suggestions for mistyped commands
   - Command names now clearly indicate what they operate on (links)
+- **Flag improvements** - Enhanced flag handling for better usability:
+  - Removed `--force` flags from individual commands in favor of global `--yes` flag
+  - Replaced `--json` flag with `--output FORMAT` flag (supports text and json formats)
+  - Added support for `--flag=value` syntax in addition to `--flag value`
+  - Improved flag consistency across all commands
 - **BREAKING: Works without configuration** - cfgman now works from any directory without requiring a config file:
   - Added configuration discovery system with precedence order: --config flag > repo dir > XDG config > user config > home > current dir > built-in defaults
   - Added global configuration flags: --config, --repo-dir, --source-dir, --target-dir, --ignore
