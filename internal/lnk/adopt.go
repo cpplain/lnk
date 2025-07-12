@@ -152,16 +152,10 @@ func performDirectoryAdoption(absSource, destPath string) error {
 	var walkErr error
 	var fileCount int
 
-	// Create progress indicator
-	progress := NewProgressIndicator("Scanning files to adopt")
-
 	// Walk the source directory
 	processFiles := func() error {
 		return filepath.Walk(absSource, func(sourcePath string, info os.FileInfo, err error) error {
 			fileCount++
-			if fileCount%50 == 0 {
-				progress.Update(fileCount)
-			}
 			if err != nil {
 				return err
 			}
@@ -248,7 +242,6 @@ func performDirectoryAdoption(absSource, destPath string) error {
 
 	// Print summary if we adopted multiple files
 	if walkErr == nil && (adopted > 0 || skipped > 0) {
-		fmt.Println()
 		if adopted > 0 {
 			PrintSuccess("Successfully adopted %d file(s)", adopted)
 			PrintInfo("Next: Run 'lnk create' to create symlinks")

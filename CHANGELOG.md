@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Progress indicator consistency** - Fixed progress indicators showing prematurely and leaving terminal artifacts:
+  - Progress indicators now only show for operations taking longer than 1 second
+  - Removed duplicate progress tracking that caused immediate output
+  - Fixed terminal cleanup to prevent `⏎` symbols from appearing
+  - Consistent behavior across all commands (create, status, adopt, orphan, remove, prune)
+
 ### Breaking Changes
 
 - **Renamed project from cfgman to lnk** - The project has been renamed to better reflect its focused purpose as a symlink management tool:

@@ -19,16 +19,10 @@ func FindManagedLinks(startPath string, config *Config) ([]ManagedLink, error) {
 	var links []ManagedLink
 	var fileCount int
 
-	// Create progress indicator
-	progress := NewProgressIndicator("Searching for managed links")
-
 	// Use ShowProgress to handle the 1-second delay
 	err := ShowProgress("Searching for managed links", func() error {
 		return filepath.Walk(startPath, func(path string, info os.FileInfo, err error) error {
 			fileCount++
-			if fileCount%100 == 0 {
-				progress.Update(fileCount)
-			}
 			if err != nil {
 				// Debug the error but continue walking
 				Debug("Error walking path %s: %v", path, err)

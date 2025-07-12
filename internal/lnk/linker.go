@@ -314,17 +314,8 @@ func executePlannedLinks(links []PlannedLink) error {
 	// Track results for summary
 	var created, failed int
 
-	// Show progress for large operations
-	progress := NewProgressIndicator("Creating symlinks")
-	if len(links) > 10 {
-		progress.SetTotal(len(links))
-	}
-
 	processLinks := func() error {
-		for i, link := range links {
-			if len(links) > 10 && i%5 == 0 {
-				progress.Update(i + 1)
-			}
+		for _, link := range links {
 			// Create parent directory if needed
 			parentDir := filepath.Dir(link.Target)
 			if !createdDirs[parentDir] {
@@ -352,18 +343,11 @@ func executePlannedLinks(links []PlannedLink) error {
 	}
 
 	// Use ShowProgress to handle the 1-second delay
-	if len(links) > 10 {
-		if err := ShowProgress("Creating symlinks", processLinks); err != nil {
-			return err
-		}
-	} else {
-		if err := processLinks(); err != nil {
-			return err
-		}
+	if err := ShowProgress("Creating symlinks", processLinks); err != nil {
+		return err
 	}
 
 	// Print summary
-	fmt.Println()
 	if created > 0 {
 		PrintSuccess("Created %d symlink(s) successfully", created)
 		PrintInfo("Next: Run 'lnk status' to verify links")
