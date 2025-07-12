@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `unlink` command renamed back to `remove` for removing symlinks
   - Commands now use simple verbs that are clear in context
 
+### Fixed
+
+- **Test environment isolation** - Fixed failing tests that were loading system configuration files:
+  - Added proper environment variable isolation for `XDG_CONFIG_HOME` and `HOME`
+  - Tests now run reliably regardless of developer's local configuration
+  - Ensures consistent test results across different environments
+
 ### Added
 
 - **Command improvements** - Enhanced command structure for clarity:

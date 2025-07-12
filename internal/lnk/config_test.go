@@ -442,6 +442,27 @@ func TestLoadConfigWithOptions_DefaultConfig(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
+	// Save original environment
+	originalXDG := os.Getenv("XDG_CONFIG_HOME")
+	originalHOME := os.Getenv("HOME")
+
+	// Set test environment
+	os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+	os.Setenv("HOME", tmpDir)
+
+	defer func() {
+		if originalXDG != "" {
+			os.Setenv("XDG_CONFIG_HOME", originalXDG)
+		} else {
+			os.Unsetenv("XDG_CONFIG_HOME")
+		}
+		if originalHOME != "" {
+			os.Setenv("HOME", originalHOME)
+		} else {
+			os.Unsetenv("HOME")
+		}
+	}()
+
 	// Test with empty options - should use defaults
 	options := &ConfigOptions{}
 	config, source, err := LoadConfigWithOptions(options)
@@ -550,14 +571,21 @@ func TestLoadConfigWithOptions_ConfigFilePrecedence(t *testing.T) {
 		ConfigPath: explicitConfigPath,
 	}
 
-	// Set XDG_CONFIG_HOME to our test directory
+	// Set XDG_CONFIG_HOME and HOME to our test directory
 	originalXDG := os.Getenv("XDG_CONFIG_HOME")
+	originalHOME := os.Getenv("HOME")
 	os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+	os.Setenv("HOME", tmpDir)
 	defer func() {
 		if originalXDG != "" {
 			os.Setenv("XDG_CONFIG_HOME", originalXDG)
 		} else {
 			os.Unsetenv("XDG_CONFIG_HOME")
+		}
+		if originalHOME != "" {
+			os.Setenv("HOME", originalHOME)
+		} else {
+			os.Unsetenv("HOME")
 		}
 	}()
 
@@ -577,8 +605,14 @@ func TestLoadConfigWithOptions_ConfigFilePrecedence(t *testing.T) {
 	// Test 2: Current directory config
 	options.ConfigPath = ""
 
-	// Temporarily unset XDG_CONFIG_HOME to test current directory precedence
-	os.Unsetenv("XDG_CONFIG_HOME")
+	// Set XDG_CONFIG_HOME to a non-existent directory to skip XDG config
+	os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, "nonexistent"))
+
+	// Also need to ensure HOME doesn't have .config/lnk/config.json
+	// Create a separate HOME for this test
+	testHome := filepath.Join(tmpDir, "testhome")
+	os.MkdirAll(testHome, 0755)
+	os.Setenv("HOME", testHome)
 
 	// Change to repo directory to test current directory loading
 	originalDir, _ := os.Getwd()
@@ -606,8 +640,9 @@ func TestLoadConfigWithOptions_ConfigFilePrecedence(t *testing.T) {
 	// Change back to original directory
 	os.Chdir(originalDir)
 
-	// Restore XDG_CONFIG_HOME
+	// Restore XDG_CONFIG_HOME and HOME for XDG test
 	os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+	os.Setenv("HOME", tmpDir)
 
 	config, source, err = LoadConfigWithOptions(options)
 	if err != nil {
@@ -819,6 +854,27 @@ func TestLoadConfigWithOptions_PartialOverrides(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmpDir)
+
+	// Save original environment
+	originalXDG := os.Getenv("XDG_CONFIG_HOME")
+	originalHOME := os.Getenv("HOME")
+
+	// Set test environment
+	os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, ".config"))
+	os.Setenv("HOME", tmpDir)
+
+	defer func() {
+		if originalXDG != "" {
+			os.Setenv("XDG_CONFIG_HOME", originalXDG)
+		} else {
+			os.Unsetenv("XDG_CONFIG_HOME")
+		}
+		if originalHOME != "" {
+			os.Setenv("HOME", originalHOME)
+		} else {
+			os.Unsetenv("HOME")
+		}
+	}()
 
 	// Test partial overrides (only source dir specified)
 	options := &ConfigOptions{
