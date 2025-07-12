@@ -43,7 +43,7 @@ lnk adopt --path ~/.gitconfig --source-dir ~/dotfiles/home
 lnk adopt --path ~/.ssh/config --source-dir ~/dotfiles/private/home
 
 # 4. Create symlinks on new machines
-lnk link
+lnk create
 ```
 
 ## Configuration
@@ -82,8 +82,8 @@ Example configuration:
 
 ```bash
 lnk status                        # Show all managed symlinks
-lnk link [--dry-run]              # Create symlinks from repo to target dirs
-lnk unlink [--dry-run]            # Remove all managed symlinks
+lnk create [--dry-run]              # Create symlinks from repo to target dirs
+lnk remove [--dry-run]            # Remove all managed symlinks
 lnk prune [--dry-run]             # Remove broken symlinks
 ```
 
@@ -137,7 +137,7 @@ git clone https://github.com/you/dotfiles.git ~/dotfiles
 cd ~/dotfiles && git submodule update --init  # If using private submodule
 
 # 2. Create links
-lnk link
+lnk create
 ```
 
 ### Adding New Configurations

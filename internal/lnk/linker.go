@@ -161,7 +161,7 @@ func removeLinks(config *Config, dryRun bool, skipConfirm bool) error {
 	fmt.Println()
 	if removed > 0 {
 		PrintSuccess("Removed %d symlink(s) successfully", removed)
-		PrintInfo("Next: Run 'lnk link' to recreate links or 'lnk status' to see remaining links")
+		PrintInfo("Next: Run 'lnk create' to recreate links or 'lnk status' to see remaining links")
 	}
 	if failed > 0 {
 		PrintWarning("Failed to remove %d symlink(s)", failed)

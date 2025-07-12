@@ -7,13 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING: Reverted command names** - Renamed commands back to their original names:
+  - `link` command renamed back to `create` for creating symlinks
+  - `unlink` command renamed back to `remove` for removing symlinks
+  - Commands now use simple verbs that are clear in context
+
 ### Added
 
 - **Command improvements** - Enhanced command structure for clarity:
-  - Renamed `create` command to `link` to be more specific about creating symlinks
-  - Renamed `remove` command to `unlink` to be more specific about removing symlinks
   - Added "did you mean?" suggestions for mistyped commands
-  - Command names now clearly indicate what they operate on (links)
 - **Flag improvements** - Enhanced flag handling for better usability:
   - Removed `--force` flags from individual commands in favor of global `--yes` flag
   - Replaced `--json` flag with `--output FORMAT` flag (supports text and json formats)

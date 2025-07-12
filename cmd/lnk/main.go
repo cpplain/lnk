@@ -111,7 +111,7 @@ func levenshteinDistance(s1, s2 string) int {
 
 // suggestCommand finds the closest matching command
 func suggestCommand(input string) string {
-	commands := []string{"status", "adopt", "orphan", "link", "unlink", "prune", "version", "help"}
+	commands := []string{"status", "adopt", "orphan", "create", "remove", "prune", "version", "help"}
 
 	bestMatch := ""
 	bestDistance := len(input) + 1
@@ -275,10 +275,10 @@ func main() {
 		handleAdopt(commandArgs, globalOptions)
 	case "orphan":
 		handleOrphan(commandArgs, globalOptions, globalYes)
-	case "link":
-		handleLink(commandArgs, globalOptions)
-	case "unlink":
-		handleUnlink(commandArgs, globalOptions, globalYes)
+	case "create":
+		handleCreate(commandArgs, globalOptions)
+	case "remove":
+		handleRemove(commandArgs, globalOptions, globalYes)
 	case "prune":
 		handlePrune(commandArgs, globalOptions, globalYes)
 	case "version":
@@ -309,7 +309,7 @@ func handleStatus(args []string, globalOptions *lnk.ConfigOptions) {
 		fmt.Println(lnk.Cyan("  lnk status"))
 		fmt.Println(lnk.Cyan("  lnk status --output json"))
 		fmt.Printf("\n%s\n", lnk.Bold("See also:"))
-		fmt.Printf("  %s\n", lnk.Cyan("link, prune"))
+		fmt.Printf("  %s\n", lnk.Cyan("create, prune"))
 	}
 	fs.Parse(args)
 
@@ -344,7 +344,7 @@ func handleAdopt(args []string, globalOptions *lnk.ConfigOptions) {
 		fmt.Println(lnk.Cyan("  lnk adopt --path ~/.ssh/config --source-dir ~/dotfiles/private/home"))
 		fmt.Println(lnk.Cyan("  lnk adopt --path ~/.bashrc --source-dir ~/dotfiles/home"))
 		fmt.Printf("\n%s\n", lnk.Bold("See also:"))
-		fmt.Printf("  %s\n", lnk.Cyan("orphan, link, status"))
+		fmt.Printf("  %s\n", lnk.Cyan("orphan, create, status"))
 	}
 
 	fs.Parse(args)
@@ -414,21 +414,21 @@ func handleOrphan(args []string, globalOptions *lnk.ConfigOptions, globalYes boo
 	}
 }
 
-func handleLink(args []string, globalOptions *lnk.ConfigOptions) {
-	fs := flag.NewFlagSet("link", flag.ExitOnError)
+func handleCreate(args []string, globalOptions *lnk.ConfigOptions) {
+	fs := flag.NewFlagSet("create", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 
 	fs.Usage = func() {
-		fmt.Printf("%s lnk link [options]\n", lnk.Bold("Usage:"))
+		fmt.Printf("%s lnk create [options]\n", lnk.Bold("Usage:"))
 		fmt.Printf("\n%s\n", lnk.Cyan("Create symlinks from repository to target directories"))
 		fmt.Printf("\n%s\n", lnk.Bold("Options:"))
 		fmt.Print(formatFlags(fs))
 		fmt.Printf("\n%s\n", lnk.Bold("Examples:"))
-		fmt.Println(lnk.Cyan("  lnk link"))
-		fmt.Println(lnk.Cyan("  lnk link --dry-run"))
-		fmt.Println(lnk.Cyan("  lnk link --source-dir ~/dotfiles/home --target-dir ~/"))
+		fmt.Println(lnk.Cyan("  lnk create"))
+		fmt.Println(lnk.Cyan("  lnk create --dry-run"))
+		fmt.Println(lnk.Cyan("  lnk create --source-dir ~/dotfiles/home --target-dir ~/"))
 		fmt.Printf("\n%s\n", lnk.Bold("See also:"))
-		fmt.Printf("  %s\n", lnk.Cyan("unlink, status, adopt"))
+		fmt.Printf("  %s\n", lnk.Cyan("remove, status, adopt"))
 	}
 
 	fs.Parse(args)
@@ -448,20 +448,20 @@ func handleLink(args []string, globalOptions *lnk.ConfigOptions) {
 	}
 }
 
-func handleUnlink(args []string, globalOptions *lnk.ConfigOptions, globalYes bool) {
-	fs := flag.NewFlagSet("unlink", flag.ExitOnError)
+func handleRemove(args []string, globalOptions *lnk.ConfigOptions, globalYes bool) {
+	fs := flag.NewFlagSet("remove", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
 
 	fs.Usage = func() {
-		fmt.Printf("%s lnk unlink [options]\n", lnk.Bold("Usage:"))
+		fmt.Printf("%s lnk remove [options]\n", lnk.Bold("Usage:"))
 		fmt.Printf("\n%s\n", lnk.Cyan("Remove all managed symlinks"))
 		fmt.Printf("\n%s\n", lnk.Bold("Options:"))
 		fmt.Print(formatFlags(fs))
 		fmt.Printf("\n%s\n", lnk.Bold("Examples:"))
-		fmt.Println(lnk.Cyan("  lnk unlink"))
-		fmt.Println(lnk.Cyan("  lnk unlink --dry-run"))
+		fmt.Println(lnk.Cyan("  lnk remove"))
+		fmt.Println(lnk.Cyan("  lnk remove --dry-run"))
 		fmt.Printf("\n%s\n", lnk.Bold("See also:"))
-		fmt.Printf("  %s\n", lnk.Cyan("link, prune, orphan"))
+		fmt.Printf("  %s\n", lnk.Cyan("create, prune, orphan"))
 	}
 
 	fs.Parse(args)
@@ -494,7 +494,7 @@ func handlePrune(args []string, globalOptions *lnk.ConfigOptions, globalYes bool
 		fmt.Println(lnk.Cyan("  lnk prune"))
 		fmt.Println(lnk.Cyan("  lnk prune --dry-run"))
 		fmt.Printf("\n%s\n", lnk.Bold("See also:"))
-		fmt.Printf("  %s\n", lnk.Cyan("unlink, status"))
+		fmt.Printf("  %s\n", lnk.Cyan("remove, status"))
 	}
 
 	fs.Parse(args)
@@ -555,8 +555,8 @@ func printUsage() {
 	fmt.Printf("    %-20s Show status of all managed symlinks\n", lnk.Bold("status"))
 	fmt.Printf("    %-20s Adopt file/directory into repository\n", lnk.Bold("adopt"))
 	fmt.Printf("    %-20s Remove file/directory from repo management\n", lnk.Bold("orphan"))
-	fmt.Printf("    %-20s Create symlinks from repo to target dirs\n", lnk.Bold("link"))
-	fmt.Printf("    %-20s Remove all managed symlinks\n", lnk.Bold("unlink"))
+	fmt.Printf("    %-20s Create symlinks from repo to target dirs\n", lnk.Bold("create"))
+	fmt.Printf("    %-20s Remove all managed symlinks\n", lnk.Bold("remove"))
 	fmt.Printf("    %-20s Remove broken symlinks\n", lnk.Bold("prune"))
 	fmt.Println()
 	fmt.Printf("  %s\n", lnk.Cyan("Other:"))
@@ -567,7 +567,7 @@ func printUsage() {
 	fmt.Println()
 	fmt.Printf("%s\n", lnk.Bold("Common workflow:"))
 	fmt.Println(lnk.Cyan("  lnk adopt --path ~/.gitconfig --source-dir ~/dotfiles/home     # Adopt existing files"))
-	fmt.Println(lnk.Cyan("  lnk link                                                        # Create symlinks"))
+	fmt.Println(lnk.Cyan("  lnk create                                                      # Create symlinks"))
 	fmt.Println(lnk.Cyan("  lnk status                                                      # Check link status"))
 	fmt.Println()
 	fmt.Printf("%s\n", lnk.Bold("Configuration Discovery:"))
@@ -602,10 +602,10 @@ func printCommandHelp(command string) {
 		handleAdopt([]string{"-h"}, emptyOptions)
 	case "orphan":
 		handleOrphan([]string{"-h"}, emptyOptions, false)
-	case "link":
-		handleLink([]string{"-h"}, emptyOptions)
-	case "unlink":
-		handleUnlink([]string{"-h"}, emptyOptions, false)
+	case "create":
+		handleCreate([]string{"-h"}, emptyOptions)
+	case "remove":
+		handleRemove([]string{"-h"}, emptyOptions, false)
 	case "prune":
 		handlePrune([]string{"-h"}, emptyOptions, false)
 	case "version":
