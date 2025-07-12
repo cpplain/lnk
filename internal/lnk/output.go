@@ -3,6 +3,7 @@ package lnk
 import (
 	"fmt"
 	"os"
+	"text/tabwriter"
 )
 
 // Debug prints debug messages to stderr when LNK_DEBUG is set or in verbose mode.
@@ -128,4 +129,42 @@ func PrintVerbose(format string, args ...interface{}) {
 	}
 	message := fmt.Sprintf(format, args...)
 	fmt.Printf("[VERBOSE] %s\n", message)
+}
+
+// PrintHelpSection prints a section header for help text
+func PrintHelpSection(title string) {
+	fmt.Println(Bold(title))
+}
+
+// PrintHelpItem prints an aligned help item using tabwriter
+// This ensures consistent spacing across all help sections
+func PrintHelpItem(name, description string) {
+	// Using a single shared tabwriter would be more efficient,
+	// but for simplicity we create one per call
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintf(w, "  %s\t%s\n", name, description)
+	w.Flush()
+}
+
+// PrintHelpItems prints multiple aligned help items at once
+// This is more efficient than calling PrintHelpItem multiple times
+func PrintHelpItems(items [][]string) {
+	if len(items) == 0 {
+		return
+	}
+
+	// Find the longest item in the first column for proper padding
+	maxLen := 0
+	for _, item := range items {
+		if len(item) >= 1 && len(item[0]) > maxLen {
+			maxLen = len(item[0])
+		}
+	}
+
+	// Print with consistent spacing (no extra padding)
+	for _, item := range items {
+		if len(item) >= 2 {
+			fmt.Printf("  %-*s  %s\n", maxLen, item[0], item[1])
+		}
+	}
 }

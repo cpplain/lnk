@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `link` command renamed back to `create` for creating symlinks
   - `unlink` command renamed back to `remove` for removing symlinks
   - Commands now use simple verbs that are clear in context
+- **Improved help documentation UX** - Standardized help output formatting:
+  - Removed excessive colors and formatting from help text
+  - Fixed inconsistent spacing and alignment across all help sections
+  - Commands now appear before options (following standard CLI conventions)
+  - Removed `help` command from command list (use `lnk <command> --help` syntax)
+  - All help output now uses consistent helper functions for proper alignment
+  - Examples section simplified to show commands without descriptions
 
 ### Fixed
 

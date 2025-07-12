@@ -1,6 +1,6 @@
 # lnk
 
-A fast, reliable dotfile management tool. Manage your configuration files across machines using intelligent symlinks.
+An opinionated symlink manager for dotfiles and more. Manage your configuration files across machines using intelligent symlinks.
 
 ## Key Features
 
