@@ -19,19 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Replaced `--json` flag with `--output FORMAT` flag (supports text and json formats)
   - Added support for `--flag=value` syntax in addition to `--flag value`
   - Improved flag consistency across all commands
-  - **BREAKING**: Removed `--repo-dir` flag and `CFGMAN_REPO_DIR` environment variable
-- **BREAKING: Directory-based architecture** - cfgman now uses absolute paths for source directories:
+  - **BREAKING**: Removed `--repo-dir` flag and `LNK_REPO_DIR` environment variable
+- **BREAKING: Directory-based architecture** - lnk now uses absolute paths for source directories:
   - Changed from repository-based to directory-based tool
   - Source directories in config must now be absolute paths (e.g., `~/dotfiles/home` instead of `home`)
   - Adopt command now requires absolute path for --source-dir (e.g., `--source-dir ~/dotfiles/home`)
-  - Removed concept of "repository directory" - cfgman can be run from anywhere
+  - Removed concept of "repository directory" - lnk can be run from anywhere
   - Each source directory is independent - you can manage configs from multiple locations
-- **Works without configuration** - cfgman works from any directory without requiring a config file:
+- **Works without configuration** - lnk works from any directory without requiring a config file:
   - Added configuration discovery system with precedence order: --config flag > XDG config > user config > home > current dir > built-in defaults
   - Added global configuration flags: --config, --source-dir, --target-dir, --ignore
-  - Added environment variable support: CFGMAN_CONFIG, CFGMAN_SOURCE_DIR, CFGMAN_TARGET_DIR, CFGMAN_IGNORE
+  - Added environment variable support: LNK_CONFIG, LNK_SOURCE_DIR, LNK_TARGET_DIR, LNK_IGNORE
   - Added built-in sensible defaults (~/dotfiles/home->~/, ~/dotfiles/config->~/.config/, common ignore patterns)
-  - Added XDG Base Directory Specification support ($XDG_CONFIG_HOME/cfgman/config.json)
+  - Added XDG Base Directory Specification support ($XDG_CONFIG_HOME/lnk/config.json)
   - All commands now work with flexible configuration loading and override system
   - Updated help text to document new configuration discovery and examples
 - **Enhanced user guidance** - Added next-step suggestions after successful operations:
@@ -66,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Useful for CI/CD environments and output parsing
 - **Enhanced error messages** - All errors now include actionable "Try:" suggestions:
   - Configuration errors guide users to create config files or use built-in defaults
-  - File conflicts suggest using `cfgman adopt` first
+  - File conflicts suggest using `lnk adopt` first
   - Invalid paths show correct format examples
   - Unknown commands direct to help documentation
   - Leverages existing hint infrastructure throughout the codebase
@@ -96,7 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Interactive terminal: Uses icons (✓, ✗, !) and colors for human-friendly output
   - Piped output: Uses simple text markers (success, error, warning) for easy parsing
   - Status command outputs `active <path>` or `broken <path>` format when piped
-  - Makes cfgman compatible with grep, awk, and other text processing tools
+  - Makes lnk compatible with grep, awk, and other text processing tools
   - JSON output (--json) takes precedence over automatic adaptation
   - Follows CLI best practices for human-first, machine-friendly design
 - **Specific exit codes for different error types** - Following GNU/POSIX conventions:
@@ -139,7 +139,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Standardized all output helpers** - All commands now use consistent output helper functions (PrintError, PrintSuccess, PrintWarning, etc.) for uniform formatting across the entire CLI
 - **Simplified status output** - Status command now uses the same single-line format as other commands (e.g., "✓ Active: ~/.bashrc") for consistency
 - **Standardized error messages** - All error messages now follow consistent "Failed to <action>: <reason>" format with lowercase actions for better readability
-- **Enhanced error context** - Error messages now include actionable suggestions where appropriate (e.g., "Use 'cfgman adopt' to adopt this file first", "Create a config file or use built-in defaults")
+- **Enhanced error context** - Error messages now include actionable suggestions where appropriate (e.g., "Use 'lnk adopt' to adopt this file first", "Create a config file or use built-in defaults")
 - **Added summary output for bulk operations** - Commands that operate on multiple files now show clear summaries:
   - `create` shows "Created X symlink(s) successfully" and failure counts
   - `remove` shows "Removed X symlink(s) successfully" and failure counts
@@ -156,9 +156,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- **BREAKING: Removed `init` command** - Following advanced CLI tool patterns, cfgman no longer provides config file creation:
-  - Advanced users can create `.cfgman.json` manually when customization is needed
-  - cfgman works with built-in defaults and doesn't require a config file
+- **BREAKING: Removed `init` command** - Following advanced CLI tool patterns, lnk no longer provides config file creation:
+  - Advanced users can create `.lnk.json` manually when customization is needed
+  - lnk works with built-in defaults and doesn't require a config file
   - Removed all `init` command references from help text and documentation
   - Updated error messages to suggest using built-in defaults instead of init
   - Simplified CLI interface by removing unnecessary config template generation
@@ -182,14 +182,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed - MAJOR REWRITE
 
-This release represents a major rewrite of cfgman's core functionality.
+This release represents a major rewrite of lnk's core functionality.
 
 - **BREAKING: File-only linking** - Removed directory linking feature. Cfgman now ONLY creates individual file symlinks, never directory symlinks. This ensures:
   - Consistent behavior across all operations
   - No conflicts between different source mappings
   - Ability to mix files from different sources in the same directory
   - Local-only files can coexist with managed configs
-- **Configuration-driven design** - All behavior now controlled by `.cfgman.json` with no hardcoded defaults
+- **Configuration-driven design** - All behavior now controlled by `.lnk.json` with no hardcoded defaults
 - **Simplified codebase** - Removed obsolete features and redundant logic:
   - Removed LinkStrategy (file/directory linking modes)
   - Removed hardcoded directory list
@@ -221,10 +221,10 @@ This release represents a major rewrite of cfgman's core functionality.
 
 ## [0.1.0] - 2025-06-24
 
-Initial release of cfgman.
+Initial release of lnk.
 
 - **Directory-based operation** - Works from repository directory (like git, npm, make)
-- **Simple configuration format** - Single `.cfgman.json` file with link mappings
+- **Simple configuration format** - Single `.lnk.json` file with link mappings
 - **Built-in ignore patterns** - Gitignore-style pattern matching without git dependency
 - **Flexible link mappings** - Map any source directory to any target location
 - **Smart linking strategies** - Choose between file-level or directory-level linking
@@ -242,8 +242,8 @@ Initial release of cfgman.
 - **Performance** - Concurrent operations for status checking
 - **Zero dependencies** - Pure Go implementation using only standard library
 
-[unreleased]: https://github.com/cpplain/cfgman/compare/v0.3.0...HEAD
-[0.3.0]: https://github.com/cpplain/cfgman/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/cpplain/cfgman/compare/v0.1.1...v0.2.0
-[0.1.1]: https://github.com/cpplain/cfgman/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/cpplain/cfgman/releases/tag/v0.1.0
+[unreleased]: https://github.com/cpplain/lnk/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/cpplain/lnk/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/cpplain/lnk/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/cpplain/lnk/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/cpplain/lnk/releases/tag/v0.1.0

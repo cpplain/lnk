@@ -2,7 +2,7 @@
 
 # Default target - show help
 help:
-	@echo "cfgman - Configuration Management Tool"
+	@echo "lnk - Symlink Management Tool"
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""
@@ -12,8 +12,8 @@ help:
 	@echo ""
 	@echo "Targets:"
 	@echo "  help           Show this help message"
-	@echo "  build          Build the cfgman binary"
-	@echo "  install        Build and install cfgman to BINDIR"
+	@echo "  build          Build the lnk binary"
+	@echo "  install        Build and install lnk to BINDIR"
 	@echo "  clean          Remove build artifacts and installed binary"
 	@echo "  test           Run all tests with verbose output"
 	@echo "  test-coverage  Run tests with coverage report (generates HTML)"
@@ -25,17 +25,17 @@ help:
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 
-# Build the cfgman binary
+# Build the lnk binary
 build:
 	mkdir -p bin
 	@# Get version from git or use "dev" as fallback
 	@VERSION=$$(git describe --tags --always 2>/dev/null || echo "dev"); \
 	COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
 	DATE=$$(date -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date); \
-	echo "Building cfgman version $$VERSION ($$COMMIT)..."; \
-	go build -ldflags "-X 'main.version=$$VERSION' -X 'main.commit=$$COMMIT' -X 'main.date=$$DATE'" -o bin/cfgman cmd/cfgman/main.go
+	echo "Building lnk version $$VERSION ($$COMMIT)..."; \
+	go build -ldflags "-X 'main.version=$$VERSION' -X 'main.commit=$$COMMIT' -X 'main.date=$$DATE'" -o bin/lnk cmd/lnk/main.go
 
-# Install cfgman to BINDIR
+# Install lnk to BINDIR
 install: build
 	@# Check if we can write to the target directory
 	@if [ -d "$(BINDIR)" ]; then \
@@ -57,14 +57,14 @@ install: build
 		fi \
 	fi
 	mkdir -p $(BINDIR)
-	cp bin/cfgman $(BINDIR)/cfgman
-	chmod +x $(BINDIR)/cfgman
+	cp bin/lnk $(BINDIR)/lnk
+	chmod +x $(BINDIR)/lnk
 
 # Clean build artifacts
 clean:
 	rm -rf bin/
 	rm -f coverage.out coverage.html
-	rm -f $(BINDIR)/cfgman
+	rm -f $(BINDIR)/lnk
 
 # Run tests
 test:

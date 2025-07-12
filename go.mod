@@ -1,3 +1,3 @@
-module github.com/cpplain/cfgman
+module github.com/cpplain/lnk
 
 go 1.21

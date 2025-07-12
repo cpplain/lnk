@@ -1,6 +1,6 @@
-# Contributing to cfgman
+# Contributing to lnk
 
-cfgman is an opinionated personal project designed to meet specific workflow needs.
+lnk is an opinionated personal project designed to meet specific workflow needs.
 
 While contributions may be considered, please note:
 
@@ -9,7 +9,7 @@ While contributions may be considered, please note:
 - Features and changes are driven by the maintainer's needs
 - The project may not follow conventional open source practices
 
-If you find cfgman useful, you're welcome to:
+If you find lnk useful, you're welcome to:
 
 - Fork it for your own needs
 - Report bugs via GitHub issues
@@ -54,7 +54,7 @@ feat(adopt): allow adopting entire directories
 
 fix!: change config file format to JSON
 
-BREAKING CHANGE: config files must now use .cfgman.json extension
+BREAKING CHANGE: config files must now use .lnk.json extension
 ```
 
 ### CLI Design Guidelines

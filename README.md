@@ -1,4 +1,4 @@
-# cfgman
+# lnk
 
 A fast, reliable dotfile management tool. Manage your configuration files across machines using intelligent symlinks.
 
@@ -15,8 +15,8 @@ A fast, reliable dotfile management tool. Manage your configuration files across
 
 ```bash
 # Build from source
-git clone https://github.com/cpplain/cfgman.git
-cd cfgman
+git clone https://github.com/cpplain/lnk.git
+cd lnk
 make install
 ```
 
@@ -28,8 +28,8 @@ mkdir -p ~/dotfiles/{home,private/home}
 cd ~/dotfiles
 git init
 
-# 2. Create configuration file (optional - cfgman works with built-in defaults)
-# Create .cfgman.json if you need custom mappings:
+# 2. Create configuration file (optional - lnk works with built-in defaults)
+# Create .lnk.json if you need custom mappings:
 # {
 #   "ignore_patterns": [".DS_Store", "*.swp"],
 #   "link_mappings": [
@@ -39,20 +39,20 @@ git init
 # }
 
 # 3. Adopt existing configs
-cfgman adopt --path ~/.gitconfig --source-dir ~/dotfiles/home
-cfgman adopt --path ~/.ssh/config --source-dir ~/dotfiles/private/home
+lnk adopt --path ~/.gitconfig --source-dir ~/dotfiles/home
+lnk adopt --path ~/.ssh/config --source-dir ~/dotfiles/private/home
 
 # 4. Create symlinks on new machines
-cfgman link
+lnk link
 ```
 
 ## Configuration
 
-cfgman uses a single configuration file `.cfgman.json` in your dotfiles repository that controls linking behavior.
+lnk uses a single configuration file `.lnk.json` in your dotfiles repository that controls linking behavior.
 
-**Note**: cfgman works with built-in defaults and doesn't require a config file. Create `.cfgman.json` only if you need custom ignore patterns or complex link mappings.
+**Note**: lnk works with built-in defaults and doesn't require a config file. Create `.lnk.json` only if you need custom ignore patterns or complex link mappings.
 
-### Configuration File (.cfgman.json)
+### Configuration File (.lnk.json)
 
 Example configuration:
 
@@ -81,37 +81,37 @@ Example configuration:
 ### Basic Commands
 
 ```bash
-cfgman status                        # Show all managed symlinks
-cfgman link [--dry-run]              # Create symlinks from repo to target dirs
-cfgman unlink [--dry-run]            # Remove all managed symlinks
-cfgman prune [--dry-run]             # Remove broken symlinks
+lnk status                        # Show all managed symlinks
+lnk link [--dry-run]              # Create symlinks from repo to target dirs
+lnk unlink [--dry-run]            # Remove all managed symlinks
+lnk prune [--dry-run]             # Remove broken symlinks
 ```
 
 ### File Operations
 
 ```bash
 # Adopt a file/directory into your repository
-cfgman adopt --path <path> --source-dir <source_dir> [--dry-run]
-cfgman adopt --path ~/.gitconfig --source-dir ~/dotfiles/home                    # Adopt to public repo
-cfgman adopt --path ~/.ssh/config --source-dir ~/dotfiles/private/home           # Adopt to private repo
+lnk adopt --path <path> --source-dir <source_dir> [--dry-run]
+lnk adopt --path ~/.gitconfig --source-dir ~/dotfiles/home                    # Adopt to public repo
+lnk adopt --path ~/.ssh/config --source-dir ~/dotfiles/private/home           # Adopt to private repo
 
 # Orphan a file/directory (remove from management)
-cfgman orphan --path <path> [--dry-run]
-cfgman orphan --path ~/.config/oldapp                    # Stop managing a config
+lnk orphan --path <path> [--dry-run]
+lnk orphan --path ~/.config/oldapp                    # Stop managing a config
 ```
 
 ### Global Options
 
 ```bash
-cfgman --version                        # Show version
-cfgman help [command]                   # Get help
+lnk --version                        # Show version
+lnk help [command]                   # Get help
 ```
 
 ## How It Works
 
 ### Recursive File Linking
 
-cfgman recursively traverses your source directories and creates individual symlinks for each file. This approach:
+lnk recursively traverses your source directories and creates individual symlinks for each file. This approach:
 
 - Allows mixing files from different sources in the same directory
 - Preserves your ability to have local-only files alongside managed configs
@@ -125,7 +125,7 @@ For example, with source `~/dotfiles/home` mapped to `~/`:
 
 ### Ignore Patterns
 
-cfgman supports gitignore-style patterns in the `ignore_patterns` field to exclude files from linking. You can add patterns like `.DS_Store`, `*.swp`, and other files you want to exclude.
+lnk supports gitignore-style patterns in the `ignore_patterns` field to exclude files from linking. You can add patterns like `.DS_Store`, `*.swp`, and other files you want to exclude.
 
 ## Common Workflows
 
@@ -137,14 +137,14 @@ git clone https://github.com/you/dotfiles.git ~/dotfiles
 cd ~/dotfiles && git submodule update --init  # If using private submodule
 
 # 2. Create links
-cfgman link
+lnk link
 ```
 
 ### Adding New Configurations
 
 ```bash
 # Adopt a new app config
-cfgman adopt --path ~/.config/newapp --source-dir ~/dotfiles/home
+lnk adopt --path ~/.config/newapp --source-dir ~/dotfiles/home
 
 # This will move the entire directory tree to your repo
 # and create symlinks for each individual file
@@ -154,15 +154,15 @@ cfgman adopt --path ~/.config/newapp --source-dir ~/dotfiles/home
 
 ```bash
 # Keep work/private configs separate
-cfgman adopt --path ~/.ssh/config --source-dir ~/dotfiles/private/home
-cfgman adopt --path ~/.config/work-vpn.conf --source-dir ~/dotfiles/private/home
+lnk adopt --path ~/.ssh/config --source-dir ~/dotfiles/private/home
+lnk adopt --path ~/.config/work-vpn.conf --source-dir ~/dotfiles/private/home
 ```
 
 ## Tips
 
 - Use `--dry-run` to preview changes before making them
 - Keep sensitive configs in a separate private directory or git submodule
-- Run `cfgman status` regularly to check for broken links
-- Use `ignore_patterns` in `.cfgman.json` to exclude unwanted files
+- Run `lnk status` regularly to check for broken links
+- Use `ignore_patterns` in `.lnk.json` to exclude unwanted files
 - Consider separate source directories for different contexts (work, personal)
 - Source paths can use `~/` for home directory expansion
