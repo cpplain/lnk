@@ -13,7 +13,7 @@ func Orphan(link string, config *Config, dryRun bool, force bool) error {
 	if err != nil {
 		return fmt.Errorf("failed to resolve link path: %w", err)
 	}
-	PrintHeader("Orphaning Files")
+	PrintCommandHeader("Orphaning Files")
 
 	// Check if path exists
 	linkInfo, err := os.Lstat(absLink)
@@ -72,6 +72,8 @@ func Orphan(link string, config *Config, dryRun bool, force bool) error {
 			PrintDetail("Copy from: %s", ContractPath(link.Target))
 			PrintDetail("Remove from repository: %s", ContractPath(link.Target))
 		}
+		fmt.Println()
+		PrintDryRunSummary()
 		return nil
 	}
 
@@ -110,10 +112,9 @@ func Orphan(link string, config *Config, dryRun bool, force bool) error {
 
 	// Report summary (only show summary if we processed multiple links)
 	if len(managedLinks) > 1 {
-		fmt.Println()
 		if orphaned > 0 {
-			PrintSuccess("Successfully orphaned %d file(s)", orphaned)
-			PrintInfo("Next: Run 'lnk status' to see remaining managed files")
+			PrintSummary("Successfully orphaned %d file(s)", orphaned)
+			PrintNextStep("status", "see remaining managed files")
 		}
 	}
 	if len(errors) > 0 {

@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed terminal cleanup to prevent `⏎` symbols from appearing
   - Consistent behavior across all commands (create, status, adopt, orphan, remove, prune)
 
+- **Output formatting consistency** - Standardized output across all commands:
+  - All commands now display a newline after headers for consistent spacing
+  - Empty result messages are consistent (e.g., "No files to link found.")
+  - Summary sections have consistent spacing with newlines before them
+  - Added helper functions to enforce output patterns
+  - Fixed `create` command to show feedback when all symlinks already exist
+
 ### Breaking Changes
 
 - **Renamed project from cfgman to lnk** - The project has been renamed to better reflect its focused purpose as a symlink management tool:

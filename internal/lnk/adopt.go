@@ -243,8 +243,8 @@ func performDirectoryAdoption(absSource, destPath string) error {
 	// Print summary if we adopted multiple files
 	if walkErr == nil && (adopted > 0 || skipped > 0) {
 		if adopted > 0 {
-			PrintSuccess("Successfully adopted %d file(s)", adopted)
-			PrintInfo("Next: Run 'lnk create' to create symlinks")
+			PrintSummary("Successfully adopted %d file(s)", adopted)
+			PrintNextStep("create", "create symlinks")
 		}
 		if skipped > 0 {
 			PrintInfo("Skipped %d file(s) (already adopted or exist in repo)", skipped)
@@ -302,7 +302,7 @@ func Adopt(source string, config *Config, sourceDir string, dryRun bool) error {
 	if err != nil {
 		return fmt.Errorf("failed to resolve source path: %w", err)
 	}
-	PrintHeader("Adopting Files")
+	PrintCommandHeader("Adopting Files")
 
 	// Ensure sourceDir is absolute
 	absSourceDir, err := ExpandPath(sourceDir)
@@ -388,7 +388,7 @@ func Adopt(source string, config *Config, sourceDir string, dryRun bool) error {
 
 	if !sourceInfo.IsDir() {
 		PrintSuccess("Adopted: %s", ContractPath(absSource))
-		PrintInfo("Next: Run 'lnk create' to create symlinks")
+		PrintNextStep("create", "create symlinks")
 	}
 
 	return nil

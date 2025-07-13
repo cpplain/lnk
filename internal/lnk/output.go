@@ -1,5 +1,36 @@
 package lnk
 
+// Output Standards
+//
+// All commands should follow these output patterns for consistency:
+//
+// 1. Command Header:
+//    PrintCommandHeader("Command Name")
+//
+// 2. Empty Results:
+//    PrintEmptyResult("items to process")
+//
+// 3. Individual Operations:
+//    PrintSuccess("Action: %s", path)
+//    PrintError("Failed: %s", err)
+//
+// 4. Summary Section (when applicable):
+//    PrintSummary("Successfully processed %d item(s)", count)
+//
+// 5. Next Steps (when applicable):
+//    PrintNextStep("command", "description of what it does")
+//
+// 6. Dry Run Mode:
+//    - Show what would happen without making changes
+//    - Prefix operations with DryRunPrefix
+//    - End with: PrintDryRunSummary()
+//
+// Example flow:
+//    PrintCommandHeader("Creating Symlinks")
+//    // ... operations ...
+//    PrintSummary("Created %d symlink(s) successfully", count)
+//    PrintNextStep("status", "verify links")
+
 import (
 	"fmt"
 	"os"
@@ -167,4 +198,33 @@ func PrintHelpItems(items [][]string) {
 			fmt.Printf("  %-*s  %s\n", maxLen, item[0], item[1])
 		}
 	}
+}
+
+// PrintCommandHeader prints a command header with standard spacing
+// This ensures all commands have consistent header formatting
+func PrintCommandHeader(text string) {
+	PrintHeader(text)
+	fmt.Println() // Standard newline after header
+}
+
+// PrintSummary prints a summary with standard spacing
+// This ensures all summaries have consistent formatting
+func PrintSummary(format string, args ...interface{}) {
+	fmt.Println() // Standard newline before summary
+	PrintSuccess(format, args...)
+}
+
+// PrintEmptyResult prints a standard "No X found" message
+func PrintEmptyResult(itemType string) {
+	PrintInfo("No %s found.", itemType)
+}
+
+// PrintNextStep prints a standard next step hint
+func PrintNextStep(command, description string) {
+	PrintInfo("Next: Run 'lnk %s' to %s", command, description)
+}
+
+// PrintDryRunSummary prints the standard dry-run mode message
+func PrintDryRunSummary() {
+	PrintInfo("No changes made in dry-run mode")
 }

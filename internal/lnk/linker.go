@@ -14,7 +14,7 @@ type PlannedLink struct {
 
 // CreateLinks creates symlinks from the source directories to the target directories
 func CreateLinks(config *Config, dryRun bool) error {
-	PrintHeader("Creating Symlinks")
+	PrintCommandHeader("Creating Symlinks")
 
 	// Require LinkMappings to be defined
 	if len(config.LinkMappings) == 0 {
@@ -64,7 +64,7 @@ func CreateLinks(config *Config, dryRun bool) error {
 	}
 
 	if len(plannedLinks) == 0 {
-		PrintInfo("No files to link.")
+		PrintEmptyResult("files to link")
 		return nil
 	}
 
@@ -82,6 +82,8 @@ func CreateLinks(config *Config, dryRun bool) error {
 		for _, link := range plannedLinks {
 			PrintDryRun("Would link: %s -> %s", ContractPath(link.Target), ContractPath(link.Source))
 		}
+		fmt.Println()
+		PrintDryRunSummary()
 		return nil
 	}
 
@@ -96,7 +98,7 @@ func RemoveLinks(config *Config, dryRun bool, force bool) error {
 
 // removeLinks is the internal implementation that allows skipping confirmation
 func removeLinks(config *Config, dryRun bool, skipConfirm bool) error {
-	PrintHeader("Removing Symlinks")
+	PrintCommandHeader("Removing Symlinks")
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -111,7 +113,7 @@ func removeLinks(config *Config, dryRun bool, skipConfirm bool) error {
 	}
 
 	if len(links) == 0 {
-		PrintInfo("No symlinks found to remove.")
+		PrintEmptyResult("symlinks to remove")
 		return nil
 	}
 
@@ -120,6 +122,8 @@ func removeLinks(config *Config, dryRun bool, skipConfirm bool) error {
 		for _, link := range links {
 			PrintDryRun("Would remove: %s", ContractPath(link.Path))
 		}
+		fmt.Println()
+		PrintDryRunSummary()
 		return nil
 	}
 
@@ -158,10 +162,9 @@ func removeLinks(config *Config, dryRun bool, skipConfirm bool) error {
 	}
 
 	// Print summary
-	fmt.Println()
 	if removed > 0 {
-		PrintSuccess("Removed %d symlink(s) successfully", removed)
-		PrintInfo("Next: Run 'lnk create' to recreate links or 'lnk status' to see remaining links")
+		PrintSummary("Removed %d symlink(s) successfully", removed)
+		PrintNextStep("create", "recreate links or 'lnk status' to see remaining links")
 	}
 	if failed > 0 {
 		PrintWarning("Failed to remove %d symlink(s)", failed)
@@ -172,7 +175,7 @@ func removeLinks(config *Config, dryRun bool, skipConfirm bool) error {
 
 // PruneLinks removes broken symlinks pointing to configured source directories
 func PruneLinks(config *Config, dryRun bool, force bool) error {
-	PrintHeader("Pruning Broken Symlinks")
+	PrintCommandHeader("Pruning Broken Symlinks")
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -197,7 +200,7 @@ func PruneLinks(config *Config, dryRun bool, force bool) error {
 
 	// If no broken links found, report and return
 	if len(brokenLinks) == 0 {
-		PrintInfo("No broken symlinks found.")
+		PrintEmptyResult("broken symlinks")
 		return nil
 	}
 
@@ -206,6 +209,8 @@ func PruneLinks(config *Config, dryRun bool, force bool) error {
 		for _, link := range brokenLinks {
 			PrintDryRun("Would prune: %s", ContractPath(link.Path))
 		}
+		fmt.Println()
+		PrintDryRunSummary()
 		return nil
 	}
 
@@ -244,10 +249,9 @@ func PruneLinks(config *Config, dryRun bool, force bool) error {
 	}
 
 	// Print summary
-	fmt.Println()
 	if pruned > 0 {
-		PrintSuccess("Pruned %d broken symlink(s) successfully", pruned)
-		PrintInfo("Next: Run 'lnk status' to check remaining links")
+		PrintSummary("Pruned %d broken symlink(s) successfully", pruned)
+		PrintNextStep("status", "check remaining links")
 	}
 	if failed > 0 {
 		PrintWarning("Failed to prune %d symlink(s)", failed)
@@ -349,8 +353,11 @@ func executePlannedLinks(links []PlannedLink) error {
 
 	// Print summary
 	if created > 0 {
-		PrintSuccess("Created %d symlink(s) successfully", created)
-		PrintInfo("Next: Run 'lnk status' to verify links")
+		PrintSummary("Created %d symlink(s) successfully", created)
+		PrintNextStep("status", "verify links")
+	} else if failed == 0 {
+		// All links were skipped (already exist)
+		PrintInfo("All symlinks already exist")
 	}
 	if failed > 0 {
 		PrintWarning("Failed to create %d symlink(s)", failed)

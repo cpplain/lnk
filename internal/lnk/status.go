@@ -29,8 +29,7 @@ type StatusOutput struct {
 func Status(config *Config) error {
 	// Only print header in human format
 	if !IsJSONFormat() {
-		PrintHeader("Dotfile Status")
-		fmt.Println()
+		PrintCommandHeader("Symlink Status")
 	}
 
 	homeDir, err := os.UserHomeDir()
@@ -114,7 +113,7 @@ func Status(config *Config) error {
 				Red(fmt.Sprintf("%d", len(brokenLinks))))
 		}
 	} else {
-		PrintInfo("No active links found.")
+		PrintEmptyResult("active links")
 	}
 
 	return nil
