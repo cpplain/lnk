@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The adopt command can now properly parse its required `--source-dir` flag
   - Previously, global flag parsing consumed these flags before commands could see them
 
+- **Config file error handling** - Fixed config loading to properly report errors for invalid configurations
+  - When using `--config` flag with an invalid or non-existent file, lnk now exits with an error
+  - Previously, config loading errors were silently ignored and fell back to defaults
+  - Validation errors in config files are now properly reported to the user
+
 - **Progress indicator consistency** - Fixed progress indicators showing prematurely and leaving terminal artifacts:
   - Progress indicators now only show for operations taking longer than 1 second
   - Removed duplicate progress tracking that caused immediate output
