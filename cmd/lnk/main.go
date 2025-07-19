@@ -137,8 +137,6 @@ func printConfigHelp() {
 	lnk.PrintHelpSection("Environment Variables:")
 	lnk.PrintHelpItems([][]string{
 		{"LNK_CONFIG", "Configuration file path"},
-		{"LNK_SOURCE_DIR", "Source directory (absolute path)"},
-		{"LNK_TARGET_DIR", "Target directory override"},
 		{"LNK_IGNORE", "Ignore patterns (comma-separated)"},
 	})
 	fmt.Println()
@@ -158,7 +156,7 @@ func printConfigHelp() {
 func main() {
 	// Parse global flags first
 	var globalVerbose, globalQuiet, globalNoColor, globalVersion, globalYes bool
-	var globalConfig, globalSourceDir, globalTargetDir, globalIgnore, globalOutput string
+	var globalConfig, globalIgnore, globalOutput string
 	remainingArgs := []string{}
 
 	// Manual parsing to extract global flags before command
@@ -188,16 +186,6 @@ func main() {
 		case "--config":
 			if hasValue {
 				globalConfig = value
-				i += consumed
-			}
-		case "--source-dir":
-			if hasValue {
-				globalSourceDir = value
-				i += consumed
-			}
-		case "--target-dir":
-			if hasValue {
-				globalTargetDir = value
 				i += consumed
 			}
 		case "--ignore":
@@ -274,8 +262,6 @@ func main() {
 	// Create global config options from parsed flags
 	globalOptions := &lnk.ConfigOptions{
 		ConfigPath:     globalConfig,
-		SourceDir:      globalSourceDir,
-		TargetDir:      globalTargetDir,
 		IgnorePatterns: parseIgnorePatterns(globalIgnore),
 	}
 
@@ -330,8 +316,6 @@ func handleStatus(args []string, globalOptions *lnk.ConfigOptions) {
 		// Add config options
 		options = append(options,
 			[]string{"--config PATH", "Path to configuration file"},
-			[]string{"--source-dir DIR", "Source directory (absolute path)"},
-			[]string{"--target-dir DIR", "Target directory for operations"},
 			[]string{"--ignore LIST", "Ignore patterns (comma-separated)"},
 		)
 		if len(options) == 0 {
@@ -451,8 +435,6 @@ func handleOrphan(args []string, globalOptions *lnk.ConfigOptions, globalYes boo
 		// Add config options
 		options = append(options,
 			[]string{"--config PATH", "Path to configuration file"},
-			[]string{"--source-dir DIR", "Source directory (absolute path)"},
-			[]string{"--target-dir DIR", "Target directory for operations"},
 			[]string{"--ignore LIST", "Ignore patterns (comma-separated)"},
 		)
 		if len(options) == 0 {
@@ -517,8 +499,6 @@ func handleCreate(args []string, globalOptions *lnk.ConfigOptions) {
 		// Add config options
 		options = append(options,
 			[]string{"--config PATH", "Path to configuration file"},
-			[]string{"--source-dir DIR", "Source directory (absolute path)"},
-			[]string{"--target-dir DIR", "Target directory for operations"},
 			[]string{"--ignore LIST", "Ignore patterns (comma-separated)"},
 		)
 		if len(options) == 0 {
@@ -531,7 +511,6 @@ func handleCreate(args []string, globalOptions *lnk.ConfigOptions) {
 		lnk.PrintHelpItems([][]string{
 			{"lnk create", ""},
 			{"lnk create --dry-run", ""},
-			{"lnk create --source-dir ~/dotfiles/home --target-dir ~/", ""},
 		})
 		fmt.Println()
 		lnk.PrintHelpSection("See also:")
@@ -576,8 +555,6 @@ func handleRemove(args []string, globalOptions *lnk.ConfigOptions, globalYes boo
 		// Add config options
 		options = append(options,
 			[]string{"--config PATH", "Path to configuration file"},
-			[]string{"--source-dir DIR", "Source directory (absolute path)"},
-			[]string{"--target-dir DIR", "Target directory for operations"},
 			[]string{"--ignore LIST", "Ignore patterns (comma-separated)"},
 		)
 		if len(options) == 0 {
@@ -634,8 +611,6 @@ func handlePrune(args []string, globalOptions *lnk.ConfigOptions, globalYes bool
 		// Add config options
 		options = append(options,
 			[]string{"--config PATH", "Path to configuration file"},
-			[]string{"--source-dir DIR", "Source directory (absolute path)"},
-			[]string{"--target-dir DIR", "Target directory for operations"},
 			[]string{"--ignore LIST", "Ignore patterns (comma-separated)"},
 		)
 		if len(options) == 0 {
@@ -739,8 +714,6 @@ func printUsage() {
 	lnk.PrintHelpSection("Environment Variables:")
 	lnk.PrintHelpItems([][]string{
 		{"LNK_CONFIG", "Configuration file path"},
-		{"LNK_SOURCE_DIR", "Source directory (absolute path)"},
-		{"LNK_TARGET_DIR", "Target directory override"},
 		{"LNK_IGNORE", "Ignore patterns (comma-separated)"},
 	})
 	fmt.Println()

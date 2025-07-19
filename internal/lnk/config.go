@@ -27,8 +27,6 @@ type Config struct {
 // ConfigOptions represents all configuration options that can be overridden by flags/env vars
 type ConfigOptions struct {
 	ConfigPath     string   // Path to config file
-	SourceDir      string   // Source directory (absolute path)
-	TargetDir      string   // Target directory override
 	IgnorePatterns []string // Ignore patterns override
 }
 
@@ -141,16 +139,6 @@ func applyEnvironmentVariables(options *ConfigOptions) {
 		PrintVerbose("Using config path from LNK_CONFIG: %s", envConfig)
 	}
 
-	if envSourceDir := os.Getenv("LNK_SOURCE_DIR"); envSourceDir != "" && options.SourceDir == "" {
-		options.SourceDir = envSourceDir
-		PrintVerbose("Using source directory from LNK_SOURCE_DIR: %s", envSourceDir)
-	}
-
-	if envTargetDir := os.Getenv("LNK_TARGET_DIR"); envTargetDir != "" && options.TargetDir == "" {
-		options.TargetDir = envTargetDir
-		PrintVerbose("Using target directory from LNK_TARGET_DIR: %s", envTargetDir)
-	}
-
 	if envIgnore := os.Getenv("LNK_IGNORE"); envIgnore != "" && len(options.IgnorePatterns) == 0 {
 		// Split by comma for multiple patterns
 		options.IgnorePatterns = strings.Split(envIgnore, ",")
@@ -206,16 +194,6 @@ func LoadConfigWithOptions(options *ConfigOptions) (*Config, string, error) {
 	}
 
 	// Apply overrides from options
-	if options.SourceDir != "" || options.TargetDir != "" {
-		// Create a custom mapping if source/target dirs are specified
-		if options.SourceDir != "" && options.TargetDir != "" {
-			config.LinkMappings = []LinkMapping{
-				{Source: options.SourceDir, Target: options.TargetDir},
-			}
-			PrintVerbose("Overriding link mappings with: %s -> %s", options.SourceDir, options.TargetDir)
-		}
-	}
-
 	if len(options.IgnorePatterns) > 0 {
 		config.IgnorePatterns = options.IgnorePatterns
 		PrintVerbose("Overriding ignore patterns with: %v", options.IgnorePatterns)

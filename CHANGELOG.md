@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The `remove` and `prune` commands now correctly skip confirmation when `--yes` is provided
   - Previously, the logic was inverted causing `--yes` to have no effect
 
+- **Adopt command flag parsing** - Fixed flag parsing issue that prevented adopt command from working
+  - Removed `--source-dir` and `--target-dir` from global flags as they were command-specific
+  - The adopt command can now properly parse its required `--source-dir` flag
+  - Previously, global flag parsing consumed these flags before commands could see them
+
 - **Progress indicator consistency** - Fixed progress indicators showing prematurely and leaving terminal artifacts:
   - Progress indicators now only show for operations taking longer than 1 second
   - Removed duplicate progress tracking that caused immediate output

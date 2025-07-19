@@ -697,8 +697,6 @@ func TestLoadConfigWithOptions_EnvironmentVariables(t *testing.T) {
 
 	// Test environment variables
 	os.Setenv("LNK_CONFIG", configPath)
-	os.Setenv("LNK_SOURCE_DIR", "env-source")
-	os.Setenv("LNK_TARGET_DIR", "~/.env/")
 	os.Setenv("LNK_IGNORE", "*.env1,*.env2,*.env3")
 
 	// Test with empty options - should pick up environment variables
@@ -712,14 +710,9 @@ func TestLoadConfigWithOptions_EnvironmentVariables(t *testing.T) {
 		t.Errorf("Expected source 'command line flag', got %s", source)
 	}
 
-	// Verify environment variables were applied
+	// Verify config was loaded from file
 	if len(config.LinkMappings) != 1 {
-		t.Errorf("Expected 1 link mapping, got %d", len(config.LinkMappings))
-	} else {
-		mapping := config.LinkMappings[0]
-		if mapping.Source != "env-source" || mapping.Target != "~/.env/" {
-			t.Errorf("Expected source/target override, got %+v", mapping)
-		}
+		t.Errorf("Expected 1 link mapping from config file, got %d", len(config.LinkMappings))
 	}
 
 	if len(config.IgnorePatterns) != 3 {
@@ -755,8 +748,6 @@ func TestLoadConfigWithOptions_FlagOverrides(t *testing.T) {
 	// Test flag overrides
 	options := &ConfigOptions{
 		ConfigPath:     configPath,
-		SourceDir:      "override-source",
-		TargetDir:      "~/.override/",
 		IgnorePatterns: []string{"*.flag1", "*.flag2"},
 	}
 
@@ -769,14 +760,9 @@ func TestLoadConfigWithOptions_FlagOverrides(t *testing.T) {
 		t.Errorf("Expected source 'command line flag', got %s", source)
 	}
 
-	// Verify flag overrides were applied
+	// Verify config was loaded from file
 	if len(config.LinkMappings) != 1 {
-		t.Errorf("Expected 1 link mapping, got %d", len(config.LinkMappings))
-	} else {
-		mapping := config.LinkMappings[0]
-		if mapping.Source != "override-source" || mapping.Target != "~/.override/" {
-			t.Errorf("Expected flag overrides, got %+v", mapping)
-		}
+		t.Errorf("Expected 1 link mapping from config file, got %d", len(config.LinkMappings))
 	}
 
 	if len(config.IgnorePatterns) != 2 {
@@ -801,9 +787,7 @@ func TestLoadConfigWithOptions_FlagsPrecedeEnvironment(t *testing.T) {
 
 	// Set environment variables
 	originalEnvs := map[string]string{
-		"LNK_SOURCE_DIR": os.Getenv("LNK_SOURCE_DIR"),
-		"LNK_TARGET_DIR": os.Getenv("LNK_TARGET_DIR"),
-		"LNK_IGNORE":     os.Getenv("LNK_IGNORE"),
+		"LNK_IGNORE": os.Getenv("LNK_IGNORE"),
 	}
 
 	defer func() {
@@ -816,14 +800,10 @@ func TestLoadConfigWithOptions_FlagsPrecedeEnvironment(t *testing.T) {
 		}
 	}()
 
-	os.Setenv("LNK_SOURCE_DIR", "env-source")
-	os.Setenv("LNK_TARGET_DIR", "~/.env/")
 	os.Setenv("LNK_IGNORE", "*.env")
 
 	// Test with flags that should override environment
 	options := &ConfigOptions{
-		SourceDir:      "flag-source",      // Should override LNK_SOURCE_DIR
-		TargetDir:      "~/.flag/",         // Should override LNK_TARGET_DIR
 		IgnorePatterns: []string{"*.flag"}, // Should override LNK_IGNORE
 	}
 
@@ -833,13 +813,8 @@ func TestLoadConfigWithOptions_FlagsPrecedeEnvironment(t *testing.T) {
 	}
 
 	// Verify flags took precedence over environment
-	if len(config.LinkMappings) != 1 {
-		t.Errorf("Expected 1 link mapping, got %d", len(config.LinkMappings))
-	} else {
-		mapping := config.LinkMappings[0]
-		if mapping.Source != "flag-source" || mapping.Target != "~/.flag/" {
-			t.Errorf("Expected flag values, got %+v", mapping)
-		}
+	if len(config.LinkMappings) != 2 {
+		t.Errorf("Expected 2 default link mappings, got %d", len(config.LinkMappings))
 	}
 
 	if len(config.IgnorePatterns) != 1 || config.IgnorePatterns[0] != "*.flag" {
@@ -876,11 +851,8 @@ func TestLoadConfigWithOptions_PartialOverrides(t *testing.T) {
 		}
 	}()
 
-	// Test partial overrides (only source dir specified)
-	options := &ConfigOptions{
-		SourceDir: "partial-source",
-		// TargetDir not specified - should use defaults
-	}
+	// Test with empty options - should use defaults
+	options := &ConfigOptions{}
 
 	config, source, err := LoadConfigWithOptions(options)
 	if err != nil {
