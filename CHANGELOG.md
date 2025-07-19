@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Remove/Prune --yes flag** - Fixed inverted logic that caused `--yes` flag to still prompt for confirmation
+  - The `remove` and `prune` commands now correctly skip confirmation when `--yes` is provided
+  - Previously, the logic was inverted causing `--yes` to have no effect
+
 - **Progress indicator consistency** - Fixed progress indicators showing prematurely and leaving terminal artifacts:
   - Progress indicators now only show for operations taking longer than 1 second
   - Removed duplicate progress tracking that caused immediate output

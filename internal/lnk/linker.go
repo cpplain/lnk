@@ -93,7 +93,7 @@ func CreateLinks(config *Config, dryRun bool) error {
 
 // RemoveLinks removes all symlinks pointing to the config repository
 func RemoveLinks(config *Config, dryRun bool, force bool) error {
-	return removeLinks(config, dryRun, !force)
+	return removeLinks(config, dryRun, force)
 }
 
 // removeLinks is the internal implementation that allows skipping confirmation
