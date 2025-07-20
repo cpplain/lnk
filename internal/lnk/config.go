@@ -183,12 +183,12 @@ func LoadConfigWithOptions(options *ConfigOptions) (*Config, string, error) {
 			PrintVerbose("Using config from: %s (%s)", configPath.path, configSource)
 			break
 		}
-		
+
 		// If this was explicitly requested via --config flag, return the error
 		if configPath.source == "command line flag" && options.ConfigPath != "" {
 			return nil, "", err
 		}
-		
+
 		PrintVerbose("Config not found at: %s (%s)", configPath.path, configPath.source)
 	}
 

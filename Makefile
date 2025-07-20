@@ -1,4 +1,4 @@
-.PHONY: help build clean test install test-coverage fmt lint check
+.PHONY: help build clean test test-unit test-e2e install test-coverage clean-test fmt lint check
 
 # Default target - show help
 help:
@@ -16,7 +16,10 @@ help:
 	@echo "  install        Build and install lnk to BINDIR"
 	@echo "  clean          Remove build artifacts and installed binary"
 	@echo "  test           Run all tests with verbose output"
+	@echo "  test-unit      Run unit tests only"
+	@echo "  test-e2e       Run end-to-end tests only"
 	@echo "  test-coverage  Run tests with coverage report (generates HTML)"
+	@echo "  clean-test     Clean up test artifacts"
 	@echo "  fmt            Format all Go code"
 	@echo "  lint           Run go vet for static analysis"
 	@echo "  check          Run fmt, test, and lint in sequence"
@@ -66,9 +69,22 @@ clean:
 	rm -f coverage.out coverage.html
 	rm -f $(BINDIR)/lnk
 
+# Clean test artifacts
+clean-test:
+	rm -rf e2e/testdata/
+	@echo "Test data cleaned. Run 'scripts/setup-testdata.sh' to recreate."
+
 # Run tests
 test:
 	go test -v ./...
+
+# Run unit tests only
+test-unit:
+	go test -v ./internal/...
+
+# Run E2E tests only
+test-e2e:
+	go test -v ./e2e/...
 
 # Run tests with coverage
 test-coverage:

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Comprehensive end-to-end testing suite** - Added e2e tests that verify CLI behavior by building and executing the actual binary:
+  - **Complete command coverage**: All commands tested with various flag combinations and edge cases
+  - **Workflow testing**: Multi-command workflows that simulate real user scenarios
+  - **Test infrastructure**: Efficient test helpers with binary caching and environment isolation
+  - **Setup automation**: `scripts/setup-testdata.sh` creates isolated test environments
+  - **Output validation**: Tests for both text and JSON output formats
+  - **Error handling**: Comprehensive testing of error conditions and user feedback
+  - **Cross-platform support**: Tests run on all platforms with Windows-specific handling
+
 ### Fixed
 
 - **Remove/Prune --yes flag** - Fixed inverted logic that caused `--yes` flag to still prompt for confirmation
