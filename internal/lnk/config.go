@@ -132,29 +132,9 @@ func loadConfigFromFile(filePath string) (*Config, error) {
 	return &config, nil
 }
 
-// applyEnvironmentVariables applies environment variable overrides to options
-func applyEnvironmentVariables(options *ConfigOptions) {
-	if envConfig := os.Getenv("LNK_CONFIG"); envConfig != "" && options.ConfigPath == "" {
-		options.ConfigPath = envConfig
-		PrintVerbose("Using config path from LNK_CONFIG: %s", envConfig)
-	}
-
-	if envIgnore := os.Getenv("LNK_IGNORE"); envIgnore != "" && len(options.IgnorePatterns) == 0 {
-		// Split by comma for multiple patterns
-		options.IgnorePatterns = strings.Split(envIgnore, ",")
-		for i := range options.IgnorePatterns {
-			options.IgnorePatterns[i] = strings.TrimSpace(options.IgnorePatterns[i])
-		}
-		PrintVerbose("Using ignore patterns from LNK_IGNORE: %v", options.IgnorePatterns)
-	}
-}
-
 // LoadConfigWithOptions loads configuration using the precedence system
 func LoadConfigWithOptions(options *ConfigOptions) (*Config, string, error) {
 	PrintVerbose("Loading configuration with options: %+v", options)
-
-	// Apply environment variables (only if not already set by flags)
-	applyEnvironmentVariables(options)
 
 	var config *Config
 	var configSource string

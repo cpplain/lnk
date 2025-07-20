@@ -123,7 +123,7 @@ func min(a, b, c int) int {
 
 func printConfigHelp() {
 	fmt.Printf("%s lnk help config\n", lnk.Bold("Usage:"))
-	fmt.Println("\nConfiguration discovery and environment variables")
+	fmt.Println("\nConfiguration discovery")
 	fmt.Println()
 	lnk.PrintHelpSection("Configuration Discovery:")
 	fmt.Println("  Configuration is loaded from the first available source:")
@@ -133,12 +133,6 @@ func printConfigHelp() {
 	fmt.Println("    4. ~/.lnk.json")
 	fmt.Printf("    5. %s in current directory\n", lnk.ConfigFileName)
 	fmt.Println("    6. Built-in defaults")
-	fmt.Println()
-	lnk.PrintHelpSection("Environment Variables:")
-	lnk.PrintHelpItems([][]string{
-		{"LNK_CONFIG", "Configuration file path"},
-		{"LNK_IGNORE", "Ignore patterns (comma-separated)"},
-	})
 	fmt.Println()
 	lnk.PrintHelpSection("Configuration Format:")
 	fmt.Println("  Configuration files use JSON format with LinkMapping structure:")
@@ -708,13 +702,6 @@ func printUsage() {
 		{"-v, --verbose", "Enable verbose output"},
 		{"    --version", "Show version information"},
 		{"-y, --yes", "Assume yes to all prompts"},
-	})
-	fmt.Println()
-
-	lnk.PrintHelpSection("Environment Variables:")
-	lnk.PrintHelpItems([][]string{
-		{"LNK_CONFIG", "Configuration file path"},
-		{"LNK_IGNORE", "Ignore patterns (comma-separated)"},
 	})
 	fmt.Println()
 

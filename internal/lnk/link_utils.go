@@ -24,8 +24,8 @@ func FindManagedLinks(startPath string, config *Config) ([]ManagedLink, error) {
 		return filepath.Walk(startPath, func(path string, info os.FileInfo, err error) error {
 			fileCount++
 			if err != nil {
-				// Debug the error but continue walking
-				Debug("Error walking path %s: %v", path, err)
+				// Log the error but continue walking
+				PrintVerbose("Error walking path %s: %v", path, err)
 				return nil
 			}
 
@@ -57,7 +57,7 @@ func FindManagedLinks(startPath string, config *Config) ([]ManagedLink, error) {
 func checkManagedLink(linkPath string, config *Config) *ManagedLink {
 	target, err := os.Readlink(linkPath)
 	if err != nil {
-		Debug("Failed to read symlink %s: %v", linkPath, err)
+		PrintVerbose("Failed to read symlink %s: %v", linkPath, err)
 		return nil
 	}
 
@@ -68,7 +68,7 @@ func checkManagedLink(linkPath string, config *Config) *ManagedLink {
 	}
 	cleanTarget, err := filepath.Abs(absTarget)
 	if err != nil {
-		Debug("Failed to get absolute path for target %s: %v", target, err)
+		PrintVerbose("Failed to get absolute path for target %s: %v", target, err)
 		return nil
 	}
 

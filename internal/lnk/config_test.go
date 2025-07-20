@@ -658,75 +658,6 @@ func TestLoadConfigWithOptions_ConfigFilePrecedence(t *testing.T) {
 	}
 }
 
-func TestLoadConfigWithOptions_EnvironmentVariables(t *testing.T) {
-	// Create temporary directory
-	tmpDir, err := os.MkdirTemp("", "lnk-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// Create test config file
-	testConfig := &Config{
-		IgnorePatterns: []string{"*.env"},
-		LinkMappings:   []LinkMapping{{Source: "/tmp/test/env", Target: "~/"}},
-	}
-	configPath := filepath.Join(tmpDir, "env.json")
-	if err := writeConfigFile(configPath, testConfig); err != nil {
-		t.Fatal(err)
-	}
-
-	// Set environment variables
-	originalEnvs := map[string]string{
-		"LNK_CONFIG":     os.Getenv("LNK_CONFIG"),
-		"LNK_SOURCE_DIR": os.Getenv("LNK_SOURCE_DIR"),
-		"LNK_TARGET_DIR": os.Getenv("LNK_TARGET_DIR"),
-		"LNK_IGNORE":     os.Getenv("LNK_IGNORE"),
-	}
-
-	// Clean up environment variables at the end
-	defer func() {
-		for key, value := range originalEnvs {
-			if value != "" {
-				os.Setenv(key, value)
-			} else {
-				os.Unsetenv(key)
-			}
-		}
-	}()
-
-	// Test environment variables
-	os.Setenv("LNK_CONFIG", configPath)
-	os.Setenv("LNK_IGNORE", "*.env1,*.env2,*.env3")
-
-	// Test with empty options - should pick up environment variables
-	options := &ConfigOptions{}
-	config, source, err := LoadConfigWithOptions(options)
-	if err != nil {
-		t.Fatalf("LoadConfigWithOptions() error = %v", err)
-	}
-
-	if source != "command line flag" {
-		t.Errorf("Expected source 'command line flag', got %s", source)
-	}
-
-	// Verify config was loaded from file
-	if len(config.LinkMappings) != 1 {
-		t.Errorf("Expected 1 link mapping from config file, got %d", len(config.LinkMappings))
-	}
-
-	if len(config.IgnorePatterns) != 3 {
-		t.Errorf("Expected 3 ignore patterns, got %d", len(config.IgnorePatterns))
-	} else {
-		expected := []string{"*.env1", "*.env2", "*.env3"}
-		for i, pattern := range expected {
-			if config.IgnorePatterns[i] != pattern {
-				t.Errorf("Ignore pattern %d: expected %s, got %s", i, pattern, config.IgnorePatterns[i])
-			}
-		}
-	}
-}
-
 func TestLoadConfigWithOptions_FlagOverrides(t *testing.T) {
 	// Create temporary directory
 	tmpDir, err := os.MkdirTemp("", "lnk-test")
@@ -774,51 +705,6 @@ func TestLoadConfigWithOptions_FlagOverrides(t *testing.T) {
 				t.Errorf("Ignore pattern %d: expected %s, got %s", i, pattern, config.IgnorePatterns[i])
 			}
 		}
-	}
-}
-
-func TestLoadConfigWithOptions_FlagsPrecedeEnvironment(t *testing.T) {
-	// Create temporary directory
-	tmpDir, err := os.MkdirTemp("", "lnk-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// Set environment variables
-	originalEnvs := map[string]string{
-		"LNK_IGNORE": os.Getenv("LNK_IGNORE"),
-	}
-
-	defer func() {
-		for key, value := range originalEnvs {
-			if value != "" {
-				os.Setenv(key, value)
-			} else {
-				os.Unsetenv(key)
-			}
-		}
-	}()
-
-	os.Setenv("LNK_IGNORE", "*.env")
-
-	// Test with flags that should override environment
-	options := &ConfigOptions{
-		IgnorePatterns: []string{"*.flag"}, // Should override LNK_IGNORE
-	}
-
-	config, _, err := LoadConfigWithOptions(options)
-	if err != nil {
-		t.Fatalf("LoadConfigWithOptions() error = %v", err)
-	}
-
-	// Verify flags took precedence over environment
-	if len(config.LinkMappings) != 2 {
-		t.Errorf("Expected 2 default link mappings, got %d", len(config.LinkMappings))
-	}
-
-	if len(config.IgnorePatterns) != 1 || config.IgnorePatterns[0] != "*.flag" {
-		t.Errorf("Expected flag ignore pattern, got %v", config.IgnorePatterns)
 	}
 }
 

@@ -53,7 +53,7 @@ func CreateLinks(config *Config, dryRun bool) error {
 			return fmt.Errorf("failed to process mapping %s: source path is not a directory: %s", mapping.Source, sourcePath)
 		}
 
-		Debug("Processing mapping: %s -> %s", mapping.Source, mapping.Target)
+		PrintVerbose("Processing mapping: %s -> %s", mapping.Source, mapping.Target)
 
 		// Collect files from this mapping
 		links, err := collectPlannedLinks(sourcePath, targetPath, &mapping, config)

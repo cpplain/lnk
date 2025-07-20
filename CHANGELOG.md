@@ -49,6 +49,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 
+- **Removed environment variables in favor of flags** - All custom environment variables have been removed:
+  - `LNK_CONFIG` → Use `--config` flag instead
+  - `LNK_IGNORE` → Set ignore patterns in config file or use future `--ignore` flag
+  - `LNK_DEBUG` → Use `--verbose` flag instead for detailed output
+  - Standard environment variables (`HOME`, `XDG_CONFIG_HOME`, `NO_COLOR`, `PATH`) are still supported
+  - This change makes the tool more discoverable and follows CLI best practices
+
 - **Renamed project from cfgman to lnk** - The project has been renamed to better reflect its focused purpose as a symlink management tool:
   - Binary name: `cfgman` → `lnk`
   - Config file: `.cfgman.json` → `.lnk.json`

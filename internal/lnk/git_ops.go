@@ -24,10 +24,10 @@ func removeFromRepository(path string) error {
 		return nil
 	} else if ctx.Err() == context.DeadlineExceeded {
 		// Command timed out
-		Debug("git rm timed out, falling back to filesystem removal")
+		PrintVerbose("git rm timed out, falling back to filesystem removal")
 	} else if len(output) > 0 {
-		// Debug git output but don't fail
-		Debug("git rm failed: %s", strings.TrimSpace(string(output)))
+		// Log git output but don't fail
+		PrintVerbose("git rm failed: %s", strings.TrimSpace(string(output)))
 	}
 
 	// Git rm failed (not in git repo, file not tracked, git not available, etc.)

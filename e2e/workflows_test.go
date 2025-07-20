@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 )
@@ -246,41 +245,5 @@ func TestPermissionHandling(t *testing.T) {
 		// Check both stdout and stderr for permission error
 		combined := result.Stdout + result.Stderr
 		assertContains(t, combined, "permission denied")
-	})
-}
-
-// TestConfigDiscovery tests configuration file discovery
-func TestConfigDiscovery(t *testing.T) {
-	cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	projectRoot := getProjectRoot(t)
-
-	t.Run("config from environment variable", func(t *testing.T) {
-		// Set LNK_CONFIG environment variable
-		configPath := filepath.Join(projectRoot, "e2e", "testdata", "config.json")
-
-		// Build binary once (will use cache if already built)
-		binary := buildBinary(t)
-		cmd := exec.Command(binary, "status")
-
-		// Use minimal environment like runCommand does
-		testHome := filepath.Join(projectRoot, "e2e", "testdata", "target")
-		cmd.Env = []string{
-			"PATH=" + os.Getenv("PATH"),
-			"HOME=" + testHome,
-			"LNK_CONFIG=" + configPath,
-			"NO_COLOR=1",
-		}
-
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() != 0 {
-				t.Fatalf("Command failed with exit code %d: %s", exitErr.ExitCode(), output)
-			}
-		}
-
-		// Should work without --config flag
-		assertContains(t, string(output), "No active links found")
 	})
 }

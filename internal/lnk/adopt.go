@@ -193,7 +193,7 @@ func performDirectoryAdoption(absSource, destPath string) error {
 			if sourceFileInfo.Mode()&os.ModeSymlink != 0 {
 				// Check if it points to our destination
 				if target, err := os.Readlink(sourcePath); err == nil && target == destItemPath {
-					Debug("Skipping already adopted file: %s", relPath)
+					PrintVerbose("Skipping already adopted file: %s", relPath)
 					skipped++
 					return nil
 				}

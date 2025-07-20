@@ -37,14 +37,6 @@ import (
 	"text/tabwriter"
 )
 
-// Debug prints debug messages to stderr when LNK_DEBUG is set or in verbose mode.
-// This follows the pattern used by many Go CLI tools for debug output.
-func Debug(format string, args ...interface{}) {
-	if os.Getenv("LNK_DEBUG") != "" || IsVerbose() {
-		fmt.Fprintf(os.Stderr, "[DEBUG] "+format+"\n", args...)
-	}
-}
-
 // PrintHeader prints a bold header for command output
 func PrintHeader(text string) {
 	if IsQuiet() {
