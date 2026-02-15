@@ -9,126 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Comprehensive end-to-end testing suite** - Added e2e tests that verify CLI behavior by building and executing the actual binary:
-  - **Complete command coverage**: All commands tested with various flag combinations and edge cases
-  - **Workflow testing**: Multi-command workflows that simulate real user scenarios
-  - **Test infrastructure**: Efficient test helpers with binary caching and environment isolation
-  - **Setup automation**: `scripts/setup-testdata.sh` creates isolated test environments
-  - **Output validation**: Tests for both text and JSON output formats
-  - **Error handling**: Comprehensive testing of error conditions and user feedback
-  - **Cross-platform support**: Tests run on all platforms with Windows-specific handling
+### Changed
+
+### Deprecated
+
+### Removed
 
 ### Fixed
 
-- **Remove/Prune --yes flag** - Fixed inverted logic that caused `--yes` flag to still prompt for confirmation
-  - The `remove` and `prune` commands now correctly skip confirmation when `--yes` is provided
-  - Previously, the logic was inverted causing `--yes` to have no effect
+### Security
 
-- **Adopt command flag parsing** - Fixed flag parsing issue that prevented adopt command from working
-  - Removed `--source-dir` and `--target-dir` from global flags as they were command-specific
-  - The adopt command can now properly parse its required `--source-dir` flag
-  - Previously, global flag parsing consumed these flags before commands could see them
-
-- **Config file error handling** - Fixed config loading to properly report errors for invalid configurations
-  - When using `--config` flag with an invalid or non-existent file, lnk now exits with an error
-  - Previously, config loading errors were silently ignored and fell back to defaults
-  - Validation errors in config files are now properly reported to the user
-
-- **Progress indicator consistency** - Fixed progress indicators showing prematurely and leaving terminal artifacts:
-  - Progress indicators now only show for operations taking longer than 1 second
-  - Removed duplicate progress tracking that caused immediate output
-  - Fixed terminal cleanup to prevent `⏎` symbols from appearing
-  - Consistent behavior across all commands (create, status, adopt, orphan, remove, prune)
-
-- **Output formatting consistency** - Standardized output across all commands:
-  - All commands now display a newline after headers for consistent spacing
-  - Empty result messages are consistent (e.g., "No files to link found.")
-  - Summary sections have consistent spacing with newlines before them
-  - Added helper functions to enforce output patterns
-  - Fixed `create` command to show feedback when all symlinks already exist
-
-### Breaking Changes
-
-- **Removed environment variables in favor of flags** - All custom environment variables have been removed:
-  - `LNK_CONFIG` → Use `--config` flag instead
-  - `LNK_IGNORE` → Set ignore patterns in config file or use future `--ignore` flag
-  - `LNK_DEBUG` → Use `--verbose` flag instead for detailed output
-  - Standard environment variables (`HOME`, `XDG_CONFIG_HOME`, `NO_COLOR`, `PATH`) are still supported
-  - This change makes the tool more discoverable and follows CLI best practices
-
-- **Renamed project from cfgman to lnk** - The project has been renamed to better reflect its focused purpose as a symlink management tool:
-  - Binary name: `cfgman` → `lnk`
-  - Config file: `.cfgman.json` → `.lnk.json`
-  - Environment variables: `CFGMAN_*` → `LNK_*`
-  - Go module: `github.com/cpplain/cfgman` → `github.com/cpplain/lnk`
-
-- **Command names reverted to original form**:
-  - `link` → `create` (for creating symlinks)
-  - `unlink` → `remove` (for removing symlinks)
-
-- **Directory-based architecture with absolute paths** - lnk now uses absolute paths for source directories:
-  - Source directories in config must now be absolute paths (e.g., `~/dotfiles/home` instead of `home`)
-  - Adopt command requires absolute path: `--source-dir ~/dotfiles/home`
-  - Removed `--repo-dir` flag and `LNK_REPO_DIR` environment variable
-  - Can run lnk from any directory - no longer requires a "repository directory"
-
-- **Command arguments replaced with explicit flags**:
-  - `adopt PATH SOURCE_DIR` → `adopt --path PATH --source-dir SOURCE_DIR`
-  - `orphan PATH` → `orphan --path PATH`
-
-- **Flag changes**:
-  - Removed `--force` flags from commands in favor of global `--yes` flag
-  - Replaced `--json` flag with `--output FORMAT` flag (supports text/json)
-
-- **Removed `init` command** - lnk works with built-in defaults and doesn't require a config file
+## [0.4.0] - 2026-02-14
 
 ### Added
 
-- **Works without configuration** - Configuration discovery with flexible precedence:
-  - Built-in defaults: `~/dotfiles/home`→`~/`, `~/dotfiles/config`→`~/.config/`
-  - XDG Base Directory support: `$XDG_CONFIG_HOME/lnk/config.json`
-  - Global flags: `--config`, `--source-dir`, `--target-dir`, `--ignore`
-  - Environment variables: `LNK_CONFIG`, `LNK_SOURCE_DIR`, `LNK_TARGET_DIR`, `LNK_IGNORE`
-
-- **Global flags for better control**:
-  - `--verbose`/`-v`: Detailed debug output
-  - `--quiet`/`-q`: Suppress non-error output
-  - `--yes`/`-y`: Skip confirmation prompts
-  - `--no-color`: Disable colored output
-  - `--output FORMAT`: Choose output format (text/json)
-
-- **Enhanced user experience features**:
-  - "Did you mean?" suggestions for mistyped commands
-  - Progress indicators for operations taking more than 1 second
-  - Next-step suggestions after successful operations
-  - Confirmation prompts for destructive operations
-  - Error messages with actionable "Try:" suggestions
-
-- **Machine-friendly features**:
-  - JSON output support for `status` command
-  - Automatic output adaptation for piping (simplified format)
-  - Specific exit codes: 0 (success), 1 (runtime errors), 2 (usage errors)
-
-- **CLI design documentation** following [cpplain/cli-design](https://github.com/cpplain/cli-design) principles
+- Comprehensive end-to-end testing suite
+- Zero-configuration defaults with flexible config discovery (`~/.config/lnk/config.json`, `~/.lnk.json`)
+- Global flags: `--verbose`, `--quiet`, `--yes`, `--no-color`, `--output`
+- Command suggestions for typos, progress indicators, confirmation prompts
+- JSON output and specific exit codes for scripting
 
 ### Changed
 
-- **Improved help system**:
-  - Standardized formatting across all commands
-  - Commands appear before options (standard convention)
-  - "See also" sections for related commands
-  - Removed `help` command (use `lnk <command> --help`)
+- Improved help system with standardized formatting and "See also" sections
+- Better output formatting with consistent indicators (✓, ✗, !) and `~` for home
+- **BREAKING: Renamed project from cfgman to lnk** (binary, config, module)
+- **BREAKING: Command names** `link`→`create`, `unlink`→`remove`
+- **BREAKING: Source directories must be absolute paths**; removed `--repo-dir`
+- **BREAKING: Explicit flags required** (`adopt --path PATH --source-dir DIR`)
+- **BREAKING: Replaced `--force` with global `--yes`**; `--json` with `--output FORMAT`
 
-- **Better output formatting**:
-  - Consistent visual indicators: ✓ (success), ✗ (error), ! (warning)
-  - Home directory displayed as `~` consistently
-  - Summary statistics for bulk operations
-  - Table-aligned status output
+### Removed
+
+- **BREAKING: Custom environment variables** (`LNK_CONFIG`, `LNK_IGNORE`, `LNK_DEBUG`)
+- **BREAKING: `init` command** (built-in defaults work without config)
 
 ### Fixed
 
-- **Circular symlink validation** - Now correctly allows existing symlinks that already point to their intended target
-- **Test environment isolation** - Tests no longer load system configuration files
+- `--yes` flag now correctly skips confirmation in `remove` and `prune`
+- Adopt command flag parsing (previously consumed by global flags)
+- Config file errors now reported instead of silently falling back to defaults
+- Progress indicators only show after 1 second; no terminal artifacts
+- Output spacing consistency across all commands
+- Circular symlink validation for existing correct symlinks
+- Test environment isolation from system config
 
 ## [0.3.0] - 2025-06-28
 
@@ -184,7 +108,8 @@ Initial release of cfgman.
 - **Performance** - Concurrent operations for status checking
 - **Zero dependencies** - Pure Go implementation using only standard library
 
-[unreleased]: https://github.com/cpplain/lnk/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/cpplain/lnk/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/cpplain/lnk/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/cpplain/lnk/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/cpplain/lnk/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/cpplain/lnk/compare/v0.1.0...v0.1.1
