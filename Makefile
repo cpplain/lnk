@@ -22,12 +22,10 @@ help:
 # Build the lnk binary
 build:
 	mkdir -p bin
-	@# Get version from git or use "dev" as fallback
-	@VERSION=$$(git describe --tags --always 2>/dev/null || echo "dev"); \
-	COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
-	DATE=$$(date -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || date); \
-	echo "Building lnk version $$VERSION ($$COMMIT)..."; \
-	go build -ldflags "-X 'main.version=$$VERSION' -X 'main.commit=$$COMMIT' -X 'main.date=$$DATE'" -o bin/lnk cmd/lnk/main.go
+	@# Generate dev+timestamp for local builds (releases override via ldflags)
+	@VERSION=$$(date -u '+dev+%Y%m%d%H%M%S'); \
+	echo "Building lnk $$VERSION..."; \
+	go build -ldflags "-X 'main.version=$$VERSION'" -o bin/lnk cmd/lnk/main.go
 
 # Clean build artifacts
 clean:

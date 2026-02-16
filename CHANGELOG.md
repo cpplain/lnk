@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING:** Simplified version output to `lnk <version>` for `--version` flag and `version` command (removed commit hash and build date; dev builds show `dev+timestamp`)
+
 ### Deprecated
 
 ### Removed

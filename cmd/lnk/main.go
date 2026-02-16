@@ -14,8 +14,6 @@ import (
 // Version variables set via ldflags during build
 var (
 	version = "dev"
-	commit  = "unknown"
-	date    = "unknown"
 )
 
 // parseIgnorePatterns parses a comma-separated string of ignore patterns
@@ -121,6 +119,11 @@ func min(a, b, c int) int {
 	return c
 }
 
+// printVersion prints the version information
+func printVersion() {
+	fmt.Printf("lnk %s\n", version)
+}
+
 func printConfigHelp() {
 	fmt.Printf("%s lnk help config\n", lnk.Bold("Usage:"))
 	fmt.Println("\nConfiguration discovery")
@@ -202,7 +205,7 @@ func main() {
 
 	// Handle --version after processing color settings
 	if globalVersion {
-		lnk.PrintInfo("%s %s", lnk.Bold("lnk version"), lnk.Green(version))
+		printVersion()
 		return
 	}
 
@@ -670,9 +673,7 @@ func handleVersion(args []string) {
 	}
 	fs.Parse(args)
 
-	lnk.PrintInfo("%s %s", lnk.Bold("lnk version"), lnk.Green(version))
-	lnk.PrintInfo("  commit: %s", lnk.Cyan(commit))
-	lnk.PrintInfo("  built:  %s", lnk.Cyan(date))
+	printVersion()
 }
 
 func printUsage() {
