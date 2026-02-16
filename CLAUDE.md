@@ -22,10 +22,6 @@ make test-coverage          # Generate coverage report (coverage.html)
 make fmt                    # Format code (prefers goimports, falls back to gofmt)
 make lint                   # Run go vet
 make check                  # Run fmt, test, and lint in sequence
-
-# Installation
-make install                # Build and install to /usr/local/bin (or PREFIX=/path)
-make install PREFIX=~/.local # Install to user directory
 ```
 
 ## Architecture

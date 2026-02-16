@@ -1,4 +1,4 @@
-.PHONY: help build clean test test-unit test-e2e install test-coverage clean-test fmt lint check
+.PHONY: help build clean test test-unit test-e2e test-coverage clean-test fmt lint check
 
 # Default target - show help
 help:
@@ -6,15 +6,10 @@ help:
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""
-	@echo "Variables:"
-	@echo "  PREFIX=$(PREFIX)     Installation prefix (override with PREFIX=/path)"
-	@echo "  BINDIR=$(BINDIR)     Binary directory (override with BINDIR=/path)"
-	@echo ""
 	@echo "Targets:"
 	@echo "  help           Show this help message"
 	@echo "  build          Build the lnk binary"
-	@echo "  install        Build and install lnk to BINDIR"
-	@echo "  clean          Remove build artifacts and installed binary"
+	@echo "  clean          Remove build artifacts"
 	@echo "  test           Run all tests with verbose output"
 	@echo "  test-unit      Run unit tests only"
 	@echo "  test-e2e       Run end-to-end tests only"
@@ -23,10 +18,6 @@ help:
 	@echo "  fmt            Format all Go code"
 	@echo "  lint           Run go vet for static analysis"
 	@echo "  check          Run fmt, test, and lint in sequence"
-
-# Installation prefix
-PREFIX ?= /usr/local
-BINDIR ?= $(PREFIX)/bin
 
 # Build the lnk binary
 build:
@@ -38,36 +29,10 @@ build:
 	echo "Building lnk version $$VERSION ($$COMMIT)..."; \
 	go build -ldflags "-X 'main.version=$$VERSION' -X 'main.commit=$$COMMIT' -X 'main.date=$$DATE'" -o bin/lnk cmd/lnk/main.go
 
-# Install lnk to BINDIR
-install: build
-	@# Check if we can write to the target directory
-	@if [ -d "$(BINDIR)" ]; then \
-		if [ ! -w "$(BINDIR)" ]; then \
-			echo "Error: Cannot write to $(BINDIR)"; \
-			echo "Try one of the following:"; \
-			echo "  sudo make install"; \
-			echo "  make install PREFIX=~/.local"; \
-			exit 1; \
-		fi \
-	else \
-		parent_dir=$$(dirname "$(BINDIR)"); \
-		if [ ! -w "$$parent_dir" ]; then \
-			echo "Error: Cannot write to $$parent_dir"; \
-			echo "Try one of the following:"; \
-			echo "  sudo make install"; \
-			echo "  make install PREFIX=~/.local"; \
-			exit 1; \
-		fi \
-	fi
-	mkdir -p $(BINDIR)
-	cp bin/lnk $(BINDIR)/lnk
-	chmod +x $(BINDIR)/lnk
-
 # Clean build artifacts
 clean:
 	rm -rf bin/
 	rm -f coverage.out coverage.html
-	rm -f $(BINDIR)/lnk
 
 # Clean test artifacts
 clean-test:
