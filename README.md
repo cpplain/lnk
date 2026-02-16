@@ -100,8 +100,16 @@ lnk orphan --path ~/.config/oldapp                    # Stop managing a config
 ### Global Options
 
 ```bash
+lnk --help                           # Show help
 lnk --version                        # Show version
-lnk help [command]                   # Get help
+lnk -v, --verbose                    # Enable verbose output
+lnk -q, --quiet                      # Suppress all non-error output
+lnk -y, --yes                        # Assume yes to all prompts
+lnk --no-color                       # Disable colored output
+lnk --output FORMAT                  # Output format: text (default), json
+
+# Get command-specific help
+lnk help [command]
 ```
 
 ## How It Works

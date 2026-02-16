@@ -9,21 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.5.0] - 2026-02-16
+
+### Added
+
 - Homebrew installation support (`brew install cpplain/tap/lnk`)
 
 ### Changed
 
 - **BREAKING:** Simplified version output to `lnk <version>` for `--version` flag and `version` command (removed commit hash and build date; dev builds show `dev+timestamp`)
 
-### Deprecated
-
 ### Removed
 
-- `make install` target (use Homebrew for installation)
-
-### Fixed
-
-### Security
+- **BREAKING:** `make install` target (use Homebrew for installation)
 
 ## [0.4.0] - 2026-02-14
 
@@ -114,7 +122,8 @@ Initial release of cfgman.
 - **Performance** - Concurrent operations for status checking
 - **Zero dependencies** - Pure Go implementation using only standard library
 
-[unreleased]: https://github.com/cpplain/lnk/compare/v0.4.0...HEAD
+[unreleased]: https://github.com/cpplain/lnk/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/cpplain/lnk/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/cpplain/lnk/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/cpplain/lnk/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/cpplain/lnk/compare/v0.1.1...v0.2.0
