@@ -14,10 +14,7 @@ An opinionated symlink manager for dotfiles and more. Manage your configuration 
 ## Installation
 
 ```bash
-# Build from source
-git clone https://github.com/cpplain/lnk.git
-cd lnk
-make install
+brew install cpplain/tap/lnk
 ```
 
 ## Quick Start

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Homebrew installation support (`brew install cpplain/tap/lnk`)
+
 ### Changed
 
 ### Deprecated
