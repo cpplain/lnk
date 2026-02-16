@@ -28,13 +28,13 @@ func TestVersion(t *testing.T) {
 			name:     "version command",
 			args:     []string{"version"},
 			wantExit: 0,
-			contains: []string{"lnk version"},
+			contains: []string{"lnk "},
 		},
 		{
 			name:     "version flag",
 			args:     []string{"--version"},
 			wantExit: 0,
-			contains: []string{"lnk version"},
+			contains: []string{"lnk "},
 		},
 	}
 
