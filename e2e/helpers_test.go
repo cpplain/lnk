@@ -141,13 +141,20 @@ func setupTestEnv(t *testing.T) func() {
 	testEnvSetupMu.Lock()
 	// Only run setup script if not already done
 	if !testEnvSetup {
-		// Run setup script
-		cmd := exec.Command("bash", setupScript)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			testEnvSetupMu.Unlock()
-			t.Fatalf("Failed to run setup script: %v\nOutput: %s", err, output)
+		// Check if test files already exist (to avoid sandbox permission issues)
+		testFile := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles", "home", ".bashrc")
+		if _, err := os.Stat(testFile); err == nil {
+			// Test files exist, skip setup script
+			testEnvSetup = true
+		} else {
+			// Run setup script
+			cmd := exec.Command("bash", setupScript)
+			if output, err := cmd.CombinedOutput(); err != nil {
+				testEnvSetupMu.Unlock()
+				t.Fatalf("Failed to run setup script: %v\nOutput: %s", err, output)
+			}
+			testEnvSetup = true
 		}
-		testEnvSetup = true
 	}
 	testEnvSetupMu.Unlock()
 

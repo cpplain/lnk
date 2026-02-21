@@ -112,7 +112,7 @@
   {
     "name": "E2E tests for new CLI syntax",
     "description": "Rewrite e2e tests to use new flag-based CLI syntax instead of subcommands",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Verification examples",
