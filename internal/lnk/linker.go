@@ -12,6 +12,15 @@ type PlannedLink struct {
 	Target string
 }
 
+// LinkOptions holds configuration for package-based linking operations
+type LinkOptions struct {
+	SourceDir      string   // base directory (e.g., ~/git/dotfiles)
+	TargetDir      string   // where to create links (default: ~)
+	Packages       []string // subdirs to process (e.g., ["home", "private/home"])
+	IgnorePatterns []string // combined ignore patterns from all sources
+	DryRun         bool     // preview mode without making changes
+}
+
 // CreateLinks creates symlinks from the source directories to the target directories
 func CreateLinks(config *Config, dryRun bool) error {
 	PrintCommandHeader("Creating Symlinks")

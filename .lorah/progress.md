@@ -285,3 +285,51 @@ Phase 1 (Config file support) is now **COMPLETE**:
 **Next Steps:**
 1. Commit these changes
 2. Begin Phase 2: Create LinkOptions struct and *WithOptions functions
+
+---
+
+## Session 4: Phase 2 - LinkOptions Struct (2026-02-21)
+
+### Tasks Completed
+
+✅ **Task 4: LinkOptions struct**
+- Added `LinkOptions` struct to `internal/lnk/linker.go`
+- Struct includes all required fields from spec:
+  - `SourceDir string`: base directory for dotfiles (e.g., ~/git/dotfiles)
+  - `TargetDir string`: where to create symlinks (default: ~)
+  - `Packages []string`: subdirectories to process (e.g., ["home", "private/home"])
+  - `IgnorePatterns []string`: combined ignore patterns from all sources
+  - `DryRun bool`: preview mode flag
+- Placed after `PlannedLink` struct for logical organization
+- Added comprehensive documentation comments for each field
+
+### Implementation Details
+
+**Files Modified:**
+- `internal/lnk/linker.go`: Added LinkOptions struct definition (~10 lines)
+
+**Design Decisions:**
+1. **Field types match spec exactly**: Used []string for Packages and IgnorePatterns to support multiple values
+2. **Documentation**: Added clear comments explaining purpose of each field with examples
+3. **Location**: Placed struct early in file after PlannedLink for visibility
+4. **Naming**: Used LinkOptions (not CreateOptions) to be generic for all operations
+
+### Syntax Verification
+
+```bash
+$ gofmt -e /Users/christopherplain/git/lnk/internal/lnk/linker.go
+Syntax OK
+```
+
+Code parses correctly. Go build cache permission issue prevents compilation, but syntax is valid.
+
+### Notes
+
+- LinkOptions struct is foundation for Phase 2 functions
+- Next tasks will implement *WithOptions functions that use this struct
+- All field names and types match spec.md requirements
+- Ready for CreateLinksWithOptions, RemoveLinksWithOptions, etc.
+
+**Next Steps:**
+1. Commit this change
+2. Implement Task 5: CreateLinksWithOptions function

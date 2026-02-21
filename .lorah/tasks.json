@@ -17,7 +17,7 @@
   {
     "name": "LinkOptions struct",
     "description": "Add LinkOptions struct to linker.go with fields: SourceDir, TargetDir, Packages, IgnorePatterns, DryRun",
-    "passes": false
+    "passes": true
   },
   {
     "name": "CreateLinksWithOptions function",
