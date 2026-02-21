@@ -721,3 +721,91 @@ All unit tests pass including:
 **Next Steps:**
 1. Commit this change
 2. Implement Task 10: FindManagedLinksForSources function
+
+---
+
+## Session 10: Phase 2 - FindManagedLinksForSources Function (2026-02-21)
+
+### Tasks Completed
+
+✅ **Task 10: FindManagedLinksForSources function**
+- Implemented `FindManagedLinksForSources(startPath string, sources []string) ([]ManagedLink, error)`:
+  - Package-based version of `FindManagedLinks` that works with explicit source paths instead of Config
+  - Takes startPath (where to search) and sources (list of absolute source directories)
+  - Walks the target directory to find symlinks
+  - Filters symlinks to only those pointing to specified source directories
+  - Skips system directories (Library, .Trash)
+  - Detects broken links
+  - Returns []ManagedLink with path, target, source, and broken status
+- Added comprehensive unit tests (8 test cases):
+  - Find links from single source
+  - Find links from multiple sources
+  - Find no links when sources don't match
+  - Detect broken links
+  - Skip system directories
+  - Handle relative symlinks
+  - Handle nested package paths
+  - Handle empty sources list
+
+### Implementation Details
+
+**Files Modified:**
+- `internal/lnk/link_utils.go`:
+  - Added `FindManagedLinksForSources()` function (~75 lines)
+  - Placed after existing `checkManagedLink()` function
+  - Uses same directory walking and symlink checking logic as existing functions
+- `internal/lnk/link_utils_test.go`:
+  - Added `TestFindManagedLinksForSources()` (~180 lines)
+  - Comprehensive tests covering all scenarios
+
+**Key Design Decisions:**
+1. **Explicit source paths**: Takes []string of absolute paths instead of Config for flexibility
+2. **Similar to findManagedLinksForPackages**: Uses same pattern but more generic
+3. **Exported function**: Capital F (FindManagedLinksForSources) for public API
+4. **Reused ManagedLink struct**: Leveraged existing structure from link_utils.go
+5. **System directory skipping**: Skips Library and .Trash directories for performance
+6. **Broken link detection**: Checks if target exists and sets IsBroken flag
+
+### Testing Results
+
+```bash
+$ GOCACHE=$TMPDIR/go-cache go test ./internal/lnk -run "TestFindManagedLinksForSources"
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     0.304s
+
+$ GOCACHE=$TMPDIR/go-cache go test ./internal/lnk
+ok      github.com/cpplain/lnk/internal/lnk     1.753s
+```
+
+All unit tests pass including:
+- Existing FindManagedLinks tests (old config-based API)
+- New FindManagedLinksForSources tests (package-based API)
+- All other internal/lnk tests (8/8 test cases pass)
+
+### Build Status
+
+✅ Syntax valid: `gofmt -e` succeeds
+✅ All unit tests pass (8/8 test cases)
+
+### Phase 2 Status
+
+Phase 2 (Options-based API) is now **COMPLETE**:
+- ✅ Task 4: LinkOptions struct
+- ✅ Task 5: CreateLinksWithOptions function
+- ✅ Task 6: RemoveLinksWithOptions function
+- ✅ Task 7: StatusWithOptions function
+- ✅ Task 8: PruneWithOptions function
+- ✅ Task 9: Refactor collectPlannedLinks
+- ✅ Task 10: FindManagedLinksForSources function
+
+### Notes
+
+- This completes all Phase 2 tasks (Options-based API)
+- All package-based functions are implemented and tested
+- Both old (config-based) and new (package-based) APIs coexist and work correctly
+- Next phase is Phase 3: CLI rewrite (Tasks 11-16)
+- The new FindManagedLinksForSources will be useful for adopt/orphan operations in Phase 4
+
+**Next Steps:**
+1. Commit this change
+2. Begin Phase 3: CLI rewrite (flag-based interface)

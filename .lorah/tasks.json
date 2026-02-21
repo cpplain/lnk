@@ -47,7 +47,7 @@
   {
     "name": "FindManagedLinksForSources function",
     "description": "Add FindManagedLinksForSources(startPath string, sources []string) to link_utils.go for finding managed links from specific source packages",
-    "passes": false
+    "passes": true
   },
   {
     "name": "CLI action flags parsing",
