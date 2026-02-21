@@ -12,7 +12,7 @@
   {
     "name": "Merge config with CLI flags",
     "description": "Implement config merging logic where CLI flags take precedence over config file values",
-    "passes": false
+    "passes": true
   },
   {
     "name": "LinkOptions struct",

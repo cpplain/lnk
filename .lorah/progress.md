@@ -189,3 +189,99 @@ All unit tests pass including:
 **Next Steps:**
 1. Commit these changes
 2. Implement Task 3: Merge config with CLI flags
+
+---
+
+## Session 3: Phase 1 - Config Merging (2026-02-21)
+
+### Tasks Completed
+
+✅ **Task 3: Merge config with CLI flags**
+- Added `MergedConfig` struct to hold final merged configuration:
+  - `SourceDir`: Source directory (from CLI)
+  - `TargetDir`: Target directory (CLI > config > default)
+  - `IgnorePatterns`: Combined patterns from all sources
+- Implemented `MergeFlagConfig(sourceDir, cliTarget, cliIgnorePatterns)`:
+  - Loads flag-based config from .lnkconfig (if exists)
+  - Loads ignore patterns from .lnkignore (if exists)
+  - Merges with CLI flags using correct precedence
+  - Returns unified MergedConfig structure
+- Extracted `getBuiltInIgnorePatterns()` function for reusability
+- Added `.lnkconfig` and `.lnkignore` to built-in ignore patterns
+- Comprehensive unit tests: 9 test cases covering all merging scenarios
+  - Tests for default behavior (no config files)
+  - Tests for config file only
+  - Tests for CLI override precedence
+  - Tests for .lnkignore patterns
+  - Tests for CLI ignore patterns
+  - Tests for combined sources
+  - Tests for subdirectory configs
+  - Tests for precedence verification
+
+### Implementation Details
+
+**Files Modified:**
+- `internal/lnk/config.go`:
+  - Added `MergedConfig` struct (~5 lines)
+  - Added `getBuiltInIgnorePatterns()` function (~15 lines)
+  - Modified `getDefaultConfig()` to use `getBuiltInIgnorePatterns()`
+  - Added `MergeFlagConfig()` function (~50 lines)
+- `internal/lnk/config_test.go`:
+  - Added `TestMergeFlagConfig()` (~145 lines)
+  - Added `TestMergeFlagConfigPrecedence()` (~60 lines)
+  - Updated `TestLoadConfigWithOptions_DefaultConfig` to expect 11 patterns
+
+**Merging Logic:**
+- **Target directory precedence**: CLI flag > .lnkconfig > default (~)
+- **Ignore patterns**: All sources combined in order:
+  1. Built-in defaults (11 patterns)
+  2. .lnkconfig patterns
+  3. .lnkignore patterns
+  4. CLI flag patterns
+- This order allows later patterns to override earlier ones using negation (!)
+
+**Key Design Decisions:**
+1. **Additive ignore patterns**: Unlike target (which uses precedence), ignore patterns are combined from all sources for maximum flexibility
+2. **Order matters**: CLI patterns come last so users can negate built-in or config patterns
+3. **Verbose logging**: Added detailed logging at each merge step for debugging
+4. **Graceful handling**: Missing config files don't cause errors, just return empty values
+
+### Testing Results
+
+```bash
+$ go test ./internal/lnk -run "TestMergeFlagConfig"
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     0.570s
+
+$ go test ./internal/lnk
+ok      github.com/cpplain/lnk/internal/lnk     1.728s
+```
+
+All unit tests pass including:
+- Existing config tests (JSON format still works)
+- New flag config parsing tests
+- New ignore file parsing tests
+- New config merging tests
+
+### Build Status
+
+✅ Build succeeds: `make build` completes successfully
+✅ Binary created: `bin/lnk` (3.6M)
+
+### Phase 1 Status
+
+Phase 1 (Config file support) is now **COMPLETE**:
+- ✅ Task 1: LoadConfig for .lnkconfig format
+- ✅ Task 2: Parse .lnkignore file
+- ✅ Task 3: Merge config with CLI flags
+
+### Notes
+
+- The merging logic is ready for Phase 2 (Options-based API)
+- Next task should be Task 4: LinkOptions struct
+- The new config system is fully backward compatible with JSON configs
+- All built-in ignore patterns now include the new config files
+
+**Next Steps:**
+1. Commit these changes
+2. Begin Phase 2: Create LinkOptions struct and *WithOptions functions

@@ -36,6 +36,13 @@ type FlagConfig struct {
 	IgnorePatterns []string // Ignore patterns from config file
 }
 
+// MergedConfig represents the final merged configuration from all sources
+type MergedConfig struct {
+	SourceDir      string   // Source directory (from CLI)
+	TargetDir      string   // Target directory (CLI > config > default)
+	IgnorePatterns []string // Combined ignore patterns from all sources
+}
+
 // parseFlagConfigFile parses a flag-based config file (stow-style)
 // Format: one flag per line, e.g., "--target=~" or "--ignore=*.swp"
 func parseFlagConfigFile(filePath string) (*FlagConfig, error) {
@@ -188,6 +195,59 @@ func LoadIgnoreFile(sourceDir string) ([]string, error) {
 	return patterns, nil
 }
 
+// MergeFlagConfig merges CLI options with config files to produce final configuration
+// Precedence for target: CLI flag > .lnkconfig > default (~)
+// Precedence for ignore patterns: All sources are combined (built-in + config + .lnkignore + CLI)
+func MergeFlagConfig(sourceDir, cliTarget string, cliIgnorePatterns []string) (*MergedConfig, error) {
+	PrintVerbose("Merging configuration from sourceDir=%s, cliTarget=%s, cliIgnorePatterns=%v",
+		sourceDir, cliTarget, cliIgnorePatterns)
+
+	// Load flag-based config from .lnkconfig file (if exists)
+	flagConfig, configPath, err := LoadFlagConfig(sourceDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load flag config: %w", err)
+	}
+
+	// Load ignore patterns from .lnkignore file (if exists)
+	ignoreFilePatterns, err := LoadIgnoreFile(sourceDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load ignore file: %w", err)
+	}
+
+	// Determine target directory with precedence: CLI > config file > default
+	targetDir := "~"
+	if cliTarget != "" {
+		targetDir = cliTarget
+		PrintVerbose("Using target from CLI flag: %s", targetDir)
+	} else if flagConfig.Target != "" {
+		targetDir = flagConfig.Target
+		if configPath != "" {
+			PrintVerbose("Using target from config file: %s (from %s)", targetDir, configPath)
+		}
+	} else {
+		PrintVerbose("Using default target: %s", targetDir)
+	}
+
+	// Combine all ignore patterns from different sources
+	// Order: built-in defaults + config file + .lnkignore + CLI flags
+	// This allows CLI flags to override earlier patterns using negation (!)
+	ignorePatterns := []string{}
+	ignorePatterns = append(ignorePatterns, getBuiltInIgnorePatterns()...)
+	ignorePatterns = append(ignorePatterns, flagConfig.IgnorePatterns...)
+	ignorePatterns = append(ignorePatterns, ignoreFilePatterns...)
+	ignorePatterns = append(ignorePatterns, cliIgnorePatterns...)
+
+	PrintVerbose("Merged ignore patterns: %d built-in, %d from config, %d from .lnkignore, %d from CLI = %d total",
+		len(getBuiltInIgnorePatterns()), len(flagConfig.IgnorePatterns),
+		len(ignoreFilePatterns), len(cliIgnorePatterns), len(ignorePatterns))
+
+	return &MergedConfig{
+		SourceDir:      sourceDir,
+		TargetDir:      targetDir,
+		IgnorePatterns: ignorePatterns,
+	}, nil
+}
+
 // getXDGConfigDir returns the XDG config directory for lnk
 func getXDGConfigDir() string {
 	// Check XDG_CONFIG_HOME first
@@ -203,20 +263,27 @@ func getXDGConfigDir() string {
 	return filepath.Join(homeDir, ".config", "lnk")
 }
 
+// getBuiltInIgnorePatterns returns the built-in default ignore patterns
+func getBuiltInIgnorePatterns() []string {
+	return []string{
+		".git",
+		".gitignore",
+		".DS_Store",
+		"*.swp",
+		"*.tmp",
+		"README*",
+		"LICENSE*",
+		"CHANGELOG*",
+		".lnk.json",
+		".lnkconfig",
+		".lnkignore",
+	}
+}
+
 // getDefaultConfig returns the built-in default configuration
 func getDefaultConfig() *Config {
 	return &Config{
-		IgnorePatterns: []string{
-			".git",
-			".gitignore",
-			".DS_Store",
-			"*.swp",
-			"*.tmp",
-			"README*",
-			"LICENSE*",
-			"CHANGELOG*",
-			".lnk.json",
-		},
+		IgnorePatterns: getBuiltInIgnorePatterns(),
 		LinkMappings: []LinkMapping{
 			{Source: "~/dotfiles/home", Target: "~/"},
 			{Source: "~/dotfiles/config", Target: "~/.config/"},
