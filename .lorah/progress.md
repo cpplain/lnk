@@ -809,3 +809,184 @@ Phase 2 (Options-based API) is now **COMPLETE**:
 **Next Steps:**
 1. Commit this change
 2. Begin Phase 3: CLI rewrite (flag-based interface)
+
+---
+
+## Session 11: Phase 3 - CLI Rewrite (2026-02-21)
+
+### Tasks Completed
+
+✅ **Task 11: CLI action flags parsing**
+✅ **Task 12: CLI directory flags parsing**
+✅ **Task 13: CLI other flags parsing**
+✅ **Task 14: CLI package arguments handling**
+✅ **Task 15: Remove subcommand routing**
+✅ **Task 16: Update CLI help text**
+✅ **Task 19: Update prune for new interface** (already implemented via PruneWithOptions)
+✅ **Task 20: Unit tests for config parsing** (already completed in sessions 2-3)
+✅ **Task 21: Unit tests for .lnkignore parsing** (already completed in sessions 2-3)
+✅ **Task 22: Unit tests for *WithOptions functions** (already completed in sessions 5-8)
+
+### Implementation Details
+
+**Complete Rewrite of `cmd/lnk/main.go`:**
+- Changed from subcommand-based routing to flag-based interface (stow-like)
+- Removed ~600 lines of subcommand handlers (handleStatus, handleCreate, handleRemove, etc.)
+- Replaced with streamlined flag parsing and action dispatch (~375 lines)
+
+**New Flag-Based Interface:**
+
+Action flags (mutually exclusive):
+- `-C, --create` - Create symlinks (default action)
+- `-R, --remove` - Remove symlinks
+- `-S, --status` - Show status of symlinks
+- `-P, --prune` - Remove broken symlinks
+- `-A, --adopt` - Adopt files (placeholder, Phase 4)
+- `-O, --orphan PATH` - Orphan file (placeholder, Phase 4)
+
+Directory flags:
+- `-s, --source DIR` - Source directory (default: ".")
+- `-t, --target DIR` - Target directory (default: "~")
+
+Other flags:
+- `--ignore PATTERN` - Additional ignore pattern (repeatable)
+- `-n, --dry-run` - Preview mode
+- `-v, --verbose` - Verbose output
+- `-q, --quiet` - Quiet mode
+- `--no-color` - Disable colors
+- `-V, --version` - Show version
+- `-h, --help` - Show help
+
+**Positional Arguments:**
+- Packages are now positional arguments (not flags)
+- At least one package required for link operations
+- Can be "." for flat repository or subdirectory names
+- Prune defaults to "." if no packages specified
+
+**Key Design Decisions:**
+
+1. **Mutually exclusive action flags**: Parser detects and rejects multiple action flags
+2. **Package validation**: Requires at least one package except for prune and orphan
+3. **Config integration**: Uses `MergeFlagConfig()` to merge .lnkconfig, .lnkignore, and CLI flags
+4. **Action dispatch**: Routes to appropriate *WithOptions functions based on action flag
+5. **Removed subcommands entirely**: No more `lnk create`, `lnk status`, etc.
+6. **Backward compatibility**: Old JSON config system and internal functions still work
+
+**New Usage Examples:**
+```bash
+lnk .                      # Flat repo: link everything
+lnk home                   # Nested repo: link home/ package
+lnk home private/home      # Multiple packages
+lnk -s ~/dotfiles home     # Specify source directory
+lnk -t ~ home              # Specify target directory
+lnk -n home                # Dry-run
+lnk -R home                # Remove links
+lnk -S home                # Show status
+lnk -P                     # Prune broken links
+lnk --ignore '*.swp' home  # Add ignore pattern
+```
+
+**Files Modified:**
+- `cmd/lnk/main.go`: Complete rewrite (~375 lines, down from ~746 lines)
+  - Added `actionFlag` type and constants
+  - Removed all subcommand handlers
+  - Added comprehensive flag parsing loop
+  - Added action-based dispatch to *WithOptions functions
+  - Rewrote `printUsage()` for new interface
+  - Removed `printCommandHelp()` and command-specific help functions
+
+**Validation & Error Handling:**
+- Mutually exclusive action flags (only one allowed)
+- Required value validation (--source, --target, --ignore, --orphan)
+- Package requirement validation (except for prune/orphan)
+- Conflicting flags (--quiet and --verbose)
+- Unknown flag detection with helpful hints
+
+**Helper Functions Kept:**
+- `parseFlagValue()` - Parse --flag=value or --flag value formats
+- `printVersion()` - Show version information
+- Removed: `levenshteinDistance()`, `suggestCommand()`, `min()` - no longer needed without subcommands
+
+### Testing Results
+
+**Build Status:**
+```bash
+$ make build
+✅ Build succeeds
+✅ Binary created: bin/lnk (3.6M)
+```
+
+**Unit Tests:**
+```bash
+$ make test-unit
+✅ All unit tests pass (1.869s)
+```
+
+**Manual CLI Testing:**
+```bash
+$ ./bin/lnk --help
+✅ Help displays new flag-based interface
+
+$ ./bin/lnk --version
+✅ Shows version: lnk dev+20260221222706
+
+$ ./bin/lnk
+✅ Error: "at least one package is required"
+
+$ ./bin/lnk -C -R home
+✅ Error: "cannot use multiple action flags"
+
+$ ./bin/lnk -s dotfiles -t target -n home
+✅ Works: "dry-run: Would create 1 symlink(s)"
+
+$ ./bin/lnk -s dotfiles -t target home
+✅ Works: "Created 1 symlink(s) successfully"
+
+$ ./bin/lnk -s dotfiles -t target -S home
+✅ Works: Shows symlink status
+
+$ ./bin/lnk -s dotfiles -t target -P -n
+✅ Works: "No broken symlinks found"
+```
+
+**E2E Tests:**
+- E2E tests currently fail because they use old subcommand syntax
+- This is expected and is Task 23 (E2E tests for new CLI syntax)
+- Examples: `lnk version` → `lnk --version`, `lnk create` → `lnk`
+
+### Phase 3 Status
+
+Phase 3 (CLI Rewrite) is now **COMPLETE**:
+- ✅ Task 11: CLI action flags parsing
+- ✅ Task 12: CLI directory flags parsing
+- ✅ Task 13: CLI other flags parsing
+- ✅ Task 14: CLI package arguments handling
+- ✅ Task 15: Remove subcommand routing
+- ✅ Task 16: Update CLI help text
+
+### Notes
+
+**Breaking Changes:**
+- Old: `lnk create` → New: `lnk home` (or `lnk .`)
+- Old: `lnk status` → New: `lnk -S home`
+- Old: `lnk remove` → New: `lnk -R home`
+- Old: `lnk prune` → New: `lnk -P`
+- Old: `lnk version` → New: `lnk --version`
+- Old: `lnk help` → New: `lnk --help`
+
+**Advantages of New Interface:**
+- Simpler: Just `lnk home` instead of `lnk create` + config file
+- More flexible: Specify source/target/packages on command line
+- Stow-like: Familiar to users of GNU Stow
+- Config optional: Works without any config files
+- Convention-based: Assumes sensible defaults (source: ".", target: "~")
+
+**Remaining Work:**
+- Task 17: Update adopt for new interface (Phase 4)
+- Task 18: Update orphan for new interface (Phase 4)
+- Task 23: Rewrite e2e tests for new CLI syntax
+- Task 24: Verification examples from spec.md
+
+**Next Steps:**
+1. Commit this CLI rewrite
+2. Implement Task 17 or 18 (adopt/orphan for new interface) or Task 23 (e2e tests)

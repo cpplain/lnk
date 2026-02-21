@@ -52,32 +52,32 @@
   {
     "name": "CLI action flags parsing",
     "description": "Implement flag parsing for action flags: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan (mutually exclusive)",
-    "passes": false
+    "passes": true
   },
   {
     "name": "CLI directory flags parsing",
     "description": "Implement flag parsing for directory flags: -s/--source DIR (default: '.'), -t/--target DIR (default: '~')",
-    "passes": false
+    "passes": true
   },
   {
     "name": "CLI other flags parsing",
     "description": "Implement flag parsing for: --ignore PATTERN (repeatable), -n/--dry-run, -v/--verbose, -q/--quiet, --no-color, -V/--version, -h/--help",
-    "passes": false
+    "passes": true
   },
   {
     "name": "CLI package arguments handling",
     "description": "Parse positional arguments as packages (at least one required for link operations, can be '.' or subdirectory paths)",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove subcommand routing",
     "description": "Remove old subcommand-based routing from main.go and replace with flag-based action dispatch",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Update CLI help text",
     "description": "Update help messages to reflect new flag-based interface matching stow-like usage",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Update adopt for new interface",
@@ -92,22 +92,22 @@
   {
     "name": "Update prune for new interface",
     "description": "Modify prune to work with --prune flag + optional packages",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Unit tests for config parsing",
     "description": "Add unit tests for .lnkconfig file discovery, parsing, and precedence logic",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Unit tests for .lnkignore parsing",
     "description": "Add unit tests for .lnkignore file parsing with gitignore syntax",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Unit tests for *WithOptions functions",
     "description": "Add unit tests for all *WithOptions functions (Create, Remove, Status, Prune)",
-    "passes": false
+    "passes": true
   },
   {
     "name": "E2E tests for new CLI syntax",
