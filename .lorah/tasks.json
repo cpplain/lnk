@@ -42,7 +42,7 @@
   {
     "name": "Refactor collectPlannedLinks",
     "description": "Update collectPlannedLinks to take ignorePatterns []string instead of *Config and work with package paths",
-    "passes": false
+    "passes": true
   },
   {
     "name": "FindManagedLinksForSources function",

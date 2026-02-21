@@ -66,7 +66,7 @@ func CreateLinks(config *Config, dryRun bool) error {
 		PrintVerbose("Processing mapping: %s -> %s", mapping.Source, mapping.Target)
 
 		// Collect files from this mapping
-		links, err := collectPlannedLinks(sourcePath, targetPath, &mapping, config)
+		links, err := collectPlannedLinks(sourcePath, targetPath, config.IgnorePatterns)
 		if err != nil {
 			return fmt.Errorf("collecting files for mapping %s: %w", mapping.Source, err)
 		}
@@ -668,18 +668,8 @@ func PruneLinks(config *Config, dryRun bool, force bool) error {
 }
 
 // shouldIgnoreEntry determines if an entry should be ignored based on patterns
-func shouldIgnoreEntry(sourceItem, sourcePath string, mapping *LinkMapping, config *Config) bool {
-	// Get relative path from source directory
-	relPath, err := filepath.Rel(sourcePath, sourceItem)
-	if err != nil {
-		// If we can't get relative path, don't ignore
-		return false
-	}
-	return config.ShouldIgnore(relPath)
-}
-
 // collectPlannedLinks walks a source directory and collects all files that should be linked
-func collectPlannedLinks(sourcePath, targetPath string, mapping *LinkMapping, config *Config) ([]PlannedLink, error) {
+func collectPlannedLinks(sourcePath, targetPath string, ignorePatterns []string) ([]PlannedLink, error) {
 	var links []PlannedLink
 
 	err := filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
@@ -692,15 +682,15 @@ func collectPlannedLinks(sourcePath, targetPath string, mapping *LinkMapping, co
 			return nil
 		}
 
-		// Check if this file should be ignored
-		if shouldIgnoreEntry(path, sourcePath, mapping, config) {
-			return nil
-		}
-
-		// Calculate relative path from source
+		// Get relative path from source directory
 		relPath, err := filepath.Rel(sourcePath, path)
 		if err != nil {
 			return fmt.Errorf("failed to calculate relative path: %w", err)
+		}
+
+		// Check if this file should be ignored
+		if MatchesPattern(relPath, ignorePatterns) {
+			return nil
 		}
 
 		// Build target path

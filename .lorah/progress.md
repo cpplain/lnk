@@ -661,3 +661,63 @@ All unit tests pass including:
 **Next Steps:**
 1. Commit this change
 2. Review remaining Phase 2 tasks or begin Phase 3 (CLI rewrite)
+
+---
+
+## Session 9: Phase 2 - Refactor collectPlannedLinks (2026-02-21)
+
+### Tasks Completed
+
+✅ **Task 9: Refactor collectPlannedLinks**
+- Updated `collectPlannedLinks()` function signature:
+  - Changed from `(sourcePath, targetPath string, mapping *LinkMapping, config *Config)`
+  - To `(sourcePath, targetPath string, ignorePatterns []string)`
+- Modified implementation:
+  - Removed dependency on `shouldIgnoreEntry()` helper
+  - Uses `MatchesPattern(relPath, ignorePatterns)` directly (same as collectPlannedLinksWithPatterns)
+  - Simplified pattern matching without Config coupling
+- Updated call site in `CreateLinks()`:
+  - Changed from `collectPlannedLinks(sourcePath, targetPath, &mapping, config)`
+  - To `collectPlannedLinks(sourcePath, targetPath, config.IgnorePatterns)`
+- Removed unused function:
+  - Deleted `shouldIgnoreEntry()` as it's no longer needed
+  - Function was only used by collectPlannedLinks
+
+### Implementation Details
+
+**Files Modified:**
+- `internal/lnk/linker.go`:
+  - Refactored `collectPlannedLinks()` signature and implementation (~35 lines changed)
+  - Updated CreateLinks() call site (1 line changed)
+  - Removed `shouldIgnoreEntry()` function (~9 lines deleted)
+
+**Key Design Decisions:**
+1. **Decoupling from Config**: Function now only depends on ignore patterns, not entire Config object
+2. **Consistent pattern matching**: Uses same MatchesPattern approach as collectPlannedLinksWithPatterns
+3. **Backward compatibility**: Old CreateLinks function still works with config-based approach
+4. **Code cleanup**: Removed unused shouldIgnoreEntry helper function
+
+### Testing Results
+
+```bash
+$ GOCACHE=$TMPDIR/go-cache go test ./internal/lnk
+ok      github.com/cpplain/lnk/internal/lnk     1.701s
+```
+
+All unit tests pass including:
+- Existing CreateLinks tests (12 test cases) - validates old config-based API still works
+- New CreateLinksWithOptions tests (9 test cases) - validates package-based API
+- New RemoveLinksWithOptions tests (8 test cases)
+- All other internal/lnk tests
+
+### Notes
+
+- This completes the refactoring of Phase 2's core functions
+- Both old (config-based) and new (package-based) APIs now use the same underlying pattern matching
+- The refactored collectPlannedLinks is cleaner and more testable
+- Next logical task is Task 10: FindManagedLinksForSources function
+- After Task 10, Phase 2 will be complete and ready for Phase 3 (CLI rewrite)
+
+**Next Steps:**
+1. Commit this change
+2. Implement Task 10: FindManagedLinksForSources function
