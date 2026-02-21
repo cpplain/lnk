@@ -87,7 +87,7 @@
   {
     "name": "Update orphan for new interface",
     "description": "Modify orphan.go to work with --orphan PATH flag instead of --path",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Update prune for new interface",

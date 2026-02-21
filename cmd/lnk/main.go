@@ -334,12 +334,18 @@ func main() {
 		}
 
 	case actionOrphan:
-		// TODO: Implement orphan with new interface (Phase 4, Task 18)
-		_ = orphanPath // Use variable to avoid compiler error
-		lnk.PrintErrorWithHint(lnk.WithHint(
-			fmt.Errorf("--orphan is not yet implemented in the new interface"),
-			"This feature will be available in Phase 4"))
-		os.Exit(lnk.ExitError)
+		// Orphan file(s) from management
+		opts := lnk.OrphanOptions{
+			SourceDir: sourceDir,
+			TargetDir: targetDir,
+			Paths:     []string{orphanPath},
+			DryRun:    dryRun,
+		}
+
+		if err := lnk.OrphanWithOptions(opts); err != nil {
+			lnk.PrintErrorWithHint(err)
+			os.Exit(lnk.ExitError)
+		}
 	}
 }
 
@@ -360,7 +366,7 @@ func printUsage() {
 		{"-S, --status", "Show status of symlinks"},
 		{"-P, --prune", "Remove broken symlinks"},
 		{"-A, --adopt", "Adopt files into package"},
-		{"-O, --orphan PATH", "Remove file from management (not yet implemented)"},
+		{"-O, --orphan PATH", "Remove file from management"},
 	})
 	fmt.Println()
 

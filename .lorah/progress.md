@@ -1139,3 +1139,148 @@ Phase 4 (Internal function updates) progress:
 **Next Steps:**
 1. Commit this adopt implementation
 2. Implement Task 18: Update orphan for new interface
+
+---
+
+## Session 13: Phase 4 - Orphan for New Interface (2026-02-21)
+
+### Tasks Completed
+
+✅ **Task 18: Update orphan for new interface**
+- Added `OrphanOptions` struct to hold options for package-based orphaning:
+  - `SourceDir`: base directory for dotfiles (e.g., ~/git/dotfiles)
+  - `TargetDir`: where symlinks are (default: ~)
+  - `Paths`: symlink paths to orphan (e.g., ["~/.bashrc", "~/.vimrc"])
+  - `DryRun`: preview mode flag
+- Implemented `OrphanWithOptions(opts OrphanOptions) error`:
+  - Validates inputs (at least one path required)
+  - Expands source/target paths
+  - Supports multiple paths in single operation
+  - Handles directories by finding all managed symlinks within
+  - For each path:
+    - Validates it's a symlink pointing to source directory
+    - Checks if it's managed (target is within source directory)
+    - Skips broken links with helpful error message
+    - Removes symlink, copies file back, removes from repository
+  - Shows dry-run preview or performs actual orphaning
+  - Displays summary with orphaned count
+  - Graceful error handling (continues processing remaining paths)
+- Updated CLI in `cmd/lnk/main.go`:
+  - Implemented orphan action handler using OrphanWithOptions
+  - Passes orphanPath from --orphan flag
+  - Updated help text to remove "not yet implemented" note
+- Added comprehensive unit tests (9 test cases):
+  - Single file orphan
+  - Multiple files orphan
+  - Dry-run mode
+  - Non-symlink (gracefully skipped)
+  - Unmanaged symlink (gracefully skipped)
+  - Directory with managed links
+  - Broken link (gracefully skipped)
+  - Error: no paths specified
+  - Error: source directory doesn't exist
+
+### Implementation Details
+
+**Files Modified:**
+- `internal/lnk/orphan.go`:
+  - Added "strings" to imports
+  - Added `OrphanOptions` struct (~6 lines)
+  - Added `OrphanWithOptions()` function (~185 lines)
+  - Placed before existing `Orphan()` function for organization
+- `internal/lnk/orphan_test.go`:
+  - Added `TestOrphanWithOptions()` (~240 lines)
+  - Added `TestOrphanWithOptionsBrokenLink()` (~40 lines)
+- `cmd/lnk/main.go`:
+  - Updated `actionOrphan` case (~10 lines)
+  - Updated help text to remove "not yet implemented" note (1 line)
+
+**Key Design Decisions:**
+1. **Multiple file paths**: Orphan can process multiple files in one command (extensible design)
+2. **Graceful error handling**: Continues processing remaining paths even if some fail
+3. **Directory support**: When given a directory, finds all managed symlinks within and orphans them
+4. **Managed link validation**: Only orphans symlinks that point to files within source directory
+5. **Broken link handling**: Skips broken links with clear error message (can't copy back)
+6. **Reused existing functions**: Leveraged `orphanManagedLink()`, `FindManagedLinksForSources()` from existing implementation
+7. **Verbose logging**: Added logging at each step for debugging
+8. **Summary output**: Shows count of orphaned files and next steps
+
+### Testing Results
+
+**Unit Tests:**
+```bash
+$ GOCACHE=$TMPDIR/go-cache go test ./internal/lnk -run "TestOrphanWithOptions"
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     0.327s
+
+$ GOCACHE=$TMPDIR/go-cache go test ./internal/lnk
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     1.740s
+```
+
+All unit tests pass including:
+- Existing Orphan tests (old config-based API) - 5 test cases
+- New OrphanWithOptions tests (package-based API) - 9 test cases
+- All other internal/lnk tests
+
+**Build Status:**
+✅ Build succeeds: `make build` completes successfully
+✅ Binary created: `bin/lnk`
+
+**Manual CLI Testing:**
+```bash
+# Dry-run
+$ ./bin/lnk -O $PWD/target/.testfile -s $PWD/dotfiles -t $PWD/target -n
+✅ Shows dry-run preview
+
+# Actual orphan
+$ ./bin/lnk -O $PWD/target/.testfile -s $PWD/dotfiles -t $PWD/target
+✅ Orphans file: copies back, removes symlink and source file
+
+# Verification
+$ ls -la target/.testfile
+✅ Shows regular file (not symlink)
+$ cat target/.testfile
+✅ Content preserved
+$ ls dotfiles/
+✅ Source file removed from repository
+```
+
+### Usage Examples
+
+**New orphan syntax:**
+```bash
+# Orphan single file
+lnk -O ~/.bashrc -s ~/dotfiles -t ~
+
+# Orphan with default directories (from dotfiles directory)
+cd ~/dotfiles
+lnk -O ~/.bashrc
+
+# Dry-run
+lnk -O ~/.bashrc -n
+
+# Orphan directory (all managed links within)
+lnk -O ~/.config
+```
+
+### Phase 4 Status
+
+Phase 4 (Internal function updates) is now **COMPLETE**:
+- ✅ Task 17: Update adopt for new interface (completed in Session 12)
+- ✅ Task 18: Update orphan for new interface
+- ✅ Task 19: Update prune for new interface (completed in Session 8)
+
+### Notes
+
+- Orphan now works with the new flag-based CLI interface
+- Old `Orphan()` function still exists and works with config-based approach
+- Both APIs coexist without conflicts
+- Package-based API is more flexible and user-friendly
+- No config file required - just specify path to orphan
+- Graceful error handling allows batch orphaning with some failures
+- Next remaining tasks are Task 23 (E2E tests) and Task 24 (Verification examples)
+
+**Next Steps:**
+1. Commit this orphan implementation
+2. Implement Task 23: E2E tests for new CLI syntax, or Task 24: Verification examples
