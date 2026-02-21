@@ -333,3 +333,88 @@ Code parses correctly. Go build cache permission issue prevents compilation, but
 **Next Steps:**
 1. Commit this change
 2. Implement Task 5: CreateLinksWithOptions function
+
+---
+
+## Session 5: Phase 2 - CreateLinksWithOptions Function (2026-02-21)
+
+### Tasks Completed
+
+✅ **Task 5: CreateLinksWithOptions function**
+- Implemented `collectPlannedLinksWithPatterns()` helper function:
+  - Takes ignorePatterns []string instead of *Config
+  - Uses MatchesPattern directly for ignore checking
+  - Same recursive file traversal as original collectPlannedLinks
+  - Returns []PlannedLink with source/target pairs
+- Implemented `CreateLinksWithOptions(opts LinkOptions) error`:
+  - Validates inputs (packages required, source dir exists)
+  - Expands source and target paths (handles ~/)
+  - Supports multiple packages in single operation
+  - Handles package "." for flat repository structure
+  - Handles nested package paths (e.g., "private/home")
+  - Skips non-existent packages with PrintSkip (doesn't error)
+  - Follows same 3-phase execution as CreateLinks:
+    1. Collect planned links from all packages
+    2. Validate all targets
+    3. Execute or show dry-run
+  - Reuses existing executePlannedLinks for actual linking
+- Added comprehensive unit tests (9 test cases):
+  - Single package linking
+  - Multiple packages
+  - Package with "." (current directory)
+  - Nested package paths (private/home)
+  - Ignore patterns
+  - Dry-run mode
+  - Non-existent package skipped gracefully
+  - Error: no packages specified
+  - Error: source directory does not exist
+
+### Implementation Details
+
+**Files Modified:**
+- `internal/lnk/linker.go`:
+  - Added `collectPlannedLinksWithPatterns()` (~40 lines)
+  - Added `CreateLinksWithOptions()` (~145 lines)
+- `internal/lnk/linker_test.go`:
+  - Added `TestCreateLinksWithOptions()` (~155 lines)
+
+**Key Design Decisions:**
+1. **Helper function**: Created collectPlannedLinksWithPatterns to avoid coupling to Config
+2. **Package "." handling**: Special case to use source directory directly for flat repos
+3. **Graceful package skipping**: Non-existent packages print skip message, don't error
+4. **Validation order**: Validate source dir exists, then validate each package
+5. **Reused executePlannedLinks**: Leveraged existing linking logic for consistency
+6. **Verbose logging**: Added logging at each phase for debugging
+
+### Testing Results
+
+```bash
+$ GOCACHE=$TMPDIR/go-cache go test ./internal/lnk -run "TestCreateLinksWithOptions"
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     0.419s
+
+$ GOCACHE=$TMPDIR/go-cache go test ./internal/lnk
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     1.727s
+```
+
+All unit tests pass including:
+- Existing CreateLinks tests (old config-based API)
+- New CreateLinksWithOptions tests (package-based API)
+- All other internal/lnk tests
+
+### Build Status
+
+✅ Syntax valid: `gofmt -e` succeeds
+✅ All unit tests pass
+
+### Notes
+
+- collectPlannedLinksWithPatterns is a stepping stone toward Task 9 (refactoring original collectPlannedLinks)
+- The old CreateLinks and new CreateLinksWithOptions coexist - both work
+- Package-based API is more flexible than config mappings
+- Next task should be Task 6: RemoveLinksWithOptions
+
+**Next Steps:**
+1. Commit this change
+2. Implement Task 6: RemoveLinksWithOptions function

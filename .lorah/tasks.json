@@ -22,7 +22,7 @@
   {
     "name": "CreateLinksWithOptions function",
     "description": "Implement CreateLinksWithOptions(opts LinkOptions) error that handles package-based linking",
-    "passes": false
+    "passes": true
   },
   {
     "name": "RemoveLinksWithOptions function",

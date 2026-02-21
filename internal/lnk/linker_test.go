@@ -972,3 +972,194 @@ func assertDirExists(t *testing.T, path string) {
 		t.Errorf("Expected %s to be a directory", path)
 	}
 }
+
+func TestCreateLinksWithOptions(t *testing.T) {
+	tests := []struct {
+		name        string
+		setup       func(t *testing.T, tmpDir string) (configRepo string, opts LinkOptions)
+		wantErr     bool
+		checkResult func(t *testing.T, tmpDir, configRepo string)
+	}{
+		{
+			name: "single package",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc")
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      filepath.Join(tmpDir, "home"),
+					Packages:       []string{"home"},
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			checkResult: func(t *testing.T, tmpDir, configRepo string) {
+				linkPath := filepath.Join(tmpDir, "home", ".bashrc")
+				assertSymlink(t, linkPath, filepath.Join(configRepo, "home", ".bashrc"))
+			},
+		},
+		{
+			name: "multiple packages",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc")
+				createTestFile(t, filepath.Join(configRepo, "config", ".vimrc"), "# vimrc")
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      filepath.Join(tmpDir, "home"),
+					Packages:       []string{"home", "config"},
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			checkResult: func(t *testing.T, tmpDir, configRepo string) {
+				assertSymlink(t, filepath.Join(tmpDir, "home", ".bashrc"), filepath.Join(configRepo, "home", ".bashrc"))
+				assertSymlink(t, filepath.Join(tmpDir, "home", ".vimrc"), filepath.Join(configRepo, "config", ".vimrc"))
+			},
+		},
+		{
+			name: "package with dot (current directory)",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				createTestFile(t, filepath.Join(configRepo, ".bashrc"), "# bashrc")
+				createTestFile(t, filepath.Join(configRepo, ".vimrc"), "# vimrc")
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      filepath.Join(tmpDir, "home"),
+					Packages:       []string{"."},
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			checkResult: func(t *testing.T, tmpDir, configRepo string) {
+				assertSymlink(t, filepath.Join(tmpDir, "home", ".bashrc"), filepath.Join(configRepo, ".bashrc"))
+				assertSymlink(t, filepath.Join(tmpDir, "home", ".vimrc"), filepath.Join(configRepo, ".vimrc"))
+			},
+		},
+		{
+			name: "nested package path",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				createTestFile(t, filepath.Join(configRepo, "private", "home", ".ssh", "config"), "# ssh config")
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      filepath.Join(tmpDir, "home"),
+					Packages:       []string{"private/home"},
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			checkResult: func(t *testing.T, tmpDir, configRepo string) {
+				assertSymlink(t, filepath.Join(tmpDir, "home", ".ssh", "config"), filepath.Join(configRepo, "private", "home", ".ssh", "config"))
+			},
+		},
+		{
+			name: "ignore patterns",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc")
+				createTestFile(t, filepath.Join(configRepo, "home", "README.md"), "# readme")
+				createTestFile(t, filepath.Join(configRepo, "home", ".vimrc"), "# vimrc")
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      filepath.Join(tmpDir, "home"),
+					Packages:       []string{"home"},
+					IgnorePatterns: []string{"README.md"},
+					DryRun:         false,
+				}
+			},
+			checkResult: func(t *testing.T, tmpDir, configRepo string) {
+				assertSymlink(t, filepath.Join(tmpDir, "home", ".bashrc"), filepath.Join(configRepo, "home", ".bashrc"))
+				assertSymlink(t, filepath.Join(tmpDir, "home", ".vimrc"), filepath.Join(configRepo, "home", ".vimrc"))
+				assertNotExists(t, filepath.Join(tmpDir, "home", "README.md"))
+			},
+		},
+		{
+			name: "dry run mode",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc")
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      filepath.Join(tmpDir, "home"),
+					Packages:       []string{"home"},
+					IgnorePatterns: []string{},
+					DryRun:         true,
+				}
+			},
+			checkResult: func(t *testing.T, tmpDir, configRepo string) {
+				// Verify symlink was NOT created in dry-run mode
+				assertNotExists(t, filepath.Join(tmpDir, "home", ".bashrc"))
+			},
+		},
+		{
+			name: "non-existent package skipped",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc")
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      filepath.Join(tmpDir, "home"),
+					Packages:       []string{"home", "nonexistent"},
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			checkResult: func(t *testing.T, tmpDir, configRepo string) {
+				// Should create link from existing package
+				assertSymlink(t, filepath.Join(tmpDir, "home", ".bashrc"), filepath.Join(configRepo, "home", ".bashrc"))
+			},
+		},
+		{
+			name: "no packages specified",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      filepath.Join(tmpDir, "home"),
+					Packages:       []string{},
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			wantErr: true,
+		},
+		{
+			name: "source directory does not exist",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				return "", LinkOptions{
+					SourceDir:      filepath.Join(tmpDir, "nonexistent"),
+					TargetDir:      filepath.Join(tmpDir, "home"),
+					Packages:       []string{"home"},
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+
+			configRepo, opts := tt.setup(t, tmpDir)
+
+			err := CreateLinksWithOptions(opts)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("CreateLinksWithOptions() expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("CreateLinksWithOptions() error = %v", err)
+			}
+
+			if tt.checkResult != nil {
+				tt.checkResult(t, tmpDir, configRepo)
+			}
+		})
+	}
+}

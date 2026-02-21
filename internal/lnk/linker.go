@@ -100,6 +100,144 @@ func CreateLinks(config *Config, dryRun bool) error {
 	return executePlannedLinks(plannedLinks)
 }
 
+// collectPlannedLinksWithPatterns walks a source directory and collects all files that should be linked
+// Uses ignore patterns directly instead of a Config object
+func collectPlannedLinksWithPatterns(sourcePath, targetPath string, ignorePatterns []string) ([]PlannedLink, error) {
+	var links []PlannedLink
+
+	err := filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip directories - we only link files
+		if info.IsDir() {
+			return nil
+		}
+
+		// Get relative path from source directory
+		relPath, err := filepath.Rel(sourcePath, path)
+		if err != nil {
+			return fmt.Errorf("failed to calculate relative path: %w", err)
+		}
+
+		// Check if this file should be ignored
+		if MatchesPattern(relPath, ignorePatterns) {
+			return nil
+		}
+
+		// Build target path
+		target := filepath.Join(targetPath, relPath)
+
+		links = append(links, PlannedLink{
+			Source: path,
+			Target: target,
+		})
+
+		return nil
+	})
+
+	return links, err
+}
+
+// CreateLinksWithOptions creates symlinks using package-based options
+func CreateLinksWithOptions(opts LinkOptions) error {
+	PrintCommandHeader("Creating Symlinks")
+
+	// Validate inputs
+	if len(opts.Packages) == 0 {
+		return NewValidationErrorWithHint("packages", "", "no packages specified",
+			"Specify at least one package to link. Example: lnk home")
+	}
+
+	// Expand source and target directories
+	sourceDir, err := ExpandPath(opts.SourceDir)
+	if err != nil {
+		return fmt.Errorf("expanding source directory %s: %w", opts.SourceDir, err)
+	}
+
+	targetDir, err := ExpandPath(opts.TargetDir)
+	if err != nil {
+		return fmt.Errorf("expanding target directory %s: %w", opts.TargetDir, err)
+	}
+
+	// Check if source directory exists
+	if info, err := os.Stat(sourceDir); err != nil {
+		if os.IsNotExist(err) {
+			return NewValidationErrorWithHint("source directory", sourceDir, "directory does not exist",
+				"Ensure the source directory exists or use -s/--source to specify a different location")
+		}
+		return fmt.Errorf("failed to check source directory: %w", err)
+	} else if !info.IsDir() {
+		return NewValidationErrorWithHint("source directory", sourceDir, "path is not a directory",
+			"The source path must be a directory containing packages to link")
+	}
+
+	// Phase 1: Collect all files to link from all packages
+	PrintVerbose("Starting phase 1: collecting files to link")
+	var plannedLinks []PlannedLink
+
+	for _, pkg := range opts.Packages {
+		PrintVerbose("Processing package: %s", pkg)
+
+		// For package ".", use the source directory directly
+		var pkgSourcePath string
+		if pkg == "." {
+			pkgSourcePath = sourceDir
+		} else {
+			pkgSourcePath = filepath.Join(sourceDir, pkg)
+		}
+
+		// Check if package directory exists
+		if info, err := os.Stat(pkgSourcePath); err != nil {
+			if os.IsNotExist(err) {
+				PrintSkip("Skipping package %s: directory does not exist", pkg)
+				continue
+			}
+			return fmt.Errorf("failed to check package %s: %w", pkg, err)
+		} else if !info.IsDir() {
+			return fmt.Errorf("package %s is not a directory: %s", pkg, pkgSourcePath)
+		}
+
+		PrintVerbose("Package source path: %s", pkgSourcePath)
+		PrintVerbose("Target directory: %s", targetDir)
+
+		// Collect files from this package
+		links, err := collectPlannedLinksWithPatterns(pkgSourcePath, targetDir, opts.IgnorePatterns)
+		if err != nil {
+			return fmt.Errorf("collecting files for package %s: %w", pkg, err)
+		}
+		plannedLinks = append(plannedLinks, links...)
+	}
+
+	if len(plannedLinks) == 0 {
+		PrintEmptyResult("files to link")
+		return nil
+	}
+
+	// Phase 2: Validate all targets
+	for _, link := range plannedLinks {
+		if err := ValidateSymlinkCreation(link.Source, link.Target); err != nil {
+			return fmt.Errorf("validation failed for %s -> %s: %w", link.Target, link.Source, err)
+		}
+	}
+
+	// Phase 3: Execute (or show dry-run)
+	if opts.DryRun {
+		fmt.Println()
+		PrintDryRun("Would create %d symlink(s):", len(plannedLinks))
+		for _, link := range plannedLinks {
+			PrintDryRun("Would link: %s -> %s", ContractPath(link.Target), ContractPath(link.Source))
+		}
+		fmt.Println()
+		PrintDryRunSummary()
+		return nil
+	}
+
+	// Execute the plan
+	return executePlannedLinks(plannedLinks)
+}
+
 // RemoveLinks removes all symlinks pointing to the config repository
 func RemoveLinks(config *Config, dryRun bool, force bool) error {
 	return removeLinks(config, dryRun, force)
