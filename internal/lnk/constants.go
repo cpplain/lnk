@@ -13,8 +13,12 @@ const (
 	GitOperationTimeout = 10
 )
 
-// Configuration file name
-const ConfigFileName = ".lnk.json"
+// Configuration file names
+const (
+	ConfigFileName       = ".lnk.json"      // Legacy JSON config format
+	FlagConfigFileName   = ".lnkconfig"     // New flag-based config format
+	IgnoreFileName       = ".lnkignore"     // Gitignore-style ignore file
+)
 
 // Terminal output formatting
 const (

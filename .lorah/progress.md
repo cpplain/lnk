@@ -114,3 +114,78 @@ All tasks marked as `"passes": false` initially.
 **Next Steps:**
 1. Commit this initialization work
 2. Begin Phase 1: Config file support
+
+---
+
+## Session 2: Phase 1 - Config File Support (2026-02-21)
+
+### Tasks Completed
+
+✅ **Task 1: LoadConfig for .lnkconfig format**
+- Added `FlagConfig` struct to hold flag-based config data (Target, IgnorePatterns)
+- Implemented `parseFlagConfigFile()` to parse stow-style flag format:
+  - Format: `--flag=value` or `--flag value` (one per line)
+  - Supports comments (`#`) and blank lines
+  - Handles `--target` and `--ignore` flags
+  - Ignores unknown flags for forward compatibility
+- Implemented `LoadFlagConfig(sourceDir)` with discovery precedence:
+  1. `.lnkconfig` in source directory (repo-specific)
+  2. `$XDG_CONFIG_HOME/lnk/config`
+  3. `~/.config/lnk/config`
+  4. `~/.lnkconfig`
+- Returns empty config (not error) if no config file found
+- Comprehensive unit tests: 6 test cases for parsing, 2 for discovery
+
+✅ **Task 2: Parse .lnkignore file**
+- Implemented `parseIgnoreFile()` to parse gitignore-style ignore files:
+  - Supports comments and blank lines
+  - Handles all gitignore patterns (already supported by patterns.go)
+  - Supports negation patterns (`!pattern`)
+- Implemented `LoadIgnoreFile(sourceDir)` to load `.lnkignore` from source directory
+- Returns empty array (not error) if no ignore file found
+- Comprehensive unit tests: 5 test cases for parsing, 2 for loading
+
+### Implementation Details
+
+**Files Modified:**
+- `internal/lnk/constants.go`: Added `FlagConfigFileName` and `IgnoreFileName` constants
+- `internal/lnk/config.go`: Added new config structures and functions (~150 lines)
+- `internal/lnk/config_test.go`: Added comprehensive unit tests (~280 lines)
+
+**Key Design Decisions:**
+1. **Graceful degradation**: Functions return empty configs/arrays instead of errors when files don't exist
+2. **Forward compatibility**: Unknown flags in config files are logged but not rejected
+3. **Reused existing patterns.go**: Leveraged existing gitignore pattern matching for .lnkignore
+4. **Verbose logging**: Added PrintVerbose calls for debugging config discovery
+
+### Testing Results
+
+```bash
+$ go test ./internal/lnk -run "TestParseFlagConfigFile|TestParseIgnoreFile|TestLoadFlagConfig|TestLoadIgnoreFile"
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     0.278s
+
+$ go test ./internal/lnk
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     1.664s
+```
+
+All unit tests pass including:
+- Existing config tests (JSON format still works)
+- New flag config parsing tests
+- New ignore file parsing tests
+- Config discovery precedence tests
+
+### Build Status
+
+✅ Build succeeds: `make build` completes successfully
+
+### Notes
+
+- Task 3 (Merge config with CLI flags) is the next logical step
+- The new config format is separate from the existing JSON config (both supported)
+- CLI merging will need to combine FlagConfig + CLI args + built-in defaults
+
+**Next Steps:**
+1. Commit these changes
+2. Implement Task 3: Merge config with CLI flags

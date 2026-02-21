@@ -2,12 +2,12 @@
   {
     "name": "LoadConfig for .lnkconfig format",
     "description": "Implement config file discovery and parsing for new stow-style .lnkconfig format (CLI flags, one per line) with precedence: .lnkconfig in source dir, XDG config, ~/.lnkconfig",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Parse .lnkignore file",
     "description": "Add function to parse .lnkignore file in source directory using gitignore syntax",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Merge config with CLI flags",
