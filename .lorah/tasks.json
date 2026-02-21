@@ -27,7 +27,7 @@
   {
     "name": "RemoveLinksWithOptions function",
     "description": "Implement RemoveLinksWithOptions(opts LinkOptions) error that handles package-based removal",
-    "passes": false
+    "passes": true
   },
   {
     "name": "StatusWithOptions function",

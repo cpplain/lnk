@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // PlannedLink represents a source file and its target symlink location
@@ -312,6 +313,175 @@ func removeLinks(config *Config, dryRun bool, skipConfirm bool) error {
 	if removed > 0 {
 		PrintSummary("Removed %d symlink(s) successfully", removed)
 		PrintNextStep("create", "recreate links or 'lnk status' to see remaining links")
+	}
+	if failed > 0 {
+		PrintWarning("Failed to remove %d symlink(s)", failed)
+	}
+
+	return nil
+}
+
+// findManagedLinksForPackages finds all symlinks in targetDir that point to the specified packages
+func findManagedLinksForPackages(targetDir, sourceDir string, packages []string) ([]ManagedLink, error) {
+	var links []ManagedLink
+
+	// Build list of absolute package source paths
+	var packagePaths []string
+	for _, pkg := range packages {
+		var pkgPath string
+		if pkg == "." {
+			pkgPath = sourceDir
+		} else {
+			pkgPath = filepath.Join(sourceDir, pkg)
+		}
+		packagePaths = append(packagePaths, pkgPath)
+	}
+
+	err := filepath.Walk(targetDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			PrintVerbose("Error walking path %s: %v", path, err)
+			return nil
+		}
+
+		// Skip directories
+		if info.IsDir() {
+			name := filepath.Base(path)
+			// Skip specific system directories
+			if name == LibraryDir || name == TrashDir {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		// Check if it's a symlink
+		if info.Mode()&os.ModeSymlink == 0 {
+			return nil
+		}
+
+		// Read symlink target
+		target, err := os.Readlink(path)
+		if err != nil {
+			PrintVerbose("Failed to read symlink %s: %v", path, err)
+			return nil
+		}
+
+		// Get absolute target path
+		absTarget := target
+		if !filepath.IsAbs(target) {
+			absTarget = filepath.Join(filepath.Dir(path), target)
+		}
+		cleanTarget, err := filepath.Abs(absTarget)
+		if err != nil {
+			PrintVerbose("Failed to get absolute path for target %s: %v", target, err)
+			return nil
+		}
+
+		// Check if target points to any of our packages
+		var managedByPackage string
+		for i, pkgPath := range packagePaths {
+			relPath, err := filepath.Rel(pkgPath, cleanTarget)
+			if err == nil && !strings.HasPrefix(relPath, "..") && relPath != "." {
+				managedByPackage = packages[i]
+				break
+			}
+		}
+
+		if managedByPackage == "" {
+			return nil
+		}
+
+		link := ManagedLink{
+			Path:   path,
+			Target: target,
+			Source: managedByPackage,
+		}
+
+		// Check if link is broken
+		if _, err := os.Stat(cleanTarget); err != nil {
+			link.IsBroken = true
+		}
+
+		links = append(links, link)
+		return nil
+	})
+
+	return links, err
+}
+
+// RemoveLinksWithOptions removes symlinks using package-based options
+func RemoveLinksWithOptions(opts LinkOptions) error {
+	PrintCommandHeader("Removing Symlinks")
+
+	// Validate inputs
+	if len(opts.Packages) == 0 {
+		return NewValidationErrorWithHint("packages", "", "no packages specified",
+			"Specify at least one package to remove links for. Example: lnk -R home")
+	}
+
+	// Expand source and target directories
+	sourceDir, err := ExpandPath(opts.SourceDir)
+	if err != nil {
+		return fmt.Errorf("expanding source directory %s: %w", opts.SourceDir, err)
+	}
+
+	targetDir, err := ExpandPath(opts.TargetDir)
+	if err != nil {
+		return fmt.Errorf("expanding target directory %s: %w", opts.TargetDir, err)
+	}
+
+	// Check if source directory exists
+	if info, err := os.Stat(sourceDir); err != nil {
+		if os.IsNotExist(err) {
+			return NewValidationErrorWithHint("source directory", sourceDir, "directory does not exist",
+				"Ensure the source directory exists or use -s/--source to specify a different location")
+		}
+		return fmt.Errorf("failed to check source directory: %w", err)
+	} else if !info.IsDir() {
+		return NewValidationErrorWithHint("source directory", sourceDir, "path is not a directory",
+			"The source path must be a directory containing packages")
+	}
+
+	// Find all managed links for the specified packages
+	PrintVerbose("Searching for managed links in %s", targetDir)
+	links, err := findManagedLinksForPackages(targetDir, sourceDir, opts.Packages)
+	if err != nil {
+		return fmt.Errorf("failed to find managed links: %w", err)
+	}
+
+	if len(links) == 0 {
+		PrintEmptyResult("symlinks to remove")
+		return nil
+	}
+
+	// Show what will be removed in dry-run mode
+	if opts.DryRun {
+		fmt.Println()
+		PrintDryRun("Would remove %d symlink(s):", len(links))
+		for _, link := range links {
+			PrintDryRun("Would remove: %s", ContractPath(link.Path))
+		}
+		fmt.Println()
+		PrintDryRunSummary()
+		return nil
+	}
+
+	// Track results for summary
+	var removed, failed int
+
+	// Remove links
+	for _, link := range links {
+		if err := os.Remove(link.Path); err != nil {
+			PrintError("Failed to remove %s: %v", ContractPath(link.Path), err)
+			failed++
+			continue
+		}
+		PrintSuccess("Removed: %s", ContractPath(link.Path))
+		removed++
+	}
+
+	// Print summary
+	if removed > 0 {
+		PrintSummary("Removed %d symlink(s) successfully", removed)
 	}
 	if failed > 0 {
 		PrintWarning("Failed to remove %d symlink(s)", failed)

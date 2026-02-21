@@ -1163,3 +1163,241 @@ func TestCreateLinksWithOptions(t *testing.T) {
 		})
 	}
 }
+
+// TestRemoveLinksWithOptions tests the RemoveLinksWithOptions function
+func TestRemoveLinksWithOptions(t *testing.T) {
+	tests := []struct {
+		name        string
+		setup       func(t *testing.T, tmpDir string) (string, LinkOptions)
+		wantErr     bool
+		checkResult func(t *testing.T, tmpDir, configRepo string)
+	}{
+		{
+			name: "remove links from single package",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				homeDir := filepath.Join(tmpDir, "home")
+
+				// Create source files
+				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc content")
+				createTestFile(t, filepath.Join(configRepo, "home", ".vimrc"), "# vimrc content")
+
+				// Create symlinks
+				createTestSymlink(t, filepath.Join(configRepo, "home", ".bashrc"), filepath.Join(homeDir, ".bashrc"))
+				createTestSymlink(t, filepath.Join(configRepo, "home", ".vimrc"), filepath.Join(homeDir, ".vimrc"))
+
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      homeDir,
+					Packages:       []string{"home"},
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			checkResult: func(t *testing.T, tmpDir, configRepo string) {
+				homeDir := filepath.Join(tmpDir, "home")
+				// Links should be removed
+				assertNotExists(t, filepath.Join(homeDir, ".bashrc"))
+				assertNotExists(t, filepath.Join(homeDir, ".vimrc"))
+			},
+		},
+		{
+			name: "remove links from multiple packages",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				homeDir := filepath.Join(tmpDir, "home")
+
+				// Create source files
+				createTestFile(t, filepath.Join(configRepo, "package1", ".bashrc"), "# bashrc")
+				createTestFile(t, filepath.Join(configRepo, "package2", ".vimrc"), "# vimrc")
+
+				// Create symlinks
+				createTestSymlink(t, filepath.Join(configRepo, "package1", ".bashrc"), filepath.Join(homeDir, ".bashrc"))
+				createTestSymlink(t, filepath.Join(configRepo, "package2", ".vimrc"), filepath.Join(homeDir, ".vimrc"))
+
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      homeDir,
+					Packages:       []string{"package1", "package2"},
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			checkResult: func(t *testing.T, tmpDir, configRepo string) {
+				homeDir := filepath.Join(tmpDir, "home")
+				// Both links should be removed
+				assertNotExists(t, filepath.Join(homeDir, ".bashrc"))
+				assertNotExists(t, filepath.Join(homeDir, ".vimrc"))
+			},
+		},
+		{
+			name: "dry run mode",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				homeDir := filepath.Join(tmpDir, "home")
+
+				// Create source file
+				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc content")
+
+				// Create symlink
+				createTestSymlink(t, filepath.Join(configRepo, "home", ".bashrc"), filepath.Join(homeDir, ".bashrc"))
+
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      homeDir,
+					Packages:       []string{"home"},
+					IgnorePatterns: []string{},
+					DryRun:         true,
+				}
+			},
+			checkResult: func(t *testing.T, tmpDir, configRepo string) {
+				homeDir := filepath.Join(tmpDir, "home")
+				// Link should still exist (dry-run)
+				assertSymlink(t, filepath.Join(homeDir, ".bashrc"), filepath.Join(configRepo, "home", ".bashrc"))
+			},
+		},
+		{
+			name: "no matching links",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				homeDir := filepath.Join(tmpDir, "home")
+
+				// Create source file but no symlinks
+				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc content")
+
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      homeDir,
+					Packages:       []string{"home"},
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			checkResult: func(t *testing.T, tmpDir, configRepo string) {
+				// Nothing to verify - just shouldn't error
+			},
+		},
+		{
+			name: "package with dot (current directory)",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				homeDir := filepath.Join(tmpDir, "home")
+
+				// Create source file directly in repo root
+				createTestFile(t, filepath.Join(configRepo, ".bashrc"), "# bashrc content")
+
+				// Create symlink
+				createTestSymlink(t, filepath.Join(configRepo, ".bashrc"), filepath.Join(homeDir, ".bashrc"))
+
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      homeDir,
+					Packages:       []string{"."},
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			checkResult: func(t *testing.T, tmpDir, configRepo string) {
+				homeDir := filepath.Join(tmpDir, "home")
+				// Link should be removed
+				assertNotExists(t, filepath.Join(homeDir, ".bashrc"))
+			},
+		},
+		{
+			name: "partial removal - only specified package",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				homeDir := filepath.Join(tmpDir, "home")
+
+				// Create source files in different packages
+				createTestFile(t, filepath.Join(configRepo, "package1", ".bashrc"), "# bashrc")
+				createTestFile(t, filepath.Join(configRepo, "package2", ".vimrc"), "# vimrc")
+
+				// Create symlinks for both
+				createTestSymlink(t, filepath.Join(configRepo, "package1", ".bashrc"), filepath.Join(homeDir, ".bashrc"))
+				createTestSymlink(t, filepath.Join(configRepo, "package2", ".vimrc"), filepath.Join(homeDir, ".vimrc"))
+
+				// Only remove package1
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      homeDir,
+					Packages:       []string{"package1"},
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			checkResult: func(t *testing.T, tmpDir, configRepo string) {
+				homeDir := filepath.Join(tmpDir, "home")
+				// package1 link should be removed
+				assertNotExists(t, filepath.Join(homeDir, ".bashrc"))
+				// package2 link should still exist
+				assertSymlink(t, filepath.Join(homeDir, ".vimrc"), filepath.Join(configRepo, "package2", ".vimrc"))
+			},
+		},
+		{
+			name: "error: no packages specified",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				return "", LinkOptions{
+					SourceDir:      tmpDir,
+					TargetDir:      filepath.Join(tmpDir, "home"),
+					Packages:       []string{},
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			wantErr: true,
+		},
+		{
+			name: "error: source directory does not exist",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				return "", LinkOptions{
+					SourceDir:      filepath.Join(tmpDir, "nonexistent"),
+					TargetDir:      filepath.Join(tmpDir, "home"),
+					Packages:       []string{"home"},
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+
+			configRepo, opts := tt.setup(t, tmpDir)
+
+			err := RemoveLinksWithOptions(opts)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("RemoveLinksWithOptions() expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("RemoveLinksWithOptions() error = %v", err)
+			}
+
+			if tt.checkResult != nil {
+				tt.checkResult(t, tmpDir, configRepo)
+			}
+		})
+	}
+}
+
+// createTestSymlink creates a symlink for testing
+func createTestSymlink(t *testing.T, source, target string) {
+	t.Helper()
+
+	// Ensure target directory exists
+	dir := filepath.Dir(target)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("Failed to create directory %s: %v", dir, err)
+	}
+
+	if err := os.Symlink(source, target); err != nil {
+		t.Fatalf("Failed to create symlink %s -> %s: %v", target, source, err)
+	}
+}

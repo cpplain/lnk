@@ -418,3 +418,90 @@ All unit tests pass including:
 **Next Steps:**
 1. Commit this change
 2. Implement Task 6: RemoveLinksWithOptions function
+
+---
+
+## Session 6: Phase 2 - RemoveLinksWithOptions Function (2026-02-21)
+
+### Tasks Completed
+
+✅ **Task 6: RemoveLinksWithOptions function**
+- Implemented `findManagedLinksForPackages()` helper function:
+  - Walks target directory to find symlinks
+  - Filters symlinks to only those pointing to specified packages
+  - Handles package "." for flat repository structure
+  - Handles nested package paths (e.g., "private/home")
+  - Checks if links are broken (for future prune functionality)
+  - Returns []ManagedLink with path, target, source, and broken status
+- Implemented `RemoveLinksWithOptions(opts LinkOptions) error`:
+  - Validates inputs (packages required, source dir exists)
+  - Expands source and target paths (handles ~/)
+  - Supports multiple packages in single operation
+  - Finds all managed links for specified packages
+  - Shows dry-run preview or removes links
+  - Displays summary of removed/failed links
+  - No confirmation prompt (unlike old RemoveLinks) - follows dry-run pattern
+- Added `createTestSymlink()` helper to test utilities
+- Added comprehensive unit tests (8 test cases):
+  - Remove links from single package
+  - Remove links from multiple packages
+  - Dry-run mode preserves links
+  - No matching links (graceful handling)
+  - Package with "." (current directory)
+  - Partial removal (only specified packages)
+  - Error: no packages specified
+  - Error: source directory does not exist
+
+### Implementation Details
+
+**Files Modified:**
+- `internal/lnk/linker.go`:
+  - Added "strings" to imports
+  - Added `findManagedLinksForPackages()` (~90 lines)
+  - Added `RemoveLinksWithOptions()` (~80 lines)
+- `internal/lnk/linker_test.go`:
+  - Added `TestRemoveLinksWithOptions()` (~220 lines)
+  - Added `createTestSymlink()` helper (~15 lines)
+
+**Key Design Decisions:**
+1. **Helper function**: Created findManagedLinksForPackages instead of using old FindManagedLinks to work with package paths
+2. **Package filtering**: Only removes links that point to specified packages (allows selective removal)
+3. **No confirmation prompt**: Unlike old RemoveLinks, this uses only DryRun flag (matches CreateLinksWithOptions pattern)
+4. **Graceful handling**: Empty link list doesn't error, just shows "No symlinks to remove"
+5. **Verbose logging**: Added logging at each phase for debugging
+6. **Reused ManagedLink struct**: Leveraged existing structure from link_utils.go
+
+### Testing Results
+
+```bash
+$ GOCACHE=$TMPDIR/go-cache go test ./internal/lnk -run "TestRemoveLinksWithOptions"
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     0.571s
+
+$ GOCACHE=$TMPDIR/go-cache go test ./internal/lnk
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     1.760s
+```
+
+All unit tests pass including:
+- Existing RemoveLinks tests (old config-based API)
+- New RemoveLinksWithOptions tests (package-based API)
+- All other internal/lnk tests
+
+### Build Status
+
+✅ Syntax valid: `gofmt -e` succeeds
+✅ All unit tests pass
+✅ Build succeeds: `go build` completes
+
+### Notes
+
+- findManagedLinksForPackages is specific to package-based removal (different from Task 10's FindManagedLinksForSources)
+- The new RemoveLinksWithOptions and old RemoveLinks coexist - both work
+- Next logical tasks are StatusWithOptions (Task 7) and PruneWithOptions (Task 8)
+- Package-based API provides more granular control than config mappings
+
+**Next Steps:**
+1. Commit this change
+2. Implement Task 7: StatusWithOptions function
+
