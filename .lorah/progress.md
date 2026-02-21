@@ -505,3 +505,81 @@ All unit tests pass including:
 1. Commit this change
 2. Implement Task 7: StatusWithOptions function
 
+
+---
+
+## Session 7: Phase 2 - StatusWithOptions Function (2026-02-21)
+
+### Tasks Completed
+
+✅ **Task 7: StatusWithOptions function**
+- Implemented `StatusWithOptions(opts LinkOptions) error`:
+  - Validates inputs (packages required, source dir exists)
+  - Expands source and target paths (handles ~/)
+  - Supports multiple packages in single operation
+  - Reuses `findManagedLinksForPackages()` helper from RemoveLinksWithOptions
+  - Shows status for only the specified packages
+  - Separates active and broken links in output
+  - Supports JSON output format (`--output json`)
+  - Displays summary with total/active/broken counts
+  - Gracefully handles empty link list
+- Added comprehensive unit tests (8 test cases):
+  - Single package with active links
+  - Multiple packages
+  - No matching links (graceful handling)
+  - Package with "." (current directory)
+  - Broken links
+  - Partial status (only specified packages shown)
+  - Error: no packages specified
+  - Error: source directory does not exist
+
+### Implementation Details
+
+**Files Modified:**
+- `internal/lnk/status.go`:
+  - Added `StatusWithOptions()` function (~125 lines)
+  - Reuses existing `outputStatusJSON()` for JSON format
+  - Reuses existing display logic for active/broken links
+- `internal/lnk/status_test.go`:
+  - Added `TestStatusWithOptions()` (~180 lines)
+
+**Key Design Decisions:**
+1. **Reused helper function**: Used `findManagedLinksForPackages()` from linker.go (created for RemoveLinksWithOptions)
+2. **Package filtering**: Only shows links for specified packages (allows partial status)
+3. **Same output format**: Uses identical display logic as original `Status()` function
+4. **JSON support**: Works with existing `outputStatusJSON()` for scripting
+5. **Graceful handling**: Empty link list doesn't error, shows "No active links found"
+6. **Verbose logging**: Added logging for debugging source/target/packages
+
+### Testing Results
+
+```bash
+$ GOCACHE=$TMPDIR/go-cache go test ./internal/lnk -run "TestStatusWithOptions"
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     0.489s
+
+$ GOCACHE=$TMPDIR/go-cache go test ./internal/lnk
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     1.749s
+```
+
+All unit tests pass including:
+- Existing Status tests (old config-based API)
+- New StatusWithOptions tests (package-based API)
+- All other internal/lnk tests
+
+### Build Status
+
+✅ All unit tests pass (8/8 test cases)
+✅ Syntax valid
+
+### Notes
+
+- StatusWithOptions shares display logic with original Status() function for consistency
+- Package filtering works correctly - only shows links for specified packages
+- Broken links are properly detected and displayed
+- Next logical task is Task 8: PruneWithOptions function
+
+**Next Steps:**
+1. Commit this change
+2. Implement Task 8: PruneWithOptions function

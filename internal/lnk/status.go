@@ -119,6 +119,127 @@ func Status(config *Config) error {
 	return nil
 }
 
+// StatusWithOptions displays the status of managed symlinks for specific packages
+func StatusWithOptions(opts LinkOptions) error {
+	// Validate inputs
+	if len(opts.Packages) == 0 {
+		return NewValidationErrorWithHint("packages", "", "no packages specified",
+			"Specify at least one package. Example: lnk status home")
+	}
+
+	// Expand source path
+	sourceDir, err := ExpandPath(opts.SourceDir)
+	if err != nil {
+		return fmt.Errorf("expanding source directory: %w", err)
+	}
+
+	// Check if source directory exists
+	if info, err := os.Stat(sourceDir); err != nil {
+		if os.IsNotExist(err) {
+			return NewPathError("source directory", sourceDir, err)
+		}
+		return fmt.Errorf("failed to check source directory: %w", err)
+	} else if !info.IsDir() {
+		return NewValidationErrorWithHint("source", sourceDir, "is not a directory",
+			"Source must be a directory containing package subdirectories")
+	}
+
+	// Expand target path
+	targetDir, err := ExpandPath(opts.TargetDir)
+	if err != nil {
+		return fmt.Errorf("expanding target directory: %w", err)
+	}
+
+	// Only print header in human format
+	if !IsJSONFormat() {
+		PrintCommandHeader("Symlink Status")
+		PrintVerbose("Source directory: %s", sourceDir)
+		PrintVerbose("Target directory: %s", targetDir)
+		PrintVerbose("Packages: %v", opts.Packages)
+	}
+
+	// Find all symlinks for the specified packages
+	managedLinks, err := findManagedLinksForPackages(targetDir, sourceDir, opts.Packages)
+	if err != nil {
+		return fmt.Errorf("failed to find managed links: %w", err)
+	}
+
+	// Convert to LinkInfo
+	var links []LinkInfo
+	for _, ml := range managedLinks {
+		link := LinkInfo{
+			Link:     ml.Path,
+			Target:   ml.Target,
+			IsBroken: ml.IsBroken,
+			Source:   ml.Source,
+		}
+		links = append(links, link)
+	}
+
+	// Sort by link path
+	sort.Slice(links, func(i, j int) bool {
+		return links[i].Link < links[j].Link
+	})
+
+	// If JSON format is requested, output JSON and return
+	if IsJSONFormat() {
+		return outputStatusJSON(links)
+	}
+
+	// Display links
+	if len(links) > 0 {
+		// Separate active and broken links
+		var activeLinks, brokenLinks []LinkInfo
+		for _, link := range links {
+			if link.IsBroken {
+				brokenLinks = append(brokenLinks, link)
+			} else {
+				activeLinks = append(activeLinks, link)
+			}
+		}
+
+		// Display active links
+		if len(activeLinks) > 0 {
+			for _, link := range activeLinks {
+				if ShouldSimplifyOutput() {
+					// For piped output, use simple format
+					fmt.Printf("active %s\n", ContractPath(link.Link))
+				} else {
+					PrintSuccess("Active: %s", ContractPath(link.Link))
+				}
+			}
+		}
+
+		// Display broken links
+		if len(brokenLinks) > 0 {
+			if len(activeLinks) > 0 && !ShouldSimplifyOutput() {
+				fmt.Println()
+			}
+			for _, link := range brokenLinks {
+				if ShouldSimplifyOutput() {
+					// For piped output, use simple format
+					fmt.Printf("broken %s\n", ContractPath(link.Link))
+				} else {
+					PrintError("Broken: %s", ContractPath(link.Link))
+				}
+			}
+		}
+
+		// Summary
+		if !ShouldSimplifyOutput() {
+			fmt.Println()
+			PrintInfo("Total: %s (%s active, %s broken)",
+				Bold(fmt.Sprintf("%d links", len(links))),
+				Green(fmt.Sprintf("%d", len(activeLinks))),
+				Red(fmt.Sprintf("%d", len(brokenLinks))))
+		}
+	} else {
+		PrintEmptyResult("active links")
+	}
+
+	return nil
+}
+
 // outputStatusJSON outputs the status in JSON format
 func outputStatusJSON(links []LinkInfo) error {
 	// Ensure links is not nil for proper JSON output

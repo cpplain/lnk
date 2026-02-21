@@ -32,7 +32,7 @@
   {
     "name": "StatusWithOptions function",
     "description": "Implement StatusWithOptions(opts LinkOptions) error that shows status for specific packages",
-    "passes": false
+    "passes": true
   },
   {
     "name": "PruneWithOptions function",
