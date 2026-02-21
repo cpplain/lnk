@@ -7,6 +7,15 @@ import (
 	"strings"
 )
 
+// AdoptOptions holds options for adopting files into a package
+type AdoptOptions struct {
+	SourceDir string   // base directory for dotfiles (e.g., ~/git/dotfiles)
+	TargetDir string   // where files currently are (default: ~)
+	Package   string   // package to adopt into (e.g., "home" or ".")
+	Paths     []string // files to adopt (e.g., ["~/.bashrc", "~/.vimrc"])
+	DryRun    bool     // preview mode
+}
+
 // validateAdoptSource validates the source path and checks if it's already adopted
 func validateAdoptSource(absSource, absSourceDir string) error {
 	// Check if source exists
@@ -290,6 +299,154 @@ func copyAndVerify(absSource, destPath string) error {
 			return fmt.Errorf("failed to complete adoption: file exists in both locations. Failed to remove original (%v) and failed to clean up copy (%v). Manual intervention required", err, cleanupErr)
 		}
 		return fmt.Errorf("failed to remove original after copy: %w", err)
+	}
+
+	return nil
+}
+
+// AdoptWithOptions adopts files into a package using the new options-based interface
+func AdoptWithOptions(opts AdoptOptions) error {
+	PrintCommandHeader("Adopting Files")
+
+	// Validate inputs
+	if opts.Package == "" {
+		return NewValidationErrorWithHint("package", "", "package argument is required",
+			"Specify which package to adopt into, e.g.: lnk -A home ~/.bashrc")
+	}
+	if len(opts.Paths) == 0 {
+		return NewValidationErrorWithHint("paths", "", "at least one file path is required",
+			"Specify which files to adopt, e.g.: lnk -A home ~/.bashrc ~/.vimrc")
+	}
+
+	// Expand paths
+	absSourceDir, err := ExpandPath(opts.SourceDir)
+	if err != nil {
+		return fmt.Errorf("failed to expand source directory: %w", err)
+	}
+	PrintVerbose("Source directory: %s", absSourceDir)
+
+	absTargetDir, err := ExpandPath(opts.TargetDir)
+	if err != nil {
+		return fmt.Errorf("failed to expand target directory: %w", err)
+	}
+	PrintVerbose("Target directory: %s", absTargetDir)
+
+	// Validate source directory exists
+	if _, err := os.Stat(absSourceDir); os.IsNotExist(err) {
+		return NewValidationErrorWithHint("source directory", absSourceDir, "does not exist",
+			fmt.Sprintf("Create it first: mkdir -p %s", absSourceDir))
+	}
+
+	// Determine package directory
+	var packageDir string
+	if opts.Package == "." {
+		// Flat repository: adopt into source root
+		packageDir = absSourceDir
+	} else {
+		// Nested repository: adopt into package subdirectory
+		packageDir = filepath.Join(absSourceDir, opts.Package)
+	}
+	PrintVerbose("Package directory: %s", packageDir)
+
+	// Create package directory if it doesn't exist (only if not dry-run)
+	if !opts.DryRun {
+		if err := os.MkdirAll(packageDir, 0755); err != nil {
+			return fmt.Errorf("failed to create package directory %s: %w", packageDir, err)
+		}
+	}
+
+	// Process each file path
+	adopted := 0
+	for _, path := range opts.Paths {
+		// Expand path
+		absPath, err := ExpandPath(path)
+		if err != nil {
+			PrintErrorWithHint(WithHint(
+				fmt.Errorf("failed to expand path %s: %w", path, err),
+				"Check that the path is valid"))
+			continue
+		}
+
+		// Validate the file exists and isn't already adopted
+		if err := validateAdoptSource(absPath, packageDir); err != nil {
+			PrintErrorWithHint(err)
+			continue
+		}
+
+		// Determine relative path from target directory
+		relPath, err := filepath.Rel(absTargetDir, absPath)
+		if err != nil || strings.HasPrefix(relPath, "..") {
+			PrintErrorWithHint(WithHint(
+				fmt.Errorf("path %s must be within target directory %s", path, absTargetDir),
+				"Only files within the target directory can be adopted"))
+			continue
+		}
+
+		// Destination path in package
+		destPath := filepath.Join(packageDir, relPath)
+
+		// Check if source is a directory
+		sourceInfo, err := os.Stat(absPath)
+		if err != nil {
+			PrintErrorWithHint(WithHint(
+				fmt.Errorf("failed to stat %s: %w", path, err),
+				"Check that the file exists"))
+			continue
+		}
+
+		// Check if destination already exists (for files only)
+		if !sourceInfo.IsDir() {
+			if _, err := os.Stat(destPath); err == nil {
+				PrintErrorWithHint(WithHint(
+					fmt.Errorf("destination %s already exists in package", ContractPath(destPath)),
+					"Remove the existing file first or choose a different file"))
+				continue
+			}
+		}
+
+		// Validate symlink creation would work
+		if err := ValidateSymlinkCreation(absPath, destPath); err != nil {
+			PrintErrorWithHint(WithHint(
+				fmt.Errorf("failed to validate adoption: %w", err),
+				"Check file permissions and paths"))
+			continue
+		}
+
+		// Dry-run or perform adoption
+		if opts.DryRun {
+			PrintDryRun("Would adopt: %s", ContractPath(absPath))
+			if sourceInfo.IsDir() {
+				PrintDetail("Move directory contents to: %s", ContractPath(destPath))
+				PrintDetail("Create individual symlinks for each file")
+			} else {
+				PrintDetail("Move to: %s", ContractPath(destPath))
+				PrintDetail("Create symlink: %s -> %s", ContractPath(absPath), ContractPath(destPath))
+			}
+		} else {
+			// Perform the adoption
+			if err := performAdoption(absPath, destPath); err != nil {
+				PrintErrorWithHint(WithHint(err, "Failed to adopt file"))
+				continue
+			}
+
+			if !sourceInfo.IsDir() {
+				PrintSuccess("Adopted: %s", ContractPath(absPath))
+			}
+		}
+
+		adopted++
+	}
+
+	// Print summary
+	if adopted > 0 {
+		if opts.DryRun {
+			PrintSummary("Would adopt %d file(s)/directory(ies)", adopted)
+		} else {
+			PrintSummary("Successfully adopted %d file(s)/directory(ies)", adopted)
+			PrintNextStep("status", "view adopted files with status command")
+		}
+	} else {
+		PrintInfo("No files were adopted (see errors above)")
 	}
 
 	return nil

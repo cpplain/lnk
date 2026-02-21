@@ -82,7 +82,7 @@
   {
     "name": "Update adopt for new interface",
     "description": "Modify adopt.go to work with --adopt flag + packages instead of --path and --source-dir",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Update orphan for new interface",

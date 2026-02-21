@@ -313,11 +313,25 @@ func main() {
 		}
 
 	case actionAdopt:
-		// TODO: Implement adopt with new interface (Phase 4, Task 17)
-		lnk.PrintErrorWithHint(lnk.WithHint(
-			fmt.Errorf("--adopt is not yet implemented in the new interface"),
-			"This feature will be available in Phase 4"))
-		os.Exit(lnk.ExitError)
+		// For adopt, we need at least 2 args: package + at least one file path
+		if len(packages) < 2 {
+			lnk.PrintErrorWithHint(lnk.WithHint(
+				fmt.Errorf("adopt requires a package and at least one file path"),
+				"Example: lnk -A home ~/.bashrc ~/.vimrc"))
+			os.Exit(lnk.ExitUsage)
+		}
+		// First arg is package, rest are file paths
+		opts := lnk.AdoptOptions{
+			SourceDir: mergedConfig.SourceDir,
+			TargetDir: mergedConfig.TargetDir,
+			Package:   packages[0],
+			Paths:     packages[1:],
+			DryRun:    dryRun,
+		}
+		if err := lnk.AdoptWithOptions(opts); err != nil {
+			lnk.PrintErrorWithHint(err)
+			os.Exit(lnk.ExitError)
+		}
 
 	case actionOrphan:
 		// TODO: Implement orphan with new interface (Phase 4, Task 18)
@@ -345,7 +359,7 @@ func printUsage() {
 		{"-R, --remove", "Remove symlinks"},
 		{"-S, --status", "Show status of symlinks"},
 		{"-P, --prune", "Remove broken symlinks"},
-		{"-A, --adopt", "Adopt files into source (not yet implemented)"},
+		{"-A, --adopt", "Adopt files into package"},
 		{"-O, --orphan PATH", "Remove file from management (not yet implemented)"},
 	})
 	fmt.Println()

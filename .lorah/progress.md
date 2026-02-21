@@ -990,3 +990,152 @@ Phase 3 (CLI Rewrite) is now **COMPLETE**:
 **Next Steps:**
 1. Commit this CLI rewrite
 2. Implement Task 17 or 18 (adopt/orphan for new interface) or Task 23 (e2e tests)
+
+---
+
+## Session 12: Phase 4 - Adopt for New Interface (2026-02-21)
+
+### Tasks Completed
+
+✅ **Task 17: Update adopt for new interface**
+- Added `AdoptOptions` struct to hold options for package-based adoption:
+  - `SourceDir`: base directory for dotfiles (e.g., ~/git/dotfiles)
+  - `TargetDir`: where files currently are (default: ~)
+  - `Package`: package to adopt into (e.g., "home" or ".")
+  - `Paths`: files to adopt (e.g., ["~/.bashrc", "~/.vimrc"])
+  - `DryRun`: preview mode flag
+- Implemented `AdoptWithOptions(opts AdoptOptions) error`:
+  - Validates inputs (package and at least one path required)
+  - Expands source/target/package paths
+  - Supports package "." for flat repository structure
+  - Supports nested package paths (e.g., "home", "private/home")
+  - Processes each file path:
+    - Validates file exists and isn't already adopted
+    - Determines relative path from target directory
+    - Moves file to package directory
+    - Creates symlink back to original location
+  - Handles directories by adopting all files individually
+  - Shows dry-run preview or performs actual adoption
+  - Displays summary with adopted count
+  - Continues processing files even if some fail (graceful error handling)
+- Updated CLI in `cmd/lnk/main.go`:
+  - Added adopt action handler
+  - First positional arg is package, rest are file paths
+  - Requires at least 2 args (package + one file path)
+  - Updated help text to show adopt functionality
+- Added comprehensive unit tests (9 test cases):
+  - Single file adoption
+  - Multiple files adoption
+  - Package "." (flat repository)
+  - Nested package paths
+  - Dry-run mode
+  - Error: no package specified
+  - Error: no paths specified
+  - Error: source directory doesn't exist
+  - Directory adoption (from old test)
+
+### Implementation Details
+
+**Files Modified:**
+- `internal/lnk/adopt.go`:
+  - Added `AdoptOptions` struct (~7 lines)
+  - Added `AdoptWithOptions()` function (~145 lines)
+  - Placed before existing `Adopt()` function for organization
+- `internal/lnk/adopt_test.go`:
+  - Added `TestAdoptWithOptions()` (~145 lines)
+  - Added `TestAdoptWithOptionsDryRun()` (~40 lines)
+  - Added `TestAdoptWithOptionsSourceDirNotExist()` (~25 lines)
+- `cmd/lnk/main.go`:
+  - Updated `actionAdopt` case (~17 lines)
+  - Updated help text to remove "not yet implemented" note
+
+**Key Design Decisions:**
+1. **Multiple file paths**: Adopt can process multiple files in one command (e.g., `lnk -A home ~/.bashrc ~/.vimrc`)
+2. **Package-first**: First positional arg is always the package destination
+3. **Graceful error handling**: Continues processing remaining files even if some fail
+4. **Reused existing functions**: Leveraged `performAdoption()`, `validateAdoptSource()` from original implementation
+5. **Verbose logging**: Added logging at each step for debugging
+6. **Summary output**: Shows count of adopted files and next steps
+
+### Testing Results
+
+**Unit Tests:**
+```bash
+$ GOCACHE=$TMPDIR/go-cache go test ./internal/lnk -run "TestAdoptWithOptions"
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     0.519s
+
+$ GOCACHE=$TMPDIR/go-cache go test ./internal/lnk
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     1.768s
+```
+
+All unit tests pass including:
+- Existing Adopt tests (old config-based API) - 6 test cases
+- New AdoptWithOptions tests (package-based API) - 9 test cases
+- All other internal/lnk tests
+
+**Build Status:**
+✅ Build succeeds: `make build` completes successfully
+✅ Binary created: `bin/lnk` (3.6M)
+
+**Manual CLI Testing:**
+```bash
+# Dry-run
+$ ./bin/lnk -A home /path/to/.testfile -s dotfiles -t target -n
+✅ Shows dry-run preview
+
+# Actual adoption
+$ ./bin/lnk -A home /path/to/.testfile -s dotfiles -t target
+✅ Adopts file: creates symlink, moves file to package
+
+# Multiple files
+$ ./bin/lnk -A home /path/.bashrc /path/.vimrc -s dotfiles -t target
+✅ Adopts both files successfully
+
+# Verification
+$ ls -la /path/.bashrc
+✅ Shows symlink to dotfiles/home/.bashrc
+$ cat dotfiles/home/.bashrc
+✅ Content preserved
+```
+
+### Usage Examples
+
+**New adopt syntax:**
+```bash
+# Adopt single file into home package
+lnk -A home ~/.bashrc
+
+# Adopt multiple files
+lnk -A home ~/.bashrc ~/.vimrc ~/.zshrc
+
+# Adopt into flat repository
+lnk -A . ~/.bashrc
+
+# Adopt with custom directories
+lnk -A home ~/.bashrc -s ~/dotfiles -t ~
+
+# Dry-run
+lnk -A home ~/.bashrc -n
+```
+
+### Phase 4 Status
+
+Phase 4 (Internal function updates) progress:
+- ✅ Task 17: Update adopt for new interface
+- ⏳ Task 18: Update orphan for new interface (pending)
+- ✅ Task 19: Update prune for new interface (completed in Session 8)
+
+### Notes
+
+- Adopt now works with the new flag-based CLI interface
+- Old `Adopt()` function still exists and works with config-based approach
+- Both APIs coexist without conflicts
+- Package-based API is more flexible and user-friendly
+- No config file required - just specify package and file paths
+- Next logical task is Task 18: Update orphan for new interface
+
+**Next Steps:**
+1. Commit this adopt implementation
+2. Implement Task 18: Update orphan for new interface
