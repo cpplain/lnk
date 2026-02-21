@@ -583,3 +583,81 @@ All unit tests pass including:
 **Next Steps:**
 1. Commit this change
 2. Implement Task 8: PruneWithOptions function
+
+---
+
+## Session 8: Phase 2 - PruneWithOptions Function (2026-02-21)
+
+### Tasks Completed
+
+✅ **Task 8: PruneWithOptions function**
+- Implemented `PruneWithOptions(opts LinkOptions) error`:
+  - Validates inputs (source dir exists)
+  - Packages are optional - defaults to "." if none specified
+  - Expands source and target paths (handles ~/)
+  - Supports multiple packages in single operation
+  - Reuses `findManagedLinksForPackages()` from RemoveLinksWithOptions
+  - Filters to only broken links (preserves active links)
+  - Shows dry-run preview or removes broken links
+  - No confirmation prompt (follows new API pattern with DryRun flag only)
+  - Displays summary with pruned/failed counts
+- Added comprehensive unit tests (8 test cases):
+  - Prune broken links from single package
+  - Prune broken links from multiple packages
+  - Dry-run mode preserves broken links
+  - No broken links (graceful handling)
+  - Package with "." (current directory)
+  - Mixed active and broken links (only prune broken)
+  - No packages specified (defaults to ".")
+  - Error: source directory does not exist
+
+### Implementation Details
+
+**Files Modified:**
+- `internal/lnk/linker.go`:
+  - Added `PruneWithOptions()` function (~95 lines)
+  - Placed after RemoveLinksWithOptions for logical grouping
+- `internal/lnk/linker_test.go`:
+  - Added `TestPruneWithOptions()` (~240 lines)
+  - Tests cover all edge cases and error conditions
+
+**Key Design Decisions:**
+1. **Optional packages**: Unlike other *WithOptions functions, packages are optional - defaults to "." for convenience
+2. **Reused helper**: Used existing `findManagedLinksForPackages()` from RemoveLinksWithOptions
+3. **Filter broken links**: Only removes links where `IsBroken == true`, preserves active links
+4. **No confirmation**: Unlike old `PruneLinks()`, this uses only DryRun flag (matches new API pattern)
+5. **Graceful handling**: Empty broken link list doesn't error, shows "No broken symlinks found"
+6. **Verbose logging**: Added logging for debugging source/target/packages
+
+### Testing Results
+
+```bash
+$ GOCACHE=$TMPDIR/go-cache go test ./internal/lnk -run "TestPruneWithOptions"
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     0.466s
+
+$ GOCACHE=$TMPDIR/go-cache go test ./internal/lnk
+PASS
+ok      github.com/cpplain/lnk/internal/lnk     1.760s
+```
+
+All unit tests pass including:
+- Existing PruneLinks tests (old config-based API)
+- New PruneWithOptions tests (package-based API)
+- All other internal/lnk tests (8/8 test cases)
+
+### Build Status
+
+✅ Binary created successfully: `bin/lnk` (3.6M, Mach-O 64-bit executable)
+✅ All unit tests pass (8/8 test cases)
+
+### Notes
+
+- PruneWithOptions is the last function in Phase 2's *WithOptions series
+- Package filtering works correctly - only prunes broken links from specified packages
+- The "no packages" default to "." makes prune more user-friendly
+- Next logical tasks are Phase 2 refactoring tasks (Task 9, 10) or Phase 3 CLI work
+
+**Next Steps:**
+1. Commit this change
+2. Review remaining Phase 2 tasks or begin Phase 3 (CLI rewrite)

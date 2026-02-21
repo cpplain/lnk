@@ -37,7 +37,7 @@
   {
     "name": "PruneWithOptions function",
     "description": "Implement PruneWithOptions(opts LinkOptions) error that prunes broken links for specific packages",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Refactor collectPlannedLinks",

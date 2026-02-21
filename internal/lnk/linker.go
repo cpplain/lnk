@@ -490,6 +490,96 @@ func RemoveLinksWithOptions(opts LinkOptions) error {
 	return nil
 }
 
+// PruneWithOptions removes broken symlinks using package-based options
+func PruneWithOptions(opts LinkOptions) error {
+	PrintCommandHeader("Pruning Broken Symlinks")
+
+	// For prune, packages are optional - if none specified, default to "." (all packages)
+	packages := opts.Packages
+	if len(packages) == 0 {
+		packages = []string{"."}
+	}
+
+	// Expand source and target directories
+	sourceDir, err := ExpandPath(opts.SourceDir)
+	if err != nil {
+		return fmt.Errorf("expanding source directory %s: %w", opts.SourceDir, err)
+	}
+
+	targetDir, err := ExpandPath(opts.TargetDir)
+	if err != nil {
+		return fmt.Errorf("expanding target directory %s: %w", opts.TargetDir, err)
+	}
+
+	// Check if source directory exists
+	if info, err := os.Stat(sourceDir); err != nil {
+		if os.IsNotExist(err) {
+			return NewValidationErrorWithHint("source directory", sourceDir, "directory does not exist",
+				"Ensure the source directory exists or use -s/--source to specify a different location")
+		}
+		return fmt.Errorf("failed to check source directory: %w", err)
+	} else if !info.IsDir() {
+		return NewValidationErrorWithHint("source directory", sourceDir, "path is not a directory",
+			"The source path must be a directory containing packages")
+	}
+
+	// Find all managed links for the specified packages
+	PrintVerbose("Searching for managed links in %s", targetDir)
+	links, err := findManagedLinksForPackages(targetDir, sourceDir, packages)
+	if err != nil {
+		return fmt.Errorf("failed to find managed links: %w", err)
+	}
+
+	// Filter to only broken links
+	var brokenLinks []ManagedLink
+	for _, link := range links {
+		if link.IsBroken {
+			brokenLinks = append(brokenLinks, link)
+		}
+	}
+
+	if len(brokenLinks) == 0 {
+		PrintEmptyResult("broken symlinks")
+		return nil
+	}
+
+	// Show what will be pruned in dry-run mode
+	if opts.DryRun {
+		fmt.Println()
+		PrintDryRun("Would prune %d broken symlink(s):", len(brokenLinks))
+		for _, link := range brokenLinks {
+			PrintDryRun("Would prune: %s", ContractPath(link.Path))
+		}
+		fmt.Println()
+		PrintDryRunSummary()
+		return nil
+	}
+
+	// Track results for summary
+	var pruned, failed int
+
+	// Remove the broken links
+	for _, link := range brokenLinks {
+		if err := os.Remove(link.Path); err != nil {
+			PrintError("Failed to prune %s: %v", ContractPath(link.Path), err)
+			failed++
+			continue
+		}
+		PrintSuccess("Pruned: %s", ContractPath(link.Path))
+		pruned++
+	}
+
+	// Print summary
+	if pruned > 0 {
+		PrintSummary("Pruned %d broken symlink(s) successfully", pruned)
+	}
+	if failed > 0 {
+		PrintWarning("Failed to prune %d symlink(s)", failed)
+	}
+
+	return nil
+}
+
 // PruneLinks removes broken symlinks pointing to configured source directories
 func PruneLinks(config *Config, dryRun bool, force bool) error {
 	PrintCommandHeader("Pruning Broken Symlinks")
