@@ -127,7 +127,7 @@
   {
     "name": "Remove legacy tests from adopt_test.go",
     "description": "Remove tests for legacy Adopt() function",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove legacy tests from orphan_test.go",

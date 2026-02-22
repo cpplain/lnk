@@ -588,3 +588,38 @@ After removing the legacy `Status(config *Config)` function in Session 4, the te
   - link_utils_test.go (Task 28) - has errors per diagnostics
 
 **Next task:** Task 26 - Remove legacy tests from adopt_test.go
+
+## Session 15: Remove Legacy Tests from adopt_test.go (Complete)
+
+### Task: Remove legacy tests from adopt_test.go (Task 26)
+
+**Context:**
+After removing the legacy `Adopt(source string, config *Config, sourceDir string, dryRun bool)` function in Session 5, the test file adopt_test.go had tests using the old `*Config` parameter pattern with `LinkMappings` that needed cleanup.
+
+**Removed 3 legacy test functions:**
+1. `TestAdopt` - tested legacy `Adopt()` with old `Config{LinkMappings}` (lines 11-196)
+2. `TestAdoptDryRun` - tested legacy `Adopt()` in dry-run mode (lines 199-240)
+3. `TestAdoptComplexDirectory` - tested legacy `Adopt()` with complex directory structure (lines 458-569)
+
+**Kept 3 tests for new flag-based API:**
+1. `TestAdoptWithOptions` - tests `AdoptWithOptions(opts AdoptOptions)`
+2. `TestAdoptWithOptionsDryRun` - tests dry-run mode with new API
+3. `TestAdoptWithOptionsSourceDirNotExist` - tests error handling
+
+**Statistics:**
+- File reduced from 570 lines to 224 lines (**346 lines removed**)
+- Test count reduced from 6 tests to 3 tests (3 legacy tests removed)
+
+**Verification:**
+- ✅ No references to `Config{LinkMappings}` remain in adopt_test.go
+- ✅ No references to legacy `Adopt()` function remain in adopt_test.go
+- ✅ Grep confirms all legacy code references removed
+- ✅ File now only contains tests using `AdoptWithOptions` API
+
+**Status:**
+- ✅ Task 26 complete - adopt_test.go has been successfully cleaned up
+- Test files still needing cleanup:
+  - orphan_test.go (Task 27) - has errors per diagnostics
+  - link_utils_test.go (Task 28) - has errors per diagnostics
+
+**Next task:** Task 27 - Remove legacy tests from orphan_test.go
