@@ -7,7 +7,7 @@
   {
     "name": "Remove legacy functions from linker.go",
     "description": "Remove CreateLinks(config *Config), RemoveLinks(config *Config), removeLinks(), and PruneLinks(config *Config) functions",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove legacy Status function from status.go",
