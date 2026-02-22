@@ -2,7 +2,7 @@
   {
     "name": "Remove legacy functions from config.go",
     "description": "Remove getDefaultConfig(), LoadConfig(), loadConfigFromFile(), LoadConfigWithOptions(), Config.Save(), Config.GetMapping(), Config.ShouldIgnore(), Config.Validate(), and DetermineSourceMapping() functions",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove legacy functions from linker.go",

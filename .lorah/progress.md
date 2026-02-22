@@ -130,3 +130,31 @@ All greps should return no results after cleanup.
 Initialization complete. Ready for cleanup execution.
 
 **Next session:** Begin Phase 2 (Remove Legacy Functions)
+
+## Session 2: Remove Legacy Functions from config.go (Complete)
+
+### Task: Remove legacy functions from config.go
+
+**Removed 9 legacy functions:**
+1. `getDefaultConfig()` - lines 284-292
+2. `LoadConfig()` - lines 296-325 (deprecated)
+3. `loadConfigFromFile()` - lines 328-358
+4. `LoadConfigWithOptions()` - lines 361-414
+5. `Config.Save()` - lines 417-429
+6. `Config.GetMapping()` - lines 432-439
+7. `Config.ShouldIgnore()` - lines 442-444
+8. `Config.Validate()` - lines 460-503
+9. `DetermineSourceMapping()` - lines 506-522
+
+**Additional cleanup:**
+- Removed unused `encoding/json` import from config.go
+- Removed `ensureSourceDirExists()` from adopt.go (dead code that depended on removed `GetMapping()`)
+  - This function was scheduled for removal in Task 4 but was never called anywhere
+  - Removing it now prevented build breakage
+
+**Status:**
+- ✅ Binary builds successfully
+- ⚠️ Tests fail as expected (using removed functions - will be fixed in Task 23)
+- Test failures are all in config_test.go and status_test.go, as expected
+
+**Next task:** Task 2 - Remove legacy functions from linker.go

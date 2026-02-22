@@ -82,28 +82,6 @@ func getRelativePathFromHome(absSource, homeDir string) (string, error) {
 	return relPath, nil
 }
 
-// ensureSourceDirExists ensures the source directory exists in the repository
-func ensureSourceDirExists(configRepo, sourceDir string, config *Config) (*LinkMapping, error) {
-	// Validate sourceDir exists in config mappings
-	mapping := config.GetMapping(sourceDir)
-	if mapping == nil {
-		return nil, NewValidationErrorWithHint("source directory", sourceDir,
-			"not found in config mappings",
-			fmt.Sprintf("Add it to .lnk.json first with a mapping like: {\"source\": \"%s\", \"target\": \"~/\"}", sourceDir))
-	}
-
-	// Check if source directory exists in the repository
-	sourceDirPath := filepath.Join(configRepo, sourceDir)
-	if _, err := os.Stat(sourceDirPath); os.IsNotExist(err) {
-		// Create the source directory if it doesn't exist
-		if err := os.MkdirAll(sourceDirPath, 0755); err != nil {
-			return nil, fmt.Errorf("failed to create source directory %s: %w", sourceDirPath, err)
-		}
-	}
-
-	return mapping, nil
-}
-
 // performAdoption performs the actual file move and symlink creation
 func performAdoption(absSource, destPath string) error {
 	// Check if source is a directory
