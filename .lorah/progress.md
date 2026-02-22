@@ -445,3 +445,61 @@ After removing the legacy `ErrNoLinkMappings` error constant in Session 9, the t
   - status_test.go: undefined Config, LinkMapping, Status (need Task 25)
 
 **Next task:** Task 28 - Remove legacy tests from link_utils_test.go
+
+## Session 12: Remove Legacy Tests from config_test.go (Complete)
+
+### Task: Remove legacy tests from config_test.go (Task 23)
+
+**Context:**
+After removing the legacy types (`Config`, `LinkMapping`) and functions (`LoadConfig`, `LoadConfigWithOptions`, `ConfigOptions`, `Config.Save()`, `Config.GetMapping()`, `Config.ShouldIgnore()`, `Config.Validate()`) in previous sessions, config_test.go had compilation errors referencing these removed items.
+
+**Removed 12 legacy test functions:**
+1. `TestConfigSaveAndLoad` - tested old Config.Save() and LoadConfig()
+2. `TestConfigSaveNewFormat` - tested old Config.Save() and LoadConfig()
+3. `TestLoadConfigNonExistent` - tested old LoadConfig()
+4. `TestLoadConfigNewFormat` - tested old LoadConfig() with JSON
+5. `TestShouldIgnore` - tested old Config.ShouldIgnore() method
+6. `TestGetMapping` - tested old Config.GetMapping() method
+7. `TestConfigValidate` - tested old Config.Validate() method
+8. `TestLoadConfigWithOptions_DefaultConfig` - tested old LoadConfigWithOptions()
+9. `TestLoadConfigWithOptions_ConfigFilePrecedence` - tested old LoadConfigWithOptions()
+10. `TestLoadConfigWithOptions_FlagOverrides` - tested old LoadConfigWithOptions()
+11. `TestLoadConfigWithOptions_PartialOverrides` - tested old LoadConfigWithOptions()
+12. `TestGetXDGConfigDir` - tested helper for legacy config system
+
+**Additional cleanup:**
+- Removed `writeConfigFile` helper function (used by legacy tests only)
+- Removed unused `encoding/json` import
+
+**Kept 6 tests for new flag-based config system:**
+1. `TestParseFlagConfigFile` - tests parseFlagConfigFile()
+2. `TestParseIgnoreFile` - tests parseIgnoreFile()
+3. `TestLoadFlagConfig` - tests LoadFlagConfig()
+4. `TestLoadIgnoreFile` - tests LoadIgnoreFile()
+5. `TestMergeFlagConfig` - tests MergeFlagConfig()
+6. `TestMergeFlagConfigPrecedence` - tests MergeFlagConfig() precedence
+
+**Statistics:**
+- File reduced from 1427 lines to 608 lines (**819 lines removed**)
+- Test count reduced from 18 tests to 6 tests (12 legacy tests removed)
+
+**Verification:**
+- ✅ No references to `Config` (old type) remain in test file
+- ✅ No references to `LinkMapping` remain in test file
+- ✅ No references to `LoadConfig()` remain in test file
+- ✅ No references to `LoadConfigWithOptions`, `ConfigOptions`, `ShouldIgnore`, `GetMapping`, or `Validate()` remain
+- ⚠️ Build verification blocked by sandbox restrictions on go build cache
+  - However, verified via grep that no legacy code references remain
+  - LSP diagnostics should now show no errors in config_test.go
+
+**Status:**
+- ✅ Task 23 complete - config_test.go has been successfully cleaned up
+- Test files still needing cleanup:
+  - status_test.go (Task 25) - has errors per diagnostics
+  - status_json_test.go - not listed as separate task, part of Task 25
+  - adopt_test.go (Task 26) - has errors per diagnostics
+  - linker_test.go (Task 24) - need to check for errors
+  - orphan_test.go (Task 27) - need to check for errors
+  - link_utils_test.go (Task 28) - need to check for errors
+
+**Next task:** Task 24 or 25 - Check which test file needs cleanup next based on diagnostics

@@ -112,7 +112,7 @@
   {
     "name": "Remove legacy tests from config_test.go",
     "description": "Remove tests for legacy JSON config functions and types",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove legacy tests from linker_test.go",
