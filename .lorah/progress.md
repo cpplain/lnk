@@ -1006,3 +1006,39 @@ Continuing Phase 0 (Simplify Naming). Tasks 10-16 (CreateLinks, RemoveLinks, Sta
 - **Phase 0 progress: 8/13 tasks complete**
 
 **Next task:** Task 18 - Rename LoadFlagConfig to loadConfigFile (unexported)
+
+## Session 26: Rename LoadFlagConfig to loadConfigFile (Complete)
+
+### Task: Rename LoadFlagConfig to loadConfigFile (unexported) (Task 18)
+
+**Context:**
+Continuing Phase 0 (Simplify Naming). Tasks 10-17 were completed in previous sessions. Now renaming the flag config loading function to drop the `Flag` prefix and make it unexported since it's only used internally within the lnk package.
+
+**Changes made:**
+
+1. **internal/lnk/config.go:106-111** - Renamed function from `LoadFlagConfig` to `loadConfigFile`
+   - Updated function comment (removed "flag-based" wording)
+   - Updated function signature to unexported (lowercase first letter)
+
+2. **internal/lnk/config.go:187** - Updated call site from `LoadFlagConfig(sourceDir)` to `loadConfigFile(sourceDir)`
+
+3. **internal/lnk/config_test.go** - Updated all test references:
+   - Line 218: Renamed test function to `TestLoadConfigFile` (following Go test naming conventions)
+   - Line 275: Updated function call from `LoadFlagConfig(sourceDir)` to `loadConfigFile(sourceDir)`
+   - Lines 277, 286, 290, 294, 300: Updated error messages from `LoadFlagConfig()` to `loadConfigFile()`
+
+**Verification:**
+- ✅ No references to `LoadFlagConfig` remain in any Go files
+- ✅ Grep confirms no legacy function name remains in production code or tests
+- ✅ Function signature matches expected pattern: `func loadConfigFile(sourceDir string) (*FlagConfig, string, error)`
+- ✅ Test function follows Go naming conventions (TestLoadConfigFile for unexported function)
+- ✅ LSP diagnostics show no compilation errors (only informational warnings about unused helper functions)
+- ⚠️ Build verification blocked by sandbox restrictions on go build cache
+  - However, verified via grep and LSP diagnostics that all references are correctly renamed
+  - Pattern matches all other successful renames from previous sessions
+
+**Status:**
+- ✅ Task 18 complete - `LoadFlagConfig` renamed to `loadConfigFile` (unexported)
+- **Phase 0 progress: 9/13 tasks complete**
+
+**Next task:** Task 19 - Rename parseFlagConfigFile to parseConfigFile (unexported)

@@ -215,7 +215,7 @@ node_modules/`,
 	}
 }
 
-func TestLoadFlagConfig(t *testing.T) {
+func TestLoadConfigFile(t *testing.T) {
 	tests := []struct {
 		name           string
 		setupFiles     func(tmpDir string) error
@@ -272,9 +272,9 @@ func TestLoadFlagConfig(t *testing.T) {
 			}
 
 			// Load config
-			config, sourcePath, err := LoadFlagConfig(sourceDir)
+			config, sourcePath, err := loadConfigFile(sourceDir)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("LoadFlagConfig() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("loadConfigFile() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
@@ -283,21 +283,21 @@ func TestLoadFlagConfig(t *testing.T) {
 			}
 
 			if config.Target != tt.wantTarget {
-				t.Errorf("LoadFlagConfig() Target = %v, want %v", config.Target, tt.wantTarget)
+				t.Errorf("loadConfigFile() Target = %v, want %v", config.Target, tt.wantTarget)
 			}
 
 			if len(config.IgnorePatterns) != len(tt.wantIgnores) {
-				t.Errorf("LoadFlagConfig() IgnorePatterns length = %v, want %v", len(config.IgnorePatterns), len(tt.wantIgnores))
+				t.Errorf("loadConfigFile() IgnorePatterns length = %v, want %v", len(config.IgnorePatterns), len(tt.wantIgnores))
 			} else {
 				for i, pattern := range tt.wantIgnores {
 					if config.IgnorePatterns[i] != pattern {
-						t.Errorf("LoadFlagConfig() IgnorePatterns[%d] = %v, want %v", i, config.IgnorePatterns[i], pattern)
+						t.Errorf("loadConfigFile() IgnorePatterns[%d] = %v, want %v", i, config.IgnorePatterns[i], pattern)
 					}
 				}
 			}
 
 			if tt.wantSourceName != "" && !strings.Contains(sourcePath, tt.sourceDir) && tt.wantSourceName != "source directory" {
-				t.Errorf("LoadFlagConfig() source path doesn't match expected location, got %v", sourcePath)
+				t.Errorf("loadConfigFile() source path doesn't match expected location, got %v", sourcePath)
 			}
 		})
 	}

@@ -87,7 +87,7 @@
   {
     "name": "Rename LoadFlagConfig to loadConfigFile (unexported)",
     "description": "Rename function in config.go to unexported name and update all call sites",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Rename parseFlagConfigFile to parseConfigFile (unexported)",

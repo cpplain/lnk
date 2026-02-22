@@ -103,12 +103,12 @@ func parseIgnoreFile(filePath string) ([]string, error) {
 	return patterns, nil
 }
 
-// LoadFlagConfig loads configuration from flag-based config files (.lnkconfig)
+// loadConfigFile loads configuration from config files (.lnkconfig)
 // Discovery order:
 // 1. .lnkconfig in source directory (repo-specific)
 // 2. $XDG_CONFIG_HOME/lnk/config or ~/.config/lnk/config
 // 3. ~/.lnkconfig
-func LoadFlagConfig(sourceDir string) (*FlagConfig, string, error) {
+func loadConfigFile(sourceDir string) (*FlagConfig, string, error) {
 	// Expand source directory path
 	absSourceDir, err := filepath.Abs(sourceDir)
 	if err != nil {
@@ -184,7 +184,7 @@ func LoadConfig(sourceDir, cliTarget string, cliIgnorePatterns []string) (*Merge
 		sourceDir, cliTarget, cliIgnorePatterns)
 
 	// Load flag-based config from .lnkconfig file (if exists)
-	flagConfig, configPath, err := LoadFlagConfig(sourceDir)
+	flagConfig, configPath, err := loadConfigFile(sourceDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load flag config: %w", err)
 	}
