@@ -125,10 +125,10 @@ func loadConfigFile(sourceDir string) (*FileConfig, string, error) {
 		path   string
 		source string
 	}{
-		{filepath.Join(absSourceDir, FlagConfigFileName), "source directory"},
+		{filepath.Join(absSourceDir, ConfigFileName), "source directory"},
 		{filepath.Join(getXDGConfigDir(), "config"), "XDG config directory"},
 		{filepath.Join(homeDir, ".config", "lnk", "config"), "user config directory"},
-		{filepath.Join(homeDir, FlagConfigFileName), "home directory"},
+		{filepath.Join(homeDir, ConfigFileName), "home directory"},
 	}
 
 	// Try each path

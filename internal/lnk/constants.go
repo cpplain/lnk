@@ -15,8 +15,8 @@ const (
 
 // Configuration file names
 const (
-	FlagConfigFileName   = ".lnkconfig"     // New flag-based config format
-	IgnoreFileName       = ".lnkignore"     // Gitignore-style ignore file
+	ConfigFileName = ".lnkconfig" // Configuration file
+	IgnoreFileName = ".lnkignore" // Gitignore-style ignore file
 )
 
 // Terminal output formatting

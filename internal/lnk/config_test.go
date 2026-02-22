@@ -230,7 +230,7 @@ func TestLoadConfigFile(t *testing.T) {
 			setupFiles: func(tmpDir string) error {
 				configContent := `--target=~/dotfiles
 --ignore=*.tmp`
-				return os.WriteFile(filepath.Join(tmpDir, FlagConfigFileName), []byte(configContent), 0644)
+				return os.WriteFile(filepath.Join(tmpDir, ConfigFileName), []byte(configContent), 0644)
 			},
 			sourceDir:      ".",
 			wantTarget:     "~/dotfiles",
@@ -400,7 +400,7 @@ func TestLoadConfig(t *testing.T) {
 			setupFiles: func(tmpDir string) error {
 				configContent := `--target=~/.config
 --ignore=*.backup`
-				return os.WriteFile(filepath.Join(tmpDir, FlagConfigFileName), []byte(configContent), 0644)
+				return os.WriteFile(filepath.Join(tmpDir, ConfigFileName), []byte(configContent), 0644)
 			},
 			sourceDir:          "",
 			cliTarget:          "",
@@ -413,7 +413,7 @@ func TestLoadConfig(t *testing.T) {
 			name: "CLI target overrides config file",
 			setupFiles: func(tmpDir string) error {
 				configContent := `--target=~/.config`
-				return os.WriteFile(filepath.Join(tmpDir, FlagConfigFileName), []byte(configContent), 0644)
+				return os.WriteFile(filepath.Join(tmpDir, ConfigFileName), []byte(configContent), 0644)
 			},
 			sourceDir:          "",
 			cliTarget:          "~/custom",
@@ -456,7 +456,7 @@ dist/
 				configContent := `--target=/opt/configs
 --ignore=*.backup
 --ignore=temp/`
-				if err := os.WriteFile(filepath.Join(tmpDir, FlagConfigFileName), []byte(configContent), 0644); err != nil {
+				if err := os.WriteFile(filepath.Join(tmpDir, ConfigFileName), []byte(configContent), 0644); err != nil {
 					return err
 				}
 
@@ -482,7 +482,7 @@ dist/
 
 				configContent := `--target=~/
 --ignore=*.test`
-				return os.WriteFile(filepath.Join(subDir, FlagConfigFileName), []byte(configContent), 0644)
+				return os.WriteFile(filepath.Join(subDir, ConfigFileName), []byte(configContent), 0644)
 			},
 			sourceDir:          "dotfiles",
 			cliTarget:          "",
@@ -565,7 +565,7 @@ func TestLoadConfigPrecedence(t *testing.T) {
 	// Setup all config sources
 	configContent := `--target=/from-config
 --ignore=config-pattern`
-	if err := os.WriteFile(filepath.Join(tmpDir, FlagConfigFileName), []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, ConfigFileName), []byte(configContent), 0644); err != nil {
 		t.Fatal(err)
 	}
 
