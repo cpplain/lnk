@@ -11,24 +11,6 @@ import (
 	"strings"
 )
 
-// LinkMapping represents a mapping from source to target directory
-type LinkMapping struct {
-	Source string `json:"source"`
-	Target string `json:"target"`
-}
-
-// Config represents the link configuration
-type Config struct {
-	IgnorePatterns []string      `json:"ignore_patterns"` // Gitignore-style patterns to ignore
-	LinkMappings   []LinkMapping `json:"link_mappings"`   // Flexible mapping system
-}
-
-// ConfigOptions represents all configuration options that can be overridden by flags/env vars
-type ConfigOptions struct {
-	ConfigPath     string   // Path to config file
-	IgnorePatterns []string // Ignore patterns override
-}
-
 // FlagConfig represents configuration loaded from flag-based config files
 type FlagConfig struct {
 	Target         string   // Target directory (default: ~)

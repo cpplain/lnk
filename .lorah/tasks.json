@@ -32,7 +32,7 @@
   {
     "name": "Remove legacy types from config.go",
     "description": "Remove LinkMapping struct, old Config struct with LinkMappings, and ConfigOptions struct",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove legacy error from errors.go",

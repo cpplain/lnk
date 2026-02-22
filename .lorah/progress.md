@@ -309,3 +309,40 @@ Initialization complete. Ready for cleanup execution.
 - **Total: ~854 lines removed (95% of goal)**
 
 **Next task:** Task 7 - Remove legacy types from config.go
+
+## Session 8: Remove Legacy Types from config.go (Complete)
+
+### Task: Remove legacy types from config.go
+
+**Removed 3 legacy types:**
+1. `LinkMapping` struct - lines 14-18
+2. Old `Config` struct with `LinkMappings` field - lines 20-24
+3. `ConfigOptions` struct - lines 26-30
+
+**Notes:**
+- All three types used the old JSON-based config system
+- `LinkMapping` was referenced by the old `Config` struct
+- These types were only used in test files, not production code
+- New types (`FlagConfig`, `MergedConfig`) remain intact for the new flag-based config system
+
+**Verification:**
+- ✅ No references to removed types in production code (cmd/ or internal/lnk/*.go)
+- ✅ Only test file references found (config_test.go, status_test.go, status_json_test.go, orphan_test.go, linker_test.go, adopt_test.go, link_utils_test.go, errors_test.go)
+- ✅ LSP diagnostics show errors only in test files:
+  - orphan_test.go: undefined Config and LinkMapping
+  - status_json_test.go: undefined Config and LinkMapping
+  - status_test.go: undefined Config and LinkMapping
+  - config_test.go: undefined Config and LinkMapping
+- All compilation errors are in test files only (expected)
+
+**Legacy code removed so far:**
+- Session 2: ~250 lines from config.go (functions)
+- Session 3: ~200 lines from linker.go
+- Session 4: ~93 lines from status.go
+- Session 5: ~98 lines from adopt.go
+- Session 6: ~121 lines from orphan.go
+- Session 7: ~92 lines from link_utils.go
+- Session 8: ~17 lines from config.go (types)
+- **Total: ~871 lines removed (97% of goal)**
+
+**Next task:** Task 8 - Remove legacy error from errors.go
