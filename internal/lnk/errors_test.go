@@ -158,11 +158,11 @@ func TestValidationError(t *testing.T) {
 		{
 			name: "validation error for config field",
 			err: &ValidationError{
-				Field:   "LinkMappings",
+				Field:   "Packages",
 				Value:   "",
-				Message: "at least one mapping is required",
+				Message: "at least one package is required",
 			},
-			expected: "invalid LinkMappings: at least one mapping is required",
+			expected: "invalid Packages: at least one package is required",
 		},
 	}
 

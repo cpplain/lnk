@@ -44,7 +44,7 @@ type[(optional scope)]: description
 #### Examples
 
 ```
-feat: add support for multiple link mappings
+feat: add support for multiple packages
 
 fix: prevent race condition during link creation
 
@@ -52,9 +52,9 @@ docs: add examples to README
 
 feat(adopt): allow adopting entire directories
 
-fix!: change config file format to JSON
+fix!: change default target directory
 
-BREAKING CHANGE: config files must now use .lnk.json extension
+BREAKING CHANGE: target directory now defaults to home instead of current directory
 ```
 
 ### CLI Design Guidelines
