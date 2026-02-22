@@ -17,8 +17,8 @@ type FileConfig struct {
 	IgnorePatterns []string // Ignore patterns from config file
 }
 
-// MergedConfig represents the final merged configuration from all sources
-type MergedConfig struct {
+// Config represents the final merged configuration from all sources
+type Config struct {
 	SourceDir      string   // Source directory (from CLI)
 	TargetDir      string   // Target directory (CLI > config > default)
 	IgnorePatterns []string // Combined ignore patterns from all sources
@@ -179,7 +179,7 @@ func LoadIgnoreFile(sourceDir string) ([]string, error) {
 // LoadConfig merges CLI options with config files to produce final configuration
 // Precedence for target: CLI flag > .lnkconfig > default (~)
 // Precedence for ignore patterns: All sources are combined (built-in + config + .lnkignore + CLI)
-func LoadConfig(sourceDir, cliTarget string, cliIgnorePatterns []string) (*MergedConfig, error) {
+func LoadConfig(sourceDir, cliTarget string, cliIgnorePatterns []string) (*Config, error) {
 	PrintVerbose("Merging configuration from sourceDir=%s, cliTarget=%s, cliIgnorePatterns=%v",
 		sourceDir, cliTarget, cliIgnorePatterns)
 
@@ -222,7 +222,7 @@ func LoadConfig(sourceDir, cliTarget string, cliIgnorePatterns []string) (*Merge
 		len(getBuiltInIgnorePatterns()), len(flagConfig.IgnorePatterns),
 		len(ignoreFilePatterns), len(cliIgnorePatterns), len(ignorePatterns))
 
-	return &MergedConfig{
+	return &Config{
 		SourceDir:      sourceDir,
 		TargetDir:      targetDir,
 		IgnorePatterns: ignorePatterns,
