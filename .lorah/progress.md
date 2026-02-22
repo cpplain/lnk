@@ -896,3 +896,40 @@ Continuing Phase 0 (Simplify Naming). Tasks 10-13 (CreateLinks, RemoveLinks, Sta
 - **Phase 0 progress: 5/13 tasks complete**
 
 **Next task:** Task 15 - Rename OrphanWithOptions to Orphan
+
+## Session 23: Rename OrphanWithOptions to Orphan (Complete)
+
+### Task: Rename OrphanWithOptions to Orphan (Task 15)
+
+**Context:**
+Continuing Phase 0 (Simplify Naming). Tasks 10-14 (CreateLinks, RemoveLinks, Status, Prune, Adopt) were completed in previous sessions. Now renaming the orphan function to drop the `WithOptions` suffix.
+
+**Changes made:**
+
+1. **internal/lnk/orphan.go:18-19** - Renamed function from `OrphanWithOptions` to `Orphan`
+   - Updated function comment
+   - Updated function signature
+
+2. **cmd/lnk/main.go:345** - Updated call site from `lnk.OrphanWithOptions(opts)` to `lnk.Orphan(opts)`
+
+3. **internal/lnk/orphan_test.go** - Updated all test references:
+   - Line 15: Renamed test function from `TestOrphanWithOptions` to `TestOrphan`
+   - Line 285: Updated function call from `OrphanWithOptions(opts)` to `Orphan(opts)`
+   - Line 308: Renamed test function from `TestOrphanWithOptionsBrokenLink` to `TestOrphanBrokenLink`
+   - Line 329: Updated function call from `OrphanWithOptions(opts)` to `Orphan(opts)`
+
+**Verification:**
+- ✅ No references to `OrphanWithOptions` remain in any Go files
+- ✅ Grep confirms only documentation references remain (.lorah/, .claude/)
+- ✅ Code manually verified - all renames look correct
+- ✅ Function signature matches expected pattern: `func Orphan(opts OrphanOptions) error`
+- ✅ LSP diagnostics show no compilation errors (only informational warnings about unused helper functions)
+- ⚠️ Build verification blocked by sandbox restrictions on go build cache
+  - However, verified via grep and manual code inspection that all references are correctly renamed
+  - Pattern matches all other successful renames from previous sessions
+
+**Status:**
+- ✅ Task 15 complete - `OrphanWithOptions` renamed to `Orphan`
+- **Phase 0 progress: 6/13 tasks complete**
+
+**Next task:** Task 16 - Rename FindManagedLinksForSources to FindManagedLinks

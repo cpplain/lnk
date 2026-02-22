@@ -72,7 +72,7 @@
   {
     "name": "Rename OrphanWithOptions to Orphan",
     "description": "Rename function in orphan.go and update all call sites",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Rename FindManagedLinksForSources to FindManagedLinks",

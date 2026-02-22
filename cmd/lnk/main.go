@@ -342,7 +342,7 @@ func main() {
 			DryRun:    dryRun,
 		}
 
-		if err := lnk.OrphanWithOptions(opts); err != nil {
+		if err := lnk.Orphan(opts); err != nil {
 			lnk.PrintErrorWithHint(err)
 			os.Exit(lnk.ExitError)
 		}

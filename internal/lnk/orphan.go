@@ -15,8 +15,8 @@ type OrphanOptions struct {
 	DryRun    bool     // preview mode
 }
 
-// OrphanWithOptions removes files from package management using the new options-based interface
-func OrphanWithOptions(opts OrphanOptions) error {
+// Orphan removes files from package management using the new options-based interface
+func Orphan(opts OrphanOptions) error {
 	PrintCommandHeader("Orphaning Files")
 
 	// Validate inputs

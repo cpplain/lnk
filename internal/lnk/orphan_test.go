@@ -12,7 +12,7 @@ func containsString(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
 
-func TestOrphanWithOptions(t *testing.T) {
+func TestOrphan(t *testing.T) {
 	tests := []struct {
 		name          string
 		setupFunc     func(t *testing.T, tmpDir string, sourceDir string, targetDir string) []string
@@ -282,7 +282,7 @@ func TestOrphanWithOptions(t *testing.T) {
 				opts.SourceDir = "/nonexistent/dotfiles"
 			}
 
-			err := OrphanWithOptions(opts)
+			err := Orphan(opts)
 
 			// Check error expectation
 			if tt.expectError {
@@ -305,7 +305,7 @@ func TestOrphanWithOptions(t *testing.T) {
 	}
 }
 
-func TestOrphanWithOptionsBrokenLink(t *testing.T) {
+func TestOrphanBrokenLink(t *testing.T) {
 	tmpDir := t.TempDir()
 	sourceDir := filepath.Join(tmpDir, "dotfiles")
 	targetDir := filepath.Join(tmpDir, "target")
@@ -326,7 +326,7 @@ func TestOrphanWithOptionsBrokenLink(t *testing.T) {
 		DryRun:    false,
 	}
 
-	err := OrphanWithOptions(opts)
+	err := Orphan(opts)
 
 	// Should return nil (graceful error handling) but not orphan the broken link
 	if err != nil {
