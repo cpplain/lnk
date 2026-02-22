@@ -37,7 +37,7 @@
   {
     "name": "Remove legacy error from errors.go",
     "description": "Remove ErrNoLinkMappings error constant",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove legacy constant from constants.go",

@@ -346,3 +346,35 @@ Initialization complete. Ready for cleanup execution.
 - **Total: ~871 lines removed (97% of goal)**
 
 **Next task:** Task 8 - Remove legacy error from errors.go
+
+## Session 9: Remove Legacy Error from errors.go (Complete)
+
+### Task: Remove legacy error from errors.go
+
+**Removed 1 legacy error constant:**
+1. `ErrNoLinkMappings` - lines 16-17 (2 lines)
+
+**Notes:**
+- This error was part of the old JSON-based config system with `LinkMappings`
+- The error indicated when no link mappings were defined in the config
+- This validation is no longer needed with the new flag-based config system
+
+**Verification:**
+- ✅ No references to `ErrNoLinkMappings` in production code (cmd/ or internal/lnk/*.go)
+- ✅ Only test file reference found (errors_test.go:250 - expected)
+- ✅ LSP diagnostics show error only in errors_test.go:
+  - Line 250: undefined: ErrNoLinkMappings
+- All compilation errors are in test files only (expected)
+
+**Legacy code removed so far:**
+- Session 2: ~250 lines from config.go (functions)
+- Session 3: ~200 lines from linker.go
+- Session 4: ~93 lines from status.go
+- Session 5: ~98 lines from adopt.go
+- Session 6: ~121 lines from orphan.go
+- Session 7: ~92 lines from link_utils.go
+- Session 8: ~17 lines from config.go (types)
+- Session 9: ~2 lines from errors.go
+- **Total: ~873 lines removed (97% of goal)**
+
+**Next task:** Task 9 - Remove legacy constant from constants.go
