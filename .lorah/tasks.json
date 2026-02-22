@@ -22,7 +22,7 @@
   {
     "name": "Remove legacy Orphan function from orphan.go",
     "description": "Remove Orphan(link string, config *Config) function",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove legacy functions from link_utils.go",

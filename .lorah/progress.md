@@ -241,3 +241,38 @@ Initialization complete. Ready for cleanup execution.
 - **Total: ~641 lines removed (71% of goal)**
 
 **Next task:** Task 5 - Remove legacy Orphan function from orphan.go
+
+## Session 6: Remove Legacy Orphan Function from orphan.go (Complete)
+
+### Task: Remove legacy Orphan function from orphan.go
+
+**Removed 1 legacy function:**
+1. `Orphan(link string, config *Config, dryRun bool, force bool)` - lines 202-322 (121 lines)
+
+**Notes:**
+- The legacy `Orphan` function used the old `*Config` type with `LinkMappings`
+- This function called legacy functions `FindManagedLinks()` and `checkManagedLink()` from link_utils.go (which will be removed in Task 6)
+- The new `OrphanWithOptions` function uses `FindManagedLinksForSources` instead
+- Production code (cmd/lnk/main.go) uses `OrphanWithOptions`, not the legacy function
+
+**Verification:**
+- ✅ No references to legacy `Orphan` in production code (cmd/ or internal/lnk/*.go)
+- ✅ Only test file references found (orphan_test.go has 6 calls - expected)
+- ✅ LSP diagnostics show errors only in orphan_test.go:
+  - Line 159: undefined: Orphan
+  - Line 234: undefined: Orphan
+  - Line 301: undefined: Orphan
+  - Line 350: undefined: Orphan
+  - Line 381: undefined: Orphan
+  - Line 427: undefined: Orphan
+- All compilation errors are in test files only (expected)
+
+**Legacy code removed so far:**
+- Session 2: ~250 lines from config.go
+- Session 3: ~200 lines from linker.go
+- Session 4: ~93 lines from status.go
+- Session 5: ~98 lines from adopt.go
+- Session 6: ~121 lines from orphan.go
+- **Total: ~762 lines removed (85% of goal)**
+
+**Next task:** Task 6 - Remove legacy functions from link_utils.go
