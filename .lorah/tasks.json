@@ -142,7 +142,7 @@
   {
     "name": "Remove legacy tests from errors_test.go",
     "description": "Remove tests for ErrNoLinkMappings error",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Verify all tests pass after cleanup",

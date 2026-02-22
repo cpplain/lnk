@@ -247,7 +247,6 @@ func TestStandardErrors(t *testing.T) {
 	}{
 		{ErrConfigNotFound, "configuration file not found"},
 		{ErrInvalidConfig, "invalid configuration"},
-		{ErrNoLinkMappings, "no link mappings defined"},
 		{ErrNotSymlink, "not a symlink"},
 		{ErrAlreadyAdopted, "file already adopted"},
 	}

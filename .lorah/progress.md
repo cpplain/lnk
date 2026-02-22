@@ -414,3 +414,34 @@ Initialization complete. Ready for cleanup execution.
 **Phase 1 Complete!** All legacy types, constants, and errors have been removed.
 
 **Next task:** Task 10 - Begin Phase 0 renames: Rename CreateLinksWithOptions to CreateLinks
+
+## Session 11: Remove Legacy Tests from errors_test.go (Complete)
+
+### Task: Remove legacy tests from errors_test.go
+
+**Context:**
+After removing the legacy `ErrNoLinkMappings` error constant in Session 9, the test file errors_test.go had a compilation error on line 250 where it referenced the removed constant.
+
+**Removed 1 test case:**
+1. Test case for `ErrNoLinkMappings` from the `TestStandardErrors` function (line 250)
+
+**Changes:**
+- Removed the line `{ErrNoLinkMappings, "no link mappings defined"},` from the test cases array
+- The function still tests all other standard errors: ErrConfigNotFound, ErrInvalidConfig, ErrNotSymlink, ErrAlreadyAdopted
+
+**Verification:**
+- ✅ No references to `ErrNoLinkMappings` remain in production code or tests
+- ✅ Grep confirms only documentation references remain (.lorah/, .claude/)
+- ✅ Compilation check shows no errors in errors_test.go
+- ✅ Other test files still have expected errors (will be cleaned up in Tasks 23-28)
+
+**Status:**
+- ✅ Task 29 complete - errors_test.go no longer references removed legacy code
+- ⚠️ Other test files still have errors (as expected):
+  - config_test.go: undefined Config
+  - adopt_test.go: undefined Config, LinkMapping, Adopt
+  - link_utils_test.go: undefined Config, LinkMapping (need Task 28)
+  - orphan_test.go: undefined Config, LinkMapping, Orphan (need Task 27)
+  - status_test.go: undefined Config, LinkMapping, Status (need Task 25)
+
+**Next task:** Task 28 - Remove legacy tests from link_utils_test.go
