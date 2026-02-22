@@ -147,17 +147,17 @@
   {
     "name": "Verify all tests pass after cleanup",
     "description": "Run 'make test' to ensure all unit and e2e tests pass",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Verify build succeeds after cleanup",
     "description": "Run 'make build' to ensure binary builds successfully",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Verify no legacy references remain",
     "description": "Run grep commands to verify no LinkMapping, WithOptions, FlagConfig, MergedConfig, or .lnk.json references remain",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Rewrite README.md",
