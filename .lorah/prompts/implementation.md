@@ -1,6 +1,6 @@
 ## YOUR ROLE - BUILD PHASE
 
-You are continuing work on a Go refactoring project. Each session starts fresh with no memory of previous sessions.
+You are continuing work on a Go cleanup project (removing legacy code). Each session starts fresh with no memory of previous sessions.
 
 ### STEP 1: Get Your Bearings
 
@@ -27,11 +27,15 @@ IMPORTANT: Only work on ONE task per session.
 
 ### STEP 3: Implement & Test
 
-1. **Write the code** - Follow existing patterns in `internal/lnk/`
+1. **Delete the code** - Remove legacy functions/types carefully
+   - Check for usage before deleting (use grep/LSP)
+   - Remove tests for deleted code in same session (if test cleanup task)
+   - Keep new functions/types that will be renamed later
 2. **Build**: Run `make build` to verify compilation
-3. **Test**: Run `make test` to verify all tests pass
-4. **Unit tests**: Add unit tests for new functions
-5. **E2E tests**: Update e2e tests if CLI behavior changed
+3. **Test**: Run `make test` to verify all tests still pass
+   - Some tests may fail if they used legacy code - that's expected
+   - Only proceed if tests related to your deletion fail (not unrelated failures)
+4. **Test cleanup**: When working on test cleanup tasks, remove legacy tests
 
 Refer to CLAUDE.md for:
 
@@ -53,10 +57,11 @@ Only after verifying the task works:
 ### CRITICAL RULES
 
 - **Leave code working**: All tests must pass before session end
-- **One task at a time**: Complete one feature fully before moving to next
+- **One task at a time**: Complete one deletion/rename fully before moving to next
 - **No task modifications**: Only change the `passes` field in tasks.json
-- **Follow conventions**: Use error types from errors.go, output functions from output.go
-- **Test thoroughly**: Run both `make test-unit` and `make test-e2e`
+- **Check before deleting**: Use grep or LSP to verify nothing uses the code you're removing
+- **Test after deletion**: Immediately run tests after each deletion
+- **Careful with renames**: Use global find-replace to rename functions/types everywhere
 
 ### EXAMPLE WORKFLOW
 
@@ -64,13 +69,15 @@ Only after verifying the task works:
 # 1. Orient
 cat .lorah/tasks.json | grep -A1 '"passes": false' | head -4
 
-# 2. Implement (example: LinkOptions struct)
+# 2. Delete (example: Remove legacy CreateLinks)
+# - Check for usage: grep -r "CreateLinks(" internal/
 # - Edit internal/lnk/linker.go
-# - Add LinkOptions struct
+# - Delete legacy CreateLinks function
 
 # 3. Test
 make build
 make test-unit
+# Fix any broken tests if needed
 
 # 4. Update
 # - Edit .lorah/tasks.json (flip passes to true)
@@ -79,5 +86,4 @@ make test-unit
 # 5. Commit
 # Use commit skill to help generate a commit message.
 /commit
-git commit -m <message>
 ```

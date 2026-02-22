@@ -1,211 +1,195 @@
-# lnk CLI Refactor - Stow-like Interface
+# lnk Legacy Code Cleanup
 
-## Context
+## Overview
 
-lnk currently requires a JSON config file with explicit `LinkMappings` before first use. This adds friction compared to stow's convention-based approach where you just run `stow package` from your dotfiles directory.
+Remove legacy code from the lnk CLI codebase. The CLI was recently refactored from a subcommand-based interface with JSON config to a stow-like flag-based interface with `.lnkconfig` files. However, all legacy code was retained for "backward compatibility" which was explicitly NOT desired.
 
 ## Goals
 
-1. Make config optional - use CLI flags and positional arguments
-2. Switch from subcommands to flags (like stow) - lnk is a focused symlink tool
-3. Breaking change (pre-v1, no migration needed)
+1. **Remove ~900 lines of legacy code** that is no longer used
+2. **Simplify naming** - drop `WithOptions` suffixes and `Flag` prefixes
+3. **Clean up tests** - remove tests for legacy functions
+4. **Update documentation** - reflect new simplified API
 
-## New Usage Model
+## Implementation Phases
 
-```bash
-# From dotfiles directory (at least one package required, like stow)
-cd ~/git/dotfiles
-lnk .                              # Flat repo: link everything (matches stow .)
-lnk home                           # Nested repo: links ./home/* -> ~/*
-lnk home private/home              # Multiple packages
+### Phase 0: Simplify Naming
 
-# Action flags (mutually exclusive)
-lnk home                           # default = create links
-lnk -C home, lnk --create home     # explicit create
-lnk -R home, lnk --remove home     # remove links
-lnk -S home, lnk --status home     # show status of links
-lnk -P,      lnk --prune           # remove broken symlinks
-lnk -A home, lnk --adopt home      # adopt existing files into source
-lnk -O path, lnk --orphan path     # move file from source to target
+After removing legacy code, simplify the remaining API:
 
-# Directory flags
--s, --source DIR   # Source directory (default: current directory)
--t, --target DIR   # Target directory (default: ~)
+**Function Renames:**
 
-# Other flags
---ignore PATTERN   # Additional ignore pattern (gitignore syntax, repeatable)
--n, --dry-run      # Preview mode (stow uses -n)
--v, --verbose      # Verbose output
--q, --quiet        # Quiet mode
---no-color         # Disable colors
--V, --version      # Show version
--h, --help         # Show help
-```
+- `CreateLinksWithOptions` → `CreateLinks`
+- `RemoveLinksWithOptions` → `RemoveLinks`
+- `StatusWithOptions` → `Status`
+- `PruneWithOptions` → `Prune`
+- `AdoptWithOptions` → `Adopt`
+- `OrphanWithOptions` → `Orphan`
+- `FindManagedLinksForSources` → `FindManagedLinks`
+- `MergeFlagConfig` → `LoadConfig`
+- `LoadFlagConfig` → `loadConfigFile` (unexported)
+- `parseFlagConfigFile` → `parseConfigFile` (unexported)
 
-**Package argument:** At least one required for link operations. Can be `.` (current directory contents) or subdirectory paths.
+**Type Renames:**
 
-## Differences from Stow
+- `FlagConfig` → `FileConfig` (config from .lnkconfig file)
+- `MergedConfig` → `Config` (final resolved config)
+- `LinkOptions`, `AdoptOptions`, `OrphanOptions` - keep as-is
 
-| Aspect                 | Stow                            | lnk                              |
-| ---------------------- | ------------------------------- | -------------------------------- |
-| Action flags           | `-S`, `-D`, `-R`                | `-C/--create`, `-R/--remove`     |
-| Source flag            | `-d, --dir`                     | `-s, --source`                   |
-| Ignore syntax          | Perl regex                      | Gitignore syntax                 |
-| Ignore file            | `.stow-local-ignore`            | `.lnkignore`                     |
-| Tree folding           | Yes (`--no-folding` to disable) | No (always links files)          |
-| `--restow`             | Yes                             | No (just run remove then create) |
-| `--defer`/`--override` | Yes                             | No (not needed)                  |
-| `--dotfiles`           | Yes                             | No (not needed)                  |
-| `-S/--status`          | No                              | Yes                              |
-| `-P/--prune`           | No                              | Yes                              |
-| `-O/--orphan`          | No                              | Yes                              |
+**Constant Renames:**
 
-## Config File (Optional)
+- `FlagConfigFileName` → `ConfigFileName`
 
-Config provides default flags, like stow's `.stowrc`. Discovery order:
+### Phase 1: Remove Legacy Types and Constants
 
-1. `.lnkconfig` in source directory (repo-specific)
-2. `$XDG_CONFIG_HOME/lnk/config` or `~/.config/lnk/config`
-3. `~/.lnkconfig`
+**File: `internal/lnk/constants.go`**
 
-Format (CLI flags, one per line):
+- Remove old `ConfigFileName = ".lnk.json"` (line 18)
 
-```
---target=~
---ignore=local/
---ignore=*.private
-```
+**File: `internal/lnk/errors.go`**
 
-## Ignore File (Optional)
+- Remove `ErrNoLinkMappings` error (lines 16-17)
 
-`.lnkignore` in source directory. Gitignore syntax (same as current lnk):
+**File: `internal/lnk/config.go`**
+Remove these types:
 
-```
-# Comments supported
-.git
-*.swp
-README.md
-scripts/
-```
+- `LinkMapping` struct (lines 15-19)
+- Old `Config` struct with `LinkMappings` (lines 21-25)
+- `ConfigOptions` struct (lines 27-31)
 
-## Implementation
+### Phase 2: Remove Legacy Functions
 
-### Phase 1: Config file support
+**File: `internal/lnk/config.go`**
 
-**Modify: `internal/lnk/config.go`**
+- Remove `getDefaultConfig()` (lines 284-292)
+- Remove `LoadConfig()` (lines 296-325) - marked deprecated
+- Remove `loadConfigFromFile()` (lines 328-358)
+- Remove `LoadConfigWithOptions()` (lines 361-414)
+- Remove `Config.Save()` (lines 417-429)
+- Remove `Config.GetMapping()` (lines 432-439)
+- Remove `Config.ShouldIgnore()` (lines 442-444)
+- Remove `Config.Validate()` (lines 460-503)
+- Remove `DetermineSourceMapping()` (lines 506-522)
 
-- `LoadConfig(sourceDir string) (*Config, error)` - discovers and parses config
-- Parse CLI flag format (stow-style, one flag per line)
-- Merge with CLI flags (CLI takes precedence)
-- Built-in ignore defaults still apply
+**File: `internal/lnk/linker.go`**
 
-### Phase 2: Create options-based Linker API
+- Remove `CreateLinks(config *Config, ...)` (lines 26-102)
+- Remove `RemoveLinks(config *Config, ...)` and `removeLinks()` (lines 243-322)
+- Remove `PruneLinks(config *Config, ...)` (lines 584-668)
 
-**Modify: `internal/lnk/linker.go`**
+**File: `internal/lnk/status.go`**
 
-Add new struct and functions:
+- Remove `Status(config *Config)` (lines 29-120)
+
+**File: `internal/lnk/adopt.go`**
+
+- Remove `ensureSourceDirExists()` (lines 86-105)
+- Remove `Adopt(source string, config *Config, ...)` (lines 456-552)
+
+**File: `internal/lnk/orphan.go`**
+
+- Remove `Orphan(link string, config *Config, ...)` (lines 202-322)
+
+**File: `internal/lnk/link_utils.go`**
+
+- Remove `FindManagedLinks(startPath string, config *Config)` (lines 18-54)
+- Remove `checkManagedLink(linkPath string, config *Config)` (lines 57-108)
+
+### Phase 3: Clean Up Status Command
+
+**Decision:** Keep status command - provides quick view of current links.
+
+**File: `internal/lnk/status.go`**
+
+- Remove only the legacy `Status(config *Config)` function
+- Keep `StatusWithOptions()` (will be renamed to `Status` in Phase 0)
+
+### Phase 4: Update Documentation
+
+**File: `README.md`**
+Complete rewrite to reflect new CLI:
+
+- Installation section
+- Quick start examples (`lnk .`, `lnk home`, `lnk home private/home`)
+- Usage section with flag descriptions
+- Examples for all operations
+- Config file documentation (.lnkconfig, .lnkignore)
+- How it works section
+
+See `mutable-gliding-flame.md` lines 100-212 for detailed README content.
+
+### Phase 5: Clean Up Tests
+
+**Files to modify:**
+
+- `internal/lnk/config_test.go` - Remove tests for legacy JSON config
+- `internal/lnk/linker_test.go` - Remove tests using old `*Config`
+- `internal/lnk/status_test.go` - Remove tests using old `*Config`
+- `internal/lnk/adopt_test.go` - Remove tests for legacy `Adopt()`
+- `internal/lnk/orphan_test.go` - Remove tests for legacy `Orphan()`
+- `internal/lnk/link_utils_test.go` - Remove tests for legacy `FindManagedLinks()`
+- `internal/lnk/errors_test.go` - Remove `ErrNoLinkMappings` tests
+
+### Phase 6: Update CLAUDE.md
+
+**File: `CLAUDE.md`**
+Update the "Configuration Structure" section to reflect new types:
 
 ```go
+// Config loaded from .lnkconfig file
+type FileConfig struct {
+    Target         string
+    IgnorePatterns []string
+}
+
+// Final resolved configuration
+type Config struct {
+    SourceDir      string
+    TargetDir      string
+    IgnorePatterns []string
+}
+
+// Options for operations
 type LinkOptions struct {
-    SourceDir      string   // base directory (e.g., ~/git/dotfiles)
-    TargetDir      string   // where to create links (default: ~)
-    Packages       []string // subdirs to process (e.g., ["home", "private/home"])
+    SourceDir      string
+    TargetDir      string
+    Packages       []string
     IgnorePatterns []string
     DryRun         bool
 }
-
-func CreateLinksWithOptions(opts LinkOptions) error
-func RemoveLinksWithOptions(opts LinkOptions) error
-func StatusWithOptions(opts LinkOptions) error
-func PruneWithOptions(opts LinkOptions) error
 ```
 
-Refactor `collectPlannedLinks` to take `ignorePatterns []string` instead of `*Config`.
+Remove references to:
 
-### Phase 3: Rewrite CLI (flag-based)
+- Subcommand routing
+- `handleXxx(args, globalOptions)` pattern
+- JSON config file
 
-**Rewrite: `cmd/lnk/main.go`**
+## Summary of Changes
 
-Replace subcommand routing with flag-based parsing:
+### Deletions
 
-```go
-// Action flags (mutually exclusive)
--C, --create    // create links (default if no action flag)
--R, --remove    // remove links
--S, --status    // show status
--P, --prune     // remove broken links
--A, --adopt     // adopt files into source
--O, --orphan PATH   // orphan specific file
+| File          | Lines to Remove (approx) |
+| ------------- | ------------------------ |
+| config.go     | ~250 lines               |
+| linker.go     | ~200 lines               |
+| status.go     | ~90 lines                |
+| adopt.go      | ~120 lines               |
+| orphan.go     | ~120 lines               |
+| link_utils.go | ~90 lines                |
+| constants.go  | 1 line                   |
+| errors.go     | 2 lines                  |
+| Test files    | Significant cleanup      |
 
-// Directory flags
--s, --source DIR   // source directory (default: ".")
--t, --target DIR   // target directory (default: "~")
+**Total: ~900+ lines of legacy code to remove**
 
-// Other flags
---ignore PATTERN   // additional ignore pattern
--n, --dry-run      // preview mode
--v, --verbose      // verbose output
--q, --quiet        // quiet mode
---no-color         // disable colors
---version          // show version
--h, --help         // show help
-```
+### Renames
 
-Positional args after flags = packages.
-
-### Phase 4: Update internal functions
-
-**`adopt`**: Change to work with `--adopt` flag + packages
-**`orphan`**: Change to work with `--orphan PATH` flag
-**`prune`**: Change to work with `--prune` flag + optional packages
-
-## Files to Modify
-
-| File                         | Changes                                                              |
-| ---------------------------- | -------------------------------------------------------------------- |
-| `cmd/lnk/main.go`            | Rewrite - flag-based parsing, remove subcommand routing              |
-| `internal/lnk/config.go`     | Rewrite - new config format, discovery, parsing                      |
-| `internal/lnk/linker.go`     | Add `LinkOptions`, `*WithOptions()` functions                        |
-| `internal/lnk/link_utils.go` | Add `FindManagedLinksForSources(startPath string, sources []string)` |
-| `internal/lnk/adopt.go`      | Update to work with new options pattern                              |
-| `internal/lnk/orphan.go`     | Update to work with new options pattern                              |
-
-## Test Strategy
-
-1. Add unit tests for new config parsing
-2. Add unit tests for `.lnkignore` parsing
-3. Add unit tests for `*WithOptions` functions
-4. Rewrite e2e tests for new CLI syntax
-
-## Verification
-
-After implementation:
-
-```bash
-# Test flat repo
-cd ~/git/dotfiles
-lnk . -n                           # dry-run create (default action)
-
-# Test nested packages
-lnk home -n
-lnk home private/home -n
-
-# Test from anywhere
-lnk -s ~/git/dotfiles home -n
-
-# Test action flags
-lnk -R home -n                     # dry-run remove
-lnk -S home                        # status
-lnk -P -n                          # dry-run prune
-
-# Test config file
-echo "--ignore=local/" > ~/git/dotfiles/.lnkconfig
-lnk . -n
-
-# Test adopt/orphan
-lnk -A home -n
-lnk -O ~/.bashrc -n
-```
+| Count | Type             |
+| ----- | ---------------- |
+| 10    | Function renames |
+| 2     | Type renames     |
+| 1     | Constant rename  |
 
 ## Technology Stack
 
@@ -216,8 +200,33 @@ lnk -O ~/.bashrc -n
 
 ## Success Criteria
 
-- All unit tests pass
-- All e2e tests pass with new CLI syntax
+- All unit tests pass (`make test-unit`)
+- All e2e tests pass (`make test-e2e`)
 - `make build` succeeds
-- Verification examples work as expected
-- Breaking change is acceptable (pre-v1.0)
+- Binary size reduced (fewer lines of code)
+- No references to legacy code remain:
+  - No `LinkMapping` in codebase
+  - No `WithOptions` suffixes in function names
+  - No `FlagConfig` type name
+  - No `.lnk.json` references
+
+## Verification Commands
+
+After cleanup:
+
+```bash
+# Build
+make build
+
+# Run tests
+make test
+
+# Verify no legacy references
+grep -r "LinkMapping" internal/
+grep -r "WithOptions" internal/
+grep -r "FlagConfig" internal/
+grep -r "MergedConfig" internal/
+grep -r "\\.lnk\\.json" .
+```
+
+All greps should return no results (or only in test files that will be cleaned up).
