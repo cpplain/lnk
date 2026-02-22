@@ -221,4 +221,3 @@ func TestAdoptSourceDirNotExist(t *testing.T) {
 		t.Errorf("expected error about nonexistent directory, got: %v", err)
 	}
 }
-

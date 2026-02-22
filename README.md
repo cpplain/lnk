@@ -37,14 +37,14 @@ At least one package is required for link operations. Use `.` for flat repositor
 
 ### Action Flags (mutually exclusive)
 
-| Flag                | Description                        |
-| ------------------- | ---------------------------------- |
-| `-C, --create`      | Create symlinks (default action)   |
-| `-R, --remove`      | Remove symlinks                    |
-| `-S, --status`      | Show status of symlinks            |
-| `-P, --prune`       | Remove broken symlinks             |
-| `-A, --adopt`       | Adopt files into package           |
-| `-O, --orphan PATH` | Remove file from management        |
+| Flag                | Description                      |
+| ------------------- | -------------------------------- |
+| `-C, --create`      | Create symlinks (default action) |
+| `-R, --remove`      | Remove symlinks                  |
+| `-S, --status`      | Show status of symlinks          |
+| `-P, --prune`       | Remove broken symlinks           |
+| `-A, --adopt`       | Adopt files into package         |
+| `-O, --orphan PATH` | Remove file from management      |
 
 ### Directory Flags
 
@@ -211,15 +211,18 @@ The directories `.config`, `.config/git`, and `.config/nvim` are created as regu
 lnk uses a package-based approach. A package is a subdirectory in your source that maps to a target directory. Common patterns:
 
 **Flat Repository:**
+
 ```
 ~/dotfiles/
   .bashrc
   .vimrc
   .gitconfig
 ```
+
 Use: `lnk .`
 
 **Nested Repository:**
+
 ```
 ~/dotfiles/
   home/          # Public configs
@@ -230,6 +233,7 @@ Use: `lnk .`
       .ssh/
         config
 ```
+
 Use: `lnk home private/home`
 
 ### Config File Precedence
@@ -250,6 +254,7 @@ lnk supports gitignore-style patterns for excluding files from linking:
 - `**/*.log` - all .log files recursively
 
 Patterns can be specified via:
+
 - `.lnkignore` file (one pattern per line)
 - `.lnkconfig` file (`--ignore=pattern`)
 - CLI flags (`--ignore pattern`)
@@ -342,6 +347,7 @@ lnk home
 - **dotbot**: YAML-based config, more explicit control
 
 lnk is designed for users who:
+
 - Want a simple, flag-based CLI
 - Prefer symlinks over copying
 - Need to mix public and private configs

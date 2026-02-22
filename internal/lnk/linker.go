@@ -22,7 +22,6 @@ type LinkOptions struct {
 	DryRun         bool     // preview mode without making changes
 }
 
-
 // collectPlannedLinksWithPatterns walks a source directory and collects all files that should be linked
 // Uses ignore patterns directly instead of a Config object
 func collectPlannedLinksWithPatterns(sourcePath, targetPath string, ignorePatterns []string) ([]PlannedLink, error) {
@@ -160,7 +159,6 @@ func CreateLinks(opts LinkOptions) error {
 	// Execute the plan
 	return executePlannedLinks(plannedLinks)
 }
-
 
 // findManagedLinksForPackages finds all symlinks in targetDir that point to the specified packages
 func findManagedLinksForPackages(targetDir, sourceDir string, packages []string) ([]ManagedLink, error) {
@@ -420,7 +418,6 @@ func Prune(opts LinkOptions) error {
 
 	return nil
 }
-
 
 // shouldIgnoreEntry determines if an entry should be ignored based on patterns
 // collectPlannedLinks walks a source directory and collects all files that should be linked

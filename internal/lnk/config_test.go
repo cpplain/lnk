@@ -587,10 +587,10 @@ func TestLoadConfigPrecedence(t *testing.T) {
 
 	// All ignore patterns should be combined
 	expectedPatterns := []string{
-		"cli-pattern",          // from CLI
-		"config-pattern",       // from .lnkconfig
-		"ignore-file-pattern",  // from .lnkignore
-		".git",                 // built-in
+		"cli-pattern",         // from CLI
+		"config-pattern",      // from .lnkconfig
+		"ignore-file-pattern", // from .lnkignore
+		".git",                // built-in
 	}
 
 	for _, want := range expectedPatterns {
