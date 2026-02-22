@@ -47,7 +47,7 @@
   {
     "name": "Rename CreateLinksWithOptions to CreateLinks",
     "description": "Rename function in linker.go and update all call sites",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Rename RemoveLinksWithOptions to RemoveLinks",

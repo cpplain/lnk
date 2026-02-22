@@ -82,7 +82,7 @@ func assertDirExists(t *testing.T, path string) {
 	}
 }
 
-func TestCreateLinksWithOptions(t *testing.T) {
+func TestCreateLinks(t *testing.T) {
 	tests := []struct {
 		name        string
 		setup       func(t *testing.T, tmpDir string) (configRepo string, opts LinkOptions)
@@ -254,16 +254,16 @@ func TestCreateLinksWithOptions(t *testing.T) {
 
 			configRepo, opts := tt.setup(t, tmpDir)
 
-			err := CreateLinksWithOptions(opts)
+			err := CreateLinks(opts)
 			if tt.wantErr {
 				if err == nil {
-					t.Errorf("CreateLinksWithOptions() expected error, got nil")
+					t.Errorf("CreateLinks() expected error, got nil")
 				}
 				return
 			}
 
 			if err != nil {
-				t.Fatalf("CreateLinksWithOptions() error = %v", err)
+				t.Fatalf("CreateLinks() error = %v", err)
 			}
 
 			if tt.checkResult != nil {

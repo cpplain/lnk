@@ -63,8 +63,8 @@ func collectPlannedLinksWithPatterns(sourcePath, targetPath string, ignorePatter
 	return links, err
 }
 
-// CreateLinksWithOptions creates symlinks using package-based options
-func CreateLinksWithOptions(opts LinkOptions) error {
+// CreateLinks creates symlinks using package-based options
+func CreateLinks(opts LinkOptions) error {
 	PrintCommandHeader("Creating Symlinks")
 
 	// Validate inputs

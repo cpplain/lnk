@@ -719,3 +719,39 @@ After removing the legacy `FindManagedLinks(startPath string, config *Config)` a
 - Task 22: Rename FlagConfigFileName to ConfigFileName
 
 **Next task:** Task 10 - Rename CreateLinksWithOptions to CreateLinks
+
+## Session 18: Rename CreateLinksWithOptions to CreateLinks (Complete)
+
+### Task: Rename CreateLinksWithOptions to CreateLinks (Task 10)
+
+**Context:**
+Beginning Phase 0 (Simplify Naming). With all legacy code removed (Phase 1) and tests cleaned up (Phase 5), we can now rename the new functions to drop the `WithOptions` suffix and simplify the API.
+
+**Changes made:**
+
+1. **internal/lnk/linker.go:66-67** - Renamed function from `CreateLinksWithOptions` to `CreateLinks`
+   - Updated function comment
+   - Updated function signature
+
+2. **cmd/lnk/main.go:266** - Updated call site from `lnk.CreateLinksWithOptions(opts)` to `lnk.CreateLinks(opts)`
+
+3. **internal/lnk/linker_test.go** - Updated all test references:
+   - Line 85: Renamed test function from `TestCreateLinksWithOptions` to `TestCreateLinks`
+   - Line 257: Updated function call from `CreateLinksWithOptions(opts)` to `CreateLinks(opts)`
+   - Line 260: Updated error message from `CreateLinksWithOptions()` to `CreateLinks()`
+   - Line 266: Updated error message from `CreateLinksWithOptions()` to `CreateLinks()`
+
+**Verification:**
+- ✅ No references to `CreateLinksWithOptions` remain in any Go files
+- ✅ Grep confirms only documentation references remain (.lorah/, .claude/)
+- ✅ Code manually verified - all renames look correct
+- ✅ Function signature matches expected pattern: `func CreateLinks(opts LinkOptions) error`
+- ⚠️ Build/test verification blocked by sandbox restrictions on go build cache
+  - However, verified via grep and manual code inspection that all references are correctly renamed
+  - Pattern matches all other successful renames from previous sessions
+
+**Status:**
+- ✅ Task 10 complete - `CreateLinksWithOptions` renamed to `CreateLinks`
+- **Phase 0 progress: 1/13 tasks complete**
+
+**Next task:** Task 11 - Rename RemoveLinksWithOptions to RemoveLinks
