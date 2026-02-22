@@ -57,7 +57,7 @@
   {
     "name": "Rename StatusWithOptions to Status",
     "description": "Rename function in status.go and update all call sites",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Rename PruneWithOptions to Prune",

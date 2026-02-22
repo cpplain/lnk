@@ -289,7 +289,7 @@ func main() {
 			IgnorePatterns: mergedConfig.IgnorePatterns,
 			DryRun:         false, // status doesn't use dry-run
 		}
-		if err := lnk.StatusWithOptions(opts); err != nil {
+		if err := lnk.Status(opts); err != nil {
 			lnk.PrintErrorWithHint(err)
 			os.Exit(lnk.ExitError)
 		}

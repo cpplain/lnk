@@ -25,8 +25,8 @@ type StatusOutput struct {
 	} `json:"summary"`
 }
 
-// StatusWithOptions displays the status of managed symlinks for specific packages
-func StatusWithOptions(opts LinkOptions) error {
+// Status displays the status of managed symlinks for specific packages
+func Status(opts LinkOptions) error {
 	// Validate inputs
 	if len(opts.Packages) == 0 {
 		return NewValidationErrorWithHint("packages", "", "no packages specified",

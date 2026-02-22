@@ -790,3 +790,35 @@ Continuing Phase 0 (Simplify Naming). Task 10 (CreateLinks rename) was completed
 - **Phase 0 progress: 2/13 tasks complete**
 
 **Next task:** Task 12 - Rename StatusWithOptions to Status
+## Session 20: Rename StatusWithOptions to Status (Complete)
+
+### Task: Rename StatusWithOptions to Status (Task 12)
+
+**Context:**
+Continuing Phase 0 (Simplify Naming). Tasks 10 (CreateLinks) and 11 (RemoveLinks) were completed in previous sessions. Now renaming the status function to drop the `WithOptions` suffix.
+
+**Changes made:**
+
+1. **internal/lnk/status.go:28-29** - Renamed function from `StatusWithOptions` to `Status`
+   - Updated function comment
+   - Updated function signature
+
+2. **cmd/lnk/main.go:292** - Updated call site from `lnk.StatusWithOptions(opts)` to `lnk.Status(opts)`
+
+3. **internal/lnk/status_test.go** - Updated all test references:
+   - Line 10: Renamed test function from `TestStatusWithOptions` to `TestStatus`
+   - Line 201: Updated function call from `StatusWithOptions(opts)` to `Status(opts)`
+   - Lines 203, 206, 219, 228, 235: Updated error messages from `StatusWithOptions()` to `Status()`
+
+**Verification:**
+- ✅ No references to `StatusWithOptions` remain in any Go files
+- ✅ Grep confirms only documentation references remain (.lorah/)
+- ✅ Code manually verified - all renames look correct
+- ✅ Function signature matches expected pattern: `func Status(opts LinkOptions) error`
+- ✅ LSP diagnostics show no compilation errors (only informational warnings about unused helper functions)
+
+**Status:**
+- ✅ Task 12 complete - `StatusWithOptions` renamed to `Status`
+- **Phase 0 progress: 3/13 tasks complete**
+
+**Next task:** Task 13 - Rename PruneWithOptions to Prune

@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestStatusWithOptions(t *testing.T) {
+func TestStatus(t *testing.T) {
 	tests := []struct {
 		name         string
 		setupFunc    func(tmpDir string) LinkOptions
@@ -198,12 +198,12 @@ func TestStatusWithOptions(t *testing.T) {
 
 			// Capture output
 			output := CaptureOutput(t, func() {
-				err := StatusWithOptions(opts)
+				err := Status(opts)
 				if tt.wantError && err == nil {
-					t.Errorf("StatusWithOptions() expected error but got nil")
+					t.Errorf("Status() expected error but got nil")
 				}
 				if !tt.wantError && err != nil {
-					t.Errorf("StatusWithOptions() unexpected error: %v", err)
+					t.Errorf("Status() unexpected error: %v", err)
 				}
 
 				// Check error message contains expected text
@@ -216,7 +216,7 @@ func TestStatusWithOptions(t *testing.T) {
 						}
 					}
 					if !found {
-						t.Errorf("StatusWithOptions() error = %v, want one of %v", err, tt.wantContains)
+						t.Errorf("Status() error = %v, want one of %v", err, tt.wantContains)
 					}
 				}
 			})
@@ -225,14 +225,14 @@ func TestStatusWithOptions(t *testing.T) {
 			if !tt.wantError {
 				for _, want := range tt.wantContains {
 					if !strings.Contains(output, want) {
-						t.Errorf("StatusWithOptions() output missing %q\nGot:\n%s", want, output)
+						t.Errorf("Status() output missing %q\nGot:\n%s", want, output)
 					}
 				}
 
 				// For partial status test, verify gitconfig is NOT present
 				if tt.name == "partial status - only specified package" {
 					if strings.Contains(output, ".gitconfig") {
-						t.Errorf("StatusWithOptions() should not show .gitconfig for home package only")
+						t.Errorf("Status() should not show .gitconfig for home package only")
 					}
 				}
 			}
