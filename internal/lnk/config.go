@@ -24,9 +24,9 @@ type MergedConfig struct {
 	IgnorePatterns []string // Combined ignore patterns from all sources
 }
 
-// parseFlagConfigFile parses a flag-based config file (stow-style)
+// parseConfigFile parses a config file (stow-style)
 // Format: one flag per line, e.g., "--target=~" or "--ignore=*.swp"
-func parseFlagConfigFile(filePath string) (*FlagConfig, error) {
+func parseConfigFile(filePath string) (*FlagConfig, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
@@ -136,7 +136,7 @@ func loadConfigFile(sourceDir string) (*FlagConfig, string, error) {
 		PrintVerbose("Looking for config at: %s", cp.path)
 
 		if _, err := os.Stat(cp.path); err == nil {
-			config, err := parseFlagConfigFile(cp.path)
+			config, err := parseConfigFile(cp.path)
 			if err != nil {
 				return nil, "", fmt.Errorf("failed to parse config from %s: %w", cp.source, err)
 			}

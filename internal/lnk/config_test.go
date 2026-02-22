@@ -9,7 +9,7 @@ import (
 
 // Tests for new flag-based config format
 
-func TestParseFlagConfigFile(t *testing.T) {
+func TestParseConfigFile(t *testing.T) {
 	tests := []struct {
 		name        string
 		content     string
@@ -93,29 +93,29 @@ func TestParseFlagConfigFile(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			got, err := parseFlagConfigFile(tmpFile.Name())
+			got, err := parseConfigFile(tmpFile.Name())
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parseFlagConfigFile() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("parseConfigFile() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if tt.wantErr {
 				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
-					t.Errorf("parseFlagConfigFile() error = %v, want error containing %q", err, tt.errContains)
+					t.Errorf("parseConfigFile() error = %v, want error containing %q", err, tt.errContains)
 				}
 				return
 			}
 
 			if got.Target != tt.want.Target {
-				t.Errorf("parseFlagConfigFile() Target = %v, want %v", got.Target, tt.want.Target)
+				t.Errorf("parseConfigFile() Target = %v, want %v", got.Target, tt.want.Target)
 			}
 
 			if len(got.IgnorePatterns) != len(tt.want.IgnorePatterns) {
-				t.Errorf("parseFlagConfigFile() IgnorePatterns length = %v, want %v", len(got.IgnorePatterns), len(tt.want.IgnorePatterns))
+				t.Errorf("parseConfigFile() IgnorePatterns length = %v, want %v", len(got.IgnorePatterns), len(tt.want.IgnorePatterns))
 			} else {
 				for i, pattern := range tt.want.IgnorePatterns {
 					if got.IgnorePatterns[i] != pattern {
-						t.Errorf("parseFlagConfigFile() IgnorePatterns[%d] = %v, want %v", i, got.IgnorePatterns[i], pattern)
+						t.Errorf("parseConfigFile() IgnorePatterns[%d] = %v, want %v", i, got.IgnorePatterns[i], pattern)
 					}
 				}
 			}
