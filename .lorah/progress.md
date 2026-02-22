@@ -1042,3 +1042,35 @@ Continuing Phase 0 (Simplify Naming). Tasks 10-17 were completed in previous ses
 - **Phase 0 progress: 9/13 tasks complete**
 
 **Next task:** Task 19 - Rename parseFlagConfigFile to parseConfigFile (unexported)
+
+## Session 27: Rename parseFlagConfigFile to parseConfigFile (Complete)
+
+### Task: Rename parseFlagConfigFile to parseConfigFile (unexported) (Task 19)
+
+**Context:**
+Continuing Phase 0 (Simplify Naming). Tasks 10-18 were completed in previous sessions. Now renaming the config file parsing function to drop the `Flag` prefix and make it unexported since it's only used internally within the lnk package.
+
+**Changes made:**
+
+1. **internal/lnk/config.go:27-29** - Renamed function from `parseFlagConfigFile` to `parseConfigFile`
+   - Updated function comment (removed "flag-based" wording)
+   - Updated function signature to unexported (lowercase first letter)
+
+2. **internal/lnk/config.go:139** - Updated call site from `parseFlagConfigFile(cp.path)` to `parseConfigFile(cp.path)`
+
+3. **internal/lnk/config_test.go** - Updated all test references:
+   - Line 12: Renamed test function to `TestParseConfigFile` (following Go test naming conventions)
+   - Lines 96, 98, 104, 110, 114, 118: Updated function calls and error messages from `parseFlagConfigFile()` to `parseConfigFile()`
+
+**Verification:**
+- ✅ No references to `parseFlagConfigFile` remain in any Go files
+- ✅ Grep confirms no legacy function name remains in production code or tests
+- ✅ Function signature matches expected pattern: `func parseConfigFile(filePath string) (*FlagConfig, error)`
+- ✅ Test function follows Go naming conventions (TestParseConfigFile for unexported function)
+- ✅ LSP diagnostics show no compilation errors (only informational warnings about unused helper functions)
+
+**Status:**
+- ✅ Task 19 complete - `parseFlagConfigFile` renamed to `parseConfigFile` (unexported)
+- **Phase 0 progress: 10/13 tasks complete**
+
+**Next task:** Task 20 - Rename FlagConfig to FileConfig
