@@ -107,7 +107,7 @@
   {
     "name": "Rename FlagConfigFileName to ConfigFileName",
     "description": "Rename constant in constants.go and update all references",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove legacy tests from config_test.go",

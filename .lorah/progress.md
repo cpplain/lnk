@@ -1148,3 +1148,48 @@ Continuing Phase 0 (Simplify Naming). Tasks 10-20 were completed in previous ses
 - **Phase 0 progress: 12/13 tasks complete**
 
 **Next task:** Task 22 - Rename FlagConfigFileName to ConfigFileName
+
+## Session 30: Rename FlagConfigFileName to ConfigFileName (Complete)
+
+### Task: Rename FlagConfigFileName to ConfigFileName (Task 22)
+
+**Context:**
+Continuing Phase 0 (Simplify Naming). Tasks 10-21 were completed in previous sessions. Now renaming the config file name constant to drop the `Flag` prefix and use the simpler name `ConfigFileName`.
+
+**Changes made:**
+
+1. **internal/lnk/constants.go:18** - Renamed constant from `FlagConfigFileName` to `ConfigFileName`
+   - Updated constant name
+   - Simplified comment from "New flag-based config format" to "Configuration file"
+
+2. **internal/lnk/config.go:128, 131** - Updated 2 references from `FlagConfigFileName` to `ConfigFileName`
+   - Line 128: `filepath.Join(absSourceDir, ConfigFileName)`
+   - Line 131: `filepath.Join(homeDir, ConfigFileName)`
+
+3. **internal/lnk/config_test.go** - Updated 6 test references from `FlagConfigFileName` to `ConfigFileName`
+   - Lines 233, 403, 416, 459, 485, 568: All `WriteFile` calls now use `ConfigFileName`
+
+**Verification:**
+- ✅ No references to `FlagConfigFileName` remain in any Go files
+- ✅ Grep confirms no legacy constant name remains in production code or tests
+- ✅ Constant definition matches expected pattern: `ConfigFileName = ".lnkconfig"`
+- ✅ LSP diagnostics show no compilation errors (only informational warnings about unused helper functions)
+- ⚠️ Build verification blocked by sandbox restrictions on go build cache
+  - However, verified via grep and LSP diagnostics that all references are correctly renamed
+  - Pattern matches all other successful renames from previous sessions
+
+**Status:**
+- ✅ Task 22 complete - `FlagConfigFileName` renamed to `ConfigFileName`
+- ✅ **Phase 0 COMPLETE!** All 13 naming simplification tasks done (Tasks 10-22)
+
+**Phase 0 Summary:**
+- 10 functions renamed (dropped `WithOptions` and `Flag` prefixes)
+- 2 types renamed (`FlagConfig` → `FileConfig`, `MergedConfig` → `Config`)
+- 1 constant renamed (`FlagConfigFileName` → `ConfigFileName`)
+
+**Next phase:** Verification tasks (Tasks 30-32)
+- Task 30: Verify all tests pass after cleanup
+- Task 31: Verify build succeeds after cleanup
+- Task 32: Verify no legacy references remain
+
+**Next task:** Task 30 - Verify all tests pass after cleanup
