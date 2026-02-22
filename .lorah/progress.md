@@ -503,3 +503,46 @@ After removing the legacy types (`Config`, `LinkMapping`) and functions (`LoadCo
   - link_utils_test.go (Task 28) - need to check for errors
 
 **Next task:** Task 24 or 25 - Check which test file needs cleanup next based on diagnostics
+
+## Session 13: Remove Legacy Tests from linker_test.go (Complete)
+
+### Task: Remove legacy tests from linker_test.go (Task 24)
+
+**Context:**
+After removing the legacy functions (`CreateLinks`, `removeLinks`, `PruneLinks`) in Session 3, linker_test.go had tests using the old `*Config` parameter pattern that needed cleanup.
+
+**Removed 4 legacy test functions:**
+1. `TestCreateLinks` - tested legacy `CreateLinks(config *Config, dryRun bool)` (lines 13-402)
+2. `TestRemoveLinks` - tested legacy `removeLinks(config *Config, dryRun bool, skipConfirm bool)` (lines 404-543)
+3. `TestPruneLinks` - tested legacy `PruneLinks(config *Config, dryRun bool, force bool)` (lines 545-673)
+4. `TestLinkerEdgeCases` - tested edge cases using legacy `CreateLinks(&Config{...})` (lines 679-902)
+
+**Kept 3 tests for new flag-based API:**
+1. `TestCreateLinksWithOptions` - tests `CreateLinksWithOptions(opts LinkOptions)`
+2. `TestRemoveLinksWithOptions` - tests `RemoveLinksWithOptions(opts LinkOptions)`
+3. `TestPruneWithOptions` - tests `PruneWithOptions(opts LinkOptions)`
+
+**Statistics:**
+- File reduced from 1659 lines to 767 lines (**892 lines removed**)
+- Test count reduced from 7 tests to 3 tests (4 legacy tests removed)
+
+**Verification:**
+- ✅ No references to `Config{` with `LinkMappings` remain
+- ✅ No references to `LinkMapping` type remain
+- ✅ No references to legacy `CreateLinks()` remain
+- ✅ No references to legacy `removeLinks()` remain
+- ✅ No references to legacy `PruneLinks()` remain
+- ✅ Grep confirms all legacy function references removed
+- ⚠️ Build verification blocked by sandbox restrictions on go build cache
+  - However, verified via grep that no legacy code references remain
+  - All helper functions preserved (createTestFile, assertSymlink, assertNotExists, assertDirExists, createTestSymlink)
+
+**Status:**
+- ✅ Task 24 complete - linker_test.go has been successfully cleaned up
+- Test files still needing cleanup:
+  - status_test.go (Task 25) - has errors per diagnostics
+  - adopt_test.go (Task 26) - has errors per diagnostics
+  - orphan_test.go (Task 27) - need to check for errors
+  - link_utils_test.go (Task 28) - has errors per diagnostics
+
+**Next task:** Task 25 - Remove legacy tests from status_test.go

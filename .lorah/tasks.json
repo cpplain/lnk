@@ -117,7 +117,7 @@
   {
     "name": "Remove legacy tests from linker_test.go",
     "description": "Remove tests using old *Config parameter pattern",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove legacy tests from status_test.go",
