@@ -276,3 +276,36 @@ Initialization complete. Ready for cleanup execution.
 - **Total: ~762 lines removed (85% of goal)**
 
 **Next task:** Task 6 - Remove legacy functions from link_utils.go
+
+## Session 7: Remove Legacy Functions from link_utils.go (Complete)
+
+### Task: Remove legacy functions from link_utils.go
+
+**Removed 2 legacy functions:**
+1. `FindManagedLinks(startPath string, config *Config)` - lines 18-54
+2. `checkManagedLink(linkPath string, config *Config)` - lines 57-108
+
+**Notes:**
+- Both functions used the old `*Config` type with `LinkMappings`
+- `checkManagedLink` was only called by `FindManagedLinks`
+- The new `FindManagedLinksForSources` function is used by production code instead
+- Production code (orphan.go) uses `FindManagedLinksForSources`, not the legacy functions
+
+**Verification:**
+- ✅ No references to removed functions in production code (cmd/ or internal/lnk/*.go)
+- ✅ Only test file references found (link_utils_test.go - expected)
+- ✅ LSP diagnostics show errors only in link_utils_test.go:
+  - Line 206: undefined: FindManagedLinks
+  - Line 292: undefined: checkManagedLink
+- All compilation errors are in test files only (expected)
+
+**Legacy code removed so far:**
+- Session 2: ~250 lines from config.go
+- Session 3: ~200 lines from linker.go
+- Session 4: ~93 lines from status.go
+- Session 5: ~98 lines from adopt.go
+- Session 6: ~121 lines from orphan.go
+- Session 7: ~92 lines from link_utils.go
+- **Total: ~854 lines removed (95% of goal)**
+
+**Next task:** Task 7 - Remove legacy types from config.go

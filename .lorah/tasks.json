@@ -27,7 +27,7 @@
   {
     "name": "Remove legacy functions from link_utils.go",
     "description": "Remove FindManagedLinks(startPath string, config *Config) and checkManagedLink(linkPath string, config *Config) functions",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove legacy types from config.go",
