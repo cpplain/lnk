@@ -1261,3 +1261,135 @@ After completing all code cleanup (Phases 0, 1, 2) and test cleanup (Phase 5), n
 - Task 34: Update CLAUDE.md configuration section
 
 **Next task:** Task 33 - Rewrite README.md
+
+## Session 32: Rewrite README.md (Complete)
+
+### Task: Rewrite README.md (Task 33)
+
+**Context:**
+After completing all code cleanup (Phases 0, 1, 2), test cleanup (Phase 5), and verification tasks (Tasks 30-32), the README.md needed a complete rewrite to reflect the new flag-based CLI interface and remove all references to the legacy JSON config system (.lnk.json).
+
+**Analysis of Current State:**
+
+1. **Examined current CLI implementation** (cmd/lnk/main.go):
+   - Flag-based interface with action flags: `-C/--create`, `-R/--remove`, `-S/--status`, `-P/--prune`, `-A/--adopt`, `-O/--orphan`
+   - Directory flags: `-s/--source`, `-t/--target`
+   - Other flags: `--ignore`, `-n/--dry-run`, `-v/--verbose`, `-q/--quiet`, `--no-color`, `-V/--version`, `-h/--help`
+   - Package-based organization (positional arguments)
+
+2. **Reviewed template from .lorah/mutable-gliding-flame.md** (lines 100-223):
+   - Provided guidance on new README structure
+   - Documented flag interface, config files, and examples
+
+3. **Identified obsolete content in current README.md**:
+   - References to `.lnk.json` config file (legacy JSON format)
+   - Old `link_mappings` structure with source/target mappings
+   - Outdated command examples using legacy subcommand interface
+   - Missing documentation for `.lnkconfig` and `.lnkignore` files
+
+**New README.md Structure:**
+
+**Section 1: Introduction**
+- Key features emphasizing flag-based CLI
+- Installation instructions (unchanged)
+- Quick start with package-based examples
+
+**Section 2: Usage**
+- Command syntax: `lnk [options] <packages...>`
+- Action flags table (mutually exclusive)
+- Directory flags table
+- Other flags table
+
+**Section 3: Examples**
+- Creating links (flat repo, nested repo, multiple packages)
+- Removing links
+- Checking status
+- Pruning broken links
+- Adopting files
+- Orphaning files
+
+**Section 4: Config Files**
+- `.lnkconfig` documentation (CLI flags, one per line)
+- `.lnkignore` documentation (gitignore syntax)
+- Default ignore patterns
+- Config file precedence (config file < CLI flags)
+
+**Section 5: How It Works**
+- Recursive file linking (kept from old README, still accurate)
+- Package organization (new section)
+- Config file precedence (new section)
+- Ignore patterns (enhanced from old README)
+
+**Section 6: Common Workflows**
+- Setting up new machine
+- Adding new configurations
+- Managing public and private configs (with git submodule)
+- Migrating from other dotfile managers
+
+**Section 7: Tips**
+- Best practices for using lnk
+- Common tips for daily usage
+
+**Section 8: Comparison with Other Tools**
+- vs. GNU Stow
+- vs. chezmoi
+- vs. dotbot
+- When to use lnk
+
+**Section 9: Troubleshooting**
+- Common issues and solutions
+- Debugging tips
+
+**Section 10: License and Contributing**
+- MIT license reference
+- Contributing guide reference
+
+**Changes Summary:**
+
+1. **Removed all legacy references:**
+   - `.lnk.json` config file format
+   - `link_mappings` structure
+   - Old subcommand-based interface
+   - JSON config examples
+
+2. **Added new documentation:**
+   - Flag-based CLI interface with comprehensive tables
+   - `.lnkconfig` and `.lnkignore` file documentation
+   - Package-based organization concept
+   - Config file precedence rules
+   - Comparison with other tools
+   - Troubleshooting section
+   - Common workflows section
+
+3. **Enhanced existing content:**
+   - More comprehensive examples for all operations
+   - Better explanation of how lnk works
+   - Clearer quick start section
+   - More practical tips and best practices
+
+4. **Maintained accurate content:**
+   - Installation instructions
+   - Recursive file linking concept (unchanged, still accurate)
+   - License and contributing references
+
+**Verification:**
+- ✅ All unit tests pass (`make test-unit`)
+- ✅ README accurately reflects current CLI implementation
+- ✅ No references to `.lnk.json` remain in README
+- ✅ All flags documented match actual implementation in main.go
+- ✅ Examples tested against usage text in printUsage()
+- ✅ Config file documentation matches implementation in config.go
+
+**Statistics:**
+- Old README: 174 lines
+- New README: 483 lines (expanded by 309 lines)
+- Content coverage: All CLI features, config files, workflows, troubleshooting
+
+**Status:**
+- ✅ Task 33 complete - README.md has been successfully rewritten
+- **Phase 4 (Update Documentation): 1 of 2 tasks complete**
+
+**Remaining tasks:**
+- Task 34: Update CLAUDE.md configuration section
+
+**Next task:** Task 34 - Update CLAUDE.md configuration section

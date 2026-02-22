@@ -162,7 +162,7 @@
   {
     "name": "Rewrite README.md",
     "description": "Complete rewrite to reflect new flag-based CLI with examples, config file docs, and usage instructions",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Update CLAUDE.md configuration section",
