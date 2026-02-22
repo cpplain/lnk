@@ -662,3 +662,60 @@ After removing the legacy `Orphan(link string, config *Config, dryRun bool, forc
   - link_utils_test.go (Task 28) - has errors per diagnostics
 
 **Next task:** Task 28 - Remove legacy tests from link_utils_test.go
+
+## Session 17: Remove Legacy Tests from link_utils_test.go (Complete)
+
+### Task: Remove legacy tests from link_utils_test.go (Task 28)
+
+**Context:**
+After removing the legacy `FindManagedLinks(startPath string, config *Config)` and `checkManagedLink(linkPath string, config *Config)` functions in Session 7, the test file link_utils_test.go had tests using the old `*Config` parameter pattern with `LinkMappings` that needed cleanup.
+
+**Removed 2 legacy test functions:**
+1. `TestFindManagedLinks` - tested legacy `FindManagedLinks()` with old `Config{LinkMappings}` (lines 10-220)
+2. `TestCheckManagedLink` - tested legacy `checkManagedLink()` function (lines 222-302)
+
+**Kept 2 tests for new API:**
+1. `TestManagedLinkStruct` - tests ManagedLink struct (no legacy code)
+2. `TestFindManagedLinksForSources` - tests `FindManagedLinksForSources(startPath string, sources []string)` (new API)
+
+**Statistics:**
+- File reduced from 554 lines to 259 lines (**295 lines removed**)
+- Test count reduced from 4 tests to 2 tests (2 legacy tests removed)
+
+**Verification:**
+- ✅ No references to `Config{LinkMappings}` remain in link_utils_test.go
+- ✅ No references to `LinkMapping` type remain in link_utils_test.go
+- ✅ No references to legacy `FindManagedLinks()` or `checkManagedLink()` functions remain
+- ✅ Grep confirms all legacy code references removed
+- ✅ File now only contains tests using `FindManagedLinksForSources` API and struct tests
+- ✅ Diagnostics show no compilation errors (only informational warnings about unused functions)
+
+**Status:**
+- ✅ Task 28 complete - link_utils_test.go has been successfully cleaned up
+- ✅ **ALL TEST CLEANUP TASKS COMPLETE!** (Tasks 23-29)
+
+**Legacy code removed across all test cleanups:**
+- Session 12: 819 lines from config_test.go
+- Session 13: 892 lines from linker_test.go
+- Session 14: 282 lines from status test files (119 from status_test.go, 163 from status_json_test.go deletion)
+- Session 15: 346 lines from adopt_test.go
+- Session 16: 446 lines from orphan_test.go
+- Session 17: 295 lines from link_utils_test.go
+- **Total test cleanup: 3,080 lines removed**
+
+**Next phase:** Phase 0 - Simplify Naming (Tasks 10-22)
+- Task 10: Rename CreateLinksWithOptions to CreateLinks
+- Task 11: Rename RemoveLinksWithOptions to RemoveLinks
+- Task 12: Rename StatusWithOptions to Status
+- Task 13: Rename PruneWithOptions to Prune
+- Task 14: Rename AdoptWithOptions to Adopt
+- Task 15: Rename OrphanWithOptions to Orphan
+- Task 16: Rename FindManagedLinksForSources to FindManagedLinks
+- Task 17: Rename MergeFlagConfig to LoadConfig
+- Task 18: Rename LoadFlagConfig to loadConfigFile (unexported)
+- Task 19: Rename parseFlagConfigFile to parseConfigFile (unexported)
+- Task 20: Rename FlagConfig to FileConfig
+- Task 21: Rename MergedConfig to Config
+- Task 22: Rename FlagConfigFileName to ConfigFileName
+
+**Next task:** Task 10 - Rename CreateLinksWithOptions to CreateLinks

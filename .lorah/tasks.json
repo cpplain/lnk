@@ -137,7 +137,7 @@
   {
     "name": "Remove legacy tests from link_utils_test.go",
     "description": "Remove tests for legacy FindManagedLinks() function",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove legacy tests from errors_test.go",
