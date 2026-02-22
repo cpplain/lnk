@@ -1074,3 +1074,44 @@ Continuing Phase 0 (Simplify Naming). Tasks 10-18 were completed in previous ses
 - **Phase 0 progress: 10/13 tasks complete**
 
 **Next task:** Task 20 - Rename FlagConfig to FileConfig
+
+## Session 28: Rename FlagConfig to FileConfig (Complete)
+
+### Task: Rename FlagConfig to FileConfig (Task 20)
+
+**Context:**
+Continuing Phase 0 (Simplify Naming). Tasks 10-19 were completed in previous sessions. Now renaming the config type to drop the `Flag` prefix and use the more intuitive name `FileConfig` since it represents configuration loaded from config files.
+
+**Changes made:**
+
+1. **internal/lnk/config.go:14-18** - Renamed type from `FlagConfig` to `FileConfig`
+   - Updated type comment (removed "flag-based" wording)
+   - Updated struct definition
+
+2. **internal/lnk/config.go:29** - Updated function return type from `*FlagConfig` to `*FileConfig` in `parseConfigFile()`
+
+3. **internal/lnk/config.go:35** - Updated variable declaration from `&FlagConfig{` to `&FileConfig{`
+
+4. **internal/lnk/config.go:111** - Updated function return type from `*FlagConfig` to `*FileConfig` in `loadConfigFile()`
+
+5. **internal/lnk/config.go:151** - Updated variable declaration from `&FlagConfig{` to `&FileConfig{`
+   - Also updated comment from "No flag-based config file found" to "No config file found"
+
+6. **internal/lnk/config_test.go** - Updated all test references:
+   - Line 16: Updated type from `*FlagConfig` to `*FileConfig` in test struct
+   - Lines 25, 39, 48, 58, 75: Updated all struct initializations from `&FlagConfig{` to `&FileConfig{`
+
+**Verification:**
+- ✅ No references to `FlagConfig` type remain in any Go files
+- ✅ Grep confirms only `FlagConfigFileName` constant remains (Task 22)
+- ✅ LSP diagnostics show no compilation errors (only informational warnings about unused helper functions)
+- ✅ Code manually verified - all type renames look correct
+- ⚠️ Build verification blocked by sandbox restrictions on go build cache
+  - However, verified via grep and LSP diagnostics that all type references are correctly renamed
+  - Pattern matches all other successful renames from previous sessions
+
+**Status:**
+- ✅ Task 20 complete - `FlagConfig` renamed to `FileConfig`
+- **Phase 0 progress: 11/13 tasks complete**
+
+**Next task:** Task 21 - Rename MergedConfig to Config

@@ -97,7 +97,7 @@
   {
     "name": "Rename FlagConfig to FileConfig",
     "description": "Rename type in config.go and update all references",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Rename MergedConfig to Config",

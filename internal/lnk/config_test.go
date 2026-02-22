@@ -13,7 +13,7 @@ func TestParseConfigFile(t *testing.T) {
 	tests := []struct {
 		name        string
 		content     string
-		want        *FlagConfig
+		want        *FileConfig
 		wantErr     bool
 		errContains string
 	}{
@@ -22,7 +22,7 @@ func TestParseConfigFile(t *testing.T) {
 			content: `--target=~
 --ignore=*.tmp
 --ignore=*.swp`,
-			want: &FlagConfig{
+			want: &FileConfig{
 				Target:         "~",
 				IgnorePatterns: []string{"*.tmp", "*.swp"},
 			},
@@ -36,7 +36,7 @@ func TestParseConfigFile(t *testing.T) {
 # Another comment
 --ignore=.git
 --ignore=*.log`,
-			want: &FlagConfig{
+			want: &FileConfig{
 				Target:         "~/dotfiles",
 				IgnorePatterns: []string{".git", "*.log"},
 			},
@@ -45,7 +45,7 @@ func TestParseConfigFile(t *testing.T) {
 		{
 			name:    "empty config",
 			content: ``,
-			want: &FlagConfig{
+			want: &FileConfig{
 				IgnorePatterns: []string{},
 			},
 			wantErr: false,
@@ -55,7 +55,7 @@ func TestParseConfigFile(t *testing.T) {
 			content: `--target=~
 --unknown-flag=value
 --ignore=*.tmp`,
-			want: &FlagConfig{
+			want: &FileConfig{
 				Target:         "~",
 				IgnorePatterns: []string{"*.tmp"},
 			},
@@ -72,7 +72,7 @@ func TestParseConfigFile(t *testing.T) {
 			name: "short flag -t",
 			content: `--t=~
 --ignore=*.tmp`,
-			want: &FlagConfig{
+			want: &FileConfig{
 				Target:         "~",
 				IgnorePatterns: []string{"*.tmp"},
 			},

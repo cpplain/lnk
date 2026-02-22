@@ -11,8 +11,8 @@ import (
 	"strings"
 )
 
-// FlagConfig represents configuration loaded from flag-based config files
-type FlagConfig struct {
+// FileConfig represents configuration loaded from config files
+type FileConfig struct {
 	Target         string   // Target directory (default: ~)
 	IgnorePatterns []string // Ignore patterns from config file
 }
@@ -26,13 +26,13 @@ type MergedConfig struct {
 
 // parseConfigFile parses a config file (stow-style)
 // Format: one flag per line, e.g., "--target=~" or "--ignore=*.swp"
-func parseConfigFile(filePath string) (*FlagConfig, error) {
+func parseConfigFile(filePath string) (*FileConfig, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	config := &FlagConfig{
+	config := &FileConfig{
 		IgnorePatterns: []string{},
 	}
 
@@ -108,7 +108,7 @@ func parseIgnoreFile(filePath string) ([]string, error) {
 // 1. .lnkconfig in source directory (repo-specific)
 // 2. $XDG_CONFIG_HOME/lnk/config or ~/.config/lnk/config
 // 3. ~/.lnkconfig
-func loadConfigFile(sourceDir string) (*FlagConfig, string, error) {
+func loadConfigFile(sourceDir string) (*FileConfig, string, error) {
 	// Expand source directory path
 	absSourceDir, err := filepath.Abs(sourceDir)
 	if err != nil {
@@ -147,8 +147,8 @@ func loadConfigFile(sourceDir string) (*FlagConfig, string, error) {
 	}
 
 	// No config file found - return empty config
-	PrintVerbose("No flag-based config file found")
-	return &FlagConfig{IgnorePatterns: []string{}}, "", nil
+	PrintVerbose("No config file found")
+	return &FileConfig{IgnorePatterns: []string{}}, "", nil
 }
 
 // LoadIgnoreFile loads ignore patterns from a .lnkignore file in the source directory
