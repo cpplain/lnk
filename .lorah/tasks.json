@@ -132,7 +132,7 @@
   {
     "name": "Remove legacy tests from orphan_test.go",
     "description": "Remove tests for legacy Orphan() function",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove legacy tests from link_utils_test.go",

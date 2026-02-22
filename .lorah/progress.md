@@ -623,3 +623,42 @@ After removing the legacy `Adopt(source string, config *Config, sourceDir string
   - link_utils_test.go (Task 28) - has errors per diagnostics
 
 **Next task:** Task 27 - Remove legacy tests from orphan_test.go
+
+## Session 16: Remove Legacy Tests from orphan_test.go (Complete)
+
+### Task: Remove legacy tests from orphan_test.go (Task 27)
+
+**Context:**
+After removing the legacy `Orphan(link string, config *Config, dryRun bool, force bool)` function in Session 6, the test file orphan_test.go had tests using the old `*Config` parameter pattern with `LinkMappings` that needed cleanup.
+
+**Removed 6 legacy test functions:**
+1. `TestOrphanSingle` - tested legacy `Orphan()` with old `Config{LinkMappings}` (lines 10-180)
+2. `TestOrphanDirectoryFull` - tested legacy `Orphan()` with directory processing (lines 182-272)
+3. `TestOrphanDryRunAdditional` - tested legacy `Orphan()` in dry-run mode (lines 274-320)
+4. `TestOrphanErrors` - tested error handling with legacy `Config` (lines 322-365)
+5. `TestOrphanDirectoryNoSymlinks` - tested edge case with legacy `Config` (lines 367-388)
+6. `TestOrphanUntrackedFile` - tested untracked file handling with legacy API (lines 390-454)
+
+**Kept 2 tests for new flag-based API:**
+1. `TestOrphanWithOptions` - tests `OrphanWithOptions(opts OrphanOptions)` (comprehensive test suite)
+2. `TestOrphanWithOptionsBrokenLink` - tests broken symlink handling with new API
+
+**Additional cleanup:**
+- Kept `containsString` helper function (used by `TestOrphanWithOptions`)
+
+**Statistics:**
+- File reduced from 791 lines to 345 lines (**446 lines removed**)
+- Test count reduced from 8 tests to 2 tests (6 legacy tests removed)
+
+**Verification:**
+- ✅ No references to `Config{LinkMappings}` remain in orphan_test.go
+- ✅ No references to legacy `Orphan()` function remain in orphan_test.go
+- ✅ Grep confirms all legacy code references removed
+- ✅ File now only contains tests using `OrphanWithOptions` API
+
+**Status:**
+- ✅ Task 27 complete - orphan_test.go has been successfully cleaned up
+- Test files still needing cleanup:
+  - link_utils_test.go (Task 28) - has errors per diagnostics
+
+**Next task:** Task 28 - Remove legacy tests from link_utils_test.go
