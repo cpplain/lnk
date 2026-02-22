@@ -1393,3 +1393,90 @@ After completing all code cleanup (Phases 0, 1, 2), test cleanup (Phase 5), and 
 - Task 34: Update CLAUDE.md configuration section
 
 **Next task:** Task 34 - Update CLAUDE.md configuration section
+
+## Session 33: Update CLAUDE.md Configuration Section (Complete)
+
+### Task: Update CLAUDE.md configuration section (Task 34)
+
+**Context:**
+After completing all code cleanup, test cleanup, verification, and README rewrite, the final task is to update CLAUDE.md to reflect the new flag-based CLI interface and remove all references to the legacy JSON config system.
+
+**Changes made to CLAUDE.md:**
+
+1. **Updated cmd/lnk/main.go description (lines 31-32)**
+   - Old: "CLI entry point with manual flag parsing (not stdlib flags for global flags). Routes to command handlers. Uses Levenshtein distance for command suggestions."
+   - New: "CLI entry point with flag-based interface using stdlib `flag` package. Action flags (-C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan) determine the operation. Positional arguments specify packages to process."
+
+2. **Updated config.go description (lines 34-39)**
+   - Removed references to old JSON config files (`.lnk.json`, `config.json`, `--config` flag)
+   - Added `.lnkconfig` file documentation
+   - Updated config file search locations:
+     - `.lnkconfig` in source directory
+     - `.lnkconfig` in home directory (~/.lnkconfig)
+     - Built-in defaults if no config found
+
+3. **Replaced Configuration Structure section (lines 72-119)**
+   - Removed old types: `Config` with `LinkMappings`, `LinkMapping`
+   - Added all new types with correct comments:
+     - `FileConfig` - Config loaded from .lnkconfig file
+     - `Config` - Final resolved configuration
+     - `LinkOptions` - Options for linking operations
+     - `AdoptOptions` - Options for adopt operations
+     - `OrphanOptions` - Options for orphan operations
+
+4. **Updated "Adding a New Command" section to "Adding a New Operation" (lines 124-135)**
+   - Removed subcommand routing pattern
+   - Removed `handleXxx(args, globalOptions)` pattern
+   - Added flag-based operation pattern:
+     1. Add new action flag to `main.go`
+     2. Create options struct in `internal/lnk/`
+     3. Implement operation function
+     4. Add case in `main.go` to handle the new flag
+
+5. **Updated "Modifying Configuration" section (lines 137-140)**
+   - Removed reference to `Validate()` method (was deleted in cleanup)
+   - Removed "must remain JSON-serializable" requirement
+   - Added note about stow-style config file format
+
+6. **Updated Technical Notes (line 154)**
+   - Old: "Manual flag parsing allows global flags before command name"
+   - New: "Uses stdlib `flag` package for command-line parsing"
+
+**Verification:**
+- ✅ No references to `LinkMapping` remain in CLAUDE.md
+- ✅ No references to `handleXxx` pattern remain
+- ✅ No references to `.lnk.json` or `config.json` remain
+- ✅ No references to `Validate()` method remain
+- ✅ All type definitions match actual implementation in codebase
+- ✅ Config file search locations match implementation in config.go
+
+**Status:**
+- ✅ Task 34 complete - CLAUDE.md has been successfully updated
+- ✅ **ALL TASKS COMPLETE!** (34/34)
+
+**Final Summary:**
+
+**Total Tasks Completed: 34**
+- Phase 0 (Simplify Naming): 13 tasks ✅
+- Phase 1 (Remove Legacy Types): 3 tasks ✅
+- Phase 2 (Remove Legacy Functions): 6 tasks ✅
+- Phase 5 (Clean Up Tests): 7 tasks ✅
+- Verification: 3 tasks ✅
+- Documentation: 2 tasks ✅ (README.md + CLAUDE.md)
+
+**Legacy Code Removed:**
+- Production code: ~874 lines
+- Test code: ~3,080 lines
+- **Total: ~3,954 lines removed**
+
+**Documentation Updated:**
+- README.md: Complete rewrite (174 → 483 lines)
+- CLAUDE.md: Updated to reflect new architecture
+
+**Codebase Status:**
+- ✅ All unit tests pass
+- ✅ Build succeeds
+- ✅ No legacy references remain
+- ✅ Documentation up to date
+
+**Project Complete!** The lnk CLI has been successfully cleaned up, with all legacy code removed and documentation updated to reflect the new flag-based interface.

@@ -28,15 +28,12 @@ make check                  # Run fmt, test, and lint in sequence
 
 ### Core Components
 
-- **cmd/lnk/main.go**: CLI entry point with manual flag parsing (not stdlib flags for global flags). Routes to command handlers. Uses Levenshtein distance for command suggestions.
+- **cmd/lnk/main.go**: CLI entry point with flag-based interface using stdlib `flag` package. Action flags (-C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan) determine the operation. Positional arguments specify packages to process.
 
-- **internal/lnk/config.go**: Configuration system with precedence chain:
-  1. `--config` flag
-  2. `$XDG_CONFIG_HOME/lnk/config.json`
-  3. `~/.config/lnk/config.json`
-  4. `~/.lnk.json`
-  5. `./.lnk.json` in current directory
-  6. Built-in defaults
+- **internal/lnk/config.go**: Configuration system with `.lnkconfig` file support. Config files can specify target directory and ignore patterns using stow-style format (one flag per line). CLI flags override config file values. Config file search locations:
+  1. `.lnkconfig` in source directory
+  2. `.lnkconfig` in home directory (~/.lnkconfig)
+  3. Built-in defaults if no config found
 
 - **internal/lnk/linker.go**: Symlink operations with 3-phase execution:
   1. Collect planned links (recursive file traversal)
@@ -72,14 +69,43 @@ make check                  # Run fmt, test, and lint in sequence
 ### Configuration Structure
 
 ```go
-type Config struct {
-    IgnorePatterns []string      // Gitignore-style patterns
-    LinkMappings   []LinkMapping  // Source-to-target mappings
+// Config loaded from .lnkconfig file
+type FileConfig struct {
+    Target         string   // Target directory (default: ~)
+    IgnorePatterns []string // Ignore patterns from config file
 }
 
-type LinkMapping struct {
-    Source string // Absolute path or ~/path
-    Target string // Where symlinks are created
+// Final resolved configuration
+type Config struct {
+    SourceDir      string   // Source directory (from CLI)
+    TargetDir      string   // Target directory (CLI > config > default)
+    IgnorePatterns []string // Combined ignore patterns from all sources
+}
+
+// Options for linking operations
+type LinkOptions struct {
+    SourceDir      string   // base directory (e.g., ~/git/dotfiles)
+    TargetDir      string   // where to create links (default: ~)
+    Packages       []string // subdirs to process (e.g., ["home", "private/home"])
+    IgnorePatterns []string // combined ignore patterns from all sources
+    DryRun         bool     // preview mode without making changes
+}
+
+// Options for adopt operations
+type AdoptOptions struct {
+    SourceDir string   // base directory for dotfiles (e.g., ~/git/dotfiles)
+    TargetDir string   // where files currently are (default: ~)
+    Package   string   // package to adopt into (e.g., "home" or ".")
+    Paths     []string // files to adopt (e.g., ["~/.bashrc", "~/.vimrc"])
+    DryRun    bool     // preview mode
+}
+
+// Options for orphan operations
+type OrphanOptions struct {
+    SourceDir string   // base directory for dotfiles (e.g., ~/git/dotfiles)
+    TargetDir string   // where symlinks are (default: ~)
+    Paths     []string // symlink paths to orphan (e.g., ["~/.bashrc", "~/.vimrc"])
+    DryRun    bool     // preview mode
 }
 ```
 
@@ -123,21 +149,20 @@ From [cpplain/cli-design](https://github.com/cpplain/cli-design):
 
 ## Common Tasks
 
-### Adding a New Command
+### Adding a New Operation
 
-1. Add command name to `suggestCommand()` in main.go
-2. Add case in main switch statement
-3. Create handler function following pattern: `handleXxx(args, globalOptions)`
-4. Create FlagSet with `-h/--help` usage function
-5. Implement command logic in `internal/lnk/`
-6. Add tests in `internal/lnk/xxx_test.go`
-7. Add e2e test if appropriate
+1. Add new action flag to `main.go` (e.g., `-X/--new-operation`)
+2. Create options struct in `internal/lnk/` following the pattern (e.g., `NewOperationOptions`)
+3. Implement operation function in `internal/lnk/` (e.g., `func NewOperation(opts NewOperationOptions) error`)
+4. Add case in `main.go` to handle the new flag and construct options
+5. Add tests in `internal/lnk/xxx_test.go`
+6. Add e2e test if appropriate
 
 ### Modifying Configuration
 
-- Configuration struct in `config.go` must remain JSON-serializable
-- Update `Validate()` method when adding fields
+- Config types in `config.go` are simple structs for holding configuration
 - Add validation with helpful hints using `NewValidationErrorWithHint()`
+- Config files use stow-style format: one flag per line (e.g., `--target=~`)
 
 ### Running Single Test
 
@@ -151,4 +176,4 @@ go test -v ./e2e -run TestE2EName
 - Version info injected via ldflags during build (version, commit, date)
 - No external dependencies - stdlib only
 - Git operations are optional (detected at runtime)
-- Manual flag parsing allows global flags before command name
+- Uses stdlib `flag` package for command-line parsing

@@ -167,6 +167,6 @@
   {
     "name": "Update CLAUDE.md configuration section",
     "description": "Update Configuration Structure section to show FileConfig and Config types, remove references to subcommands and JSON config",
-    "passes": false
+    "passes": true
   }
 ]
