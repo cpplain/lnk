@@ -276,7 +276,7 @@ func main() {
 			IgnorePatterns: mergedConfig.IgnorePatterns,
 			DryRun:         dryRun,
 		}
-		if err := lnk.RemoveLinksWithOptions(opts); err != nil {
+		if err := lnk.RemoveLinks(opts); err != nil {
 			lnk.PrintErrorWithHint(err)
 			os.Exit(lnk.ExitError)
 		}

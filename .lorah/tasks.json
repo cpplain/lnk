@@ -52,7 +52,7 @@
   {
     "name": "Rename RemoveLinksWithOptions to RemoveLinks",
     "description": "Rename function in linker.go and update all call sites",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Rename StatusWithOptions to Status",

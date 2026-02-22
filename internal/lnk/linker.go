@@ -249,8 +249,8 @@ func findManagedLinksForPackages(targetDir, sourceDir string, packages []string)
 	return links, err
 }
 
-// RemoveLinksWithOptions removes symlinks using package-based options
-func RemoveLinksWithOptions(opts LinkOptions) error {
+// RemoveLinks removes symlinks using package-based options
+func RemoveLinks(opts LinkOptions) error {
 	PrintCommandHeader("Removing Symlinks")
 
 	// Validate inputs

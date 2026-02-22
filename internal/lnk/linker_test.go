@@ -273,8 +273,8 @@ func TestCreateLinks(t *testing.T) {
 	}
 }
 
-// TestRemoveLinksWithOptions tests the RemoveLinksWithOptions function
-func TestRemoveLinksWithOptions(t *testing.T) {
+// TestRemoveLinks tests the RemoveLinks function
+func TestRemoveLinks(t *testing.T) {
 	tests := []struct {
 		name        string
 		setup       func(t *testing.T, tmpDir string) (string, LinkOptions)
@@ -477,16 +477,16 @@ func TestRemoveLinksWithOptions(t *testing.T) {
 
 			configRepo, opts := tt.setup(t, tmpDir)
 
-			err := RemoveLinksWithOptions(opts)
+			err := RemoveLinks(opts)
 			if tt.wantErr {
 				if err == nil {
-					t.Errorf("RemoveLinksWithOptions() expected error, got nil")
+					t.Errorf("RemoveLinks() expected error, got nil")
 				}
 				return
 			}
 
 			if err != nil {
-				t.Fatalf("RemoveLinksWithOptions() error = %v", err)
+				t.Fatalf("RemoveLinks() error = %v", err)
 			}
 
 			if tt.checkResult != nil {

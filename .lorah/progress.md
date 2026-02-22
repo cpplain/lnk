@@ -755,3 +755,38 @@ Beginning Phase 0 (Simplify Naming). With all legacy code removed (Phase 1) and 
 - **Phase 0 progress: 1/13 tasks complete**
 
 **Next task:** Task 11 - Rename RemoveLinksWithOptions to RemoveLinks
+
+## Session 19: Rename RemoveLinksWithOptions to RemoveLinks (Complete)
+
+### Task: Rename RemoveLinksWithOptions to RemoveLinks (Task 11)
+
+**Context:**
+Continuing Phase 0 (Simplify Naming). Task 10 (CreateLinks rename) was completed in the previous session. Now renaming the remove links function to drop the `WithOptions` suffix.
+
+**Changes made:**
+
+1. **internal/lnk/linker.go:252-253** - Renamed function from `RemoveLinksWithOptions` to `RemoveLinks`
+   - Updated function comment
+   - Updated function signature
+
+2. **cmd/lnk/main.go:279** - Updated call site from `lnk.RemoveLinksWithOptions(opts)` to `lnk.RemoveLinks(opts)`
+
+3. **internal/lnk/linker_test.go** - Updated all test references:
+   - Line 276: Renamed test comment
+   - Line 277: Renamed test function from `TestRemoveLinksWithOptions` to `TestRemoveLinks`
+   - Line 480: Updated function call from `RemoveLinksWithOptions(opts)` to `RemoveLinks(opts)`
+   - Line 483: Updated error message from `RemoveLinksWithOptions()` to `RemoveLinks()`
+   - Line 489: Updated error message from `RemoveLinksWithOptions()` to `RemoveLinks()`
+
+**Verification:**
+- ✅ No references to `RemoveLinksWithOptions` remain in any Go files
+- ✅ Grep confirms only documentation references remain (.lorah/, .claude/)
+- ✅ Code manually verified - all renames look correct
+- ✅ Function signature matches expected pattern: `func RemoveLinks(opts LinkOptions) error`
+- ✅ LSP diagnostics show no compilation errors (only informational warnings about unused helper functions)
+
+**Status:**
+- ✅ Task 11 complete - `RemoveLinksWithOptions` renamed to `RemoveLinks`
+- **Phase 0 progress: 2/13 tasks complete**
+
+**Next task:** Task 12 - Rename StatusWithOptions to Status
