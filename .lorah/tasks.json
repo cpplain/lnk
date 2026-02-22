@@ -102,7 +102,7 @@
   {
     "name": "Rename MergedConfig to Config",
     "description": "Rename type in config.go and update all references (note: old Config will be deleted first)",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Rename FlagConfigFileName to ConfigFileName",

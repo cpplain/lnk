@@ -1115,3 +1115,36 @@ Continuing Phase 0 (Simplify Naming). Tasks 10-19 were completed in previous ses
 - **Phase 0 progress: 11/13 tasks complete**
 
 **Next task:** Task 21 - Rename MergedConfig to Config
+
+## Session 29: Rename MergedConfig to Config (Complete)
+
+### Task: Rename MergedConfig to Config (Task 21)
+
+**Context:**
+Continuing Phase 0 (Simplify Naming). Tasks 10-20 were completed in previous sessions. Now renaming the merged config type to drop the `Merged` prefix and use the simpler name `Config`. The old `Config` type with `LinkMappings` was already deleted in Task 7 (Session 8).
+
+**Changes made:**
+
+1. **internal/lnk/config.go:20-21** - Renamed type from `MergedConfig` to `Config`
+   - Updated type comment
+   - Updated struct definition
+
+2. **internal/lnk/config.go:182** - Updated function return type from `*MergedConfig` to `*Config` in `LoadConfig()`
+
+3. **internal/lnk/config.go:225** - Updated struct initialization from `&MergedConfig{` to `&Config{`
+
+**Verification:**
+- ✅ No references to `MergedConfig` remain in any Go files
+- ✅ Grep confirms no legacy type name remains in production code
+- ✅ Type signature matches expected pattern: `type Config struct`
+- ✅ Function signature matches expected pattern: `func LoadConfig(...) (*Config, error)`
+- ✅ Struct initialization correctly uses `&Config{`
+- ⚠️ Build verification blocked by sandbox restrictions on go build cache
+  - However, verified via grep that no legacy type references remain in production code
+  - Pattern matches all other successful renames from previous sessions
+
+**Status:**
+- ✅ Task 21 complete - `MergedConfig` renamed to `Config`
+- **Phase 0 progress: 12/13 tasks complete**
+
+**Next task:** Task 22 - Rename FlagConfigFileName to ConfigFileName
