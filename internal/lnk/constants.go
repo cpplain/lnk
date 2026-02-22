@@ -15,7 +15,6 @@ const (
 
 // Configuration file names
 const (
-	ConfigFileName       = ".lnk.json"      // Legacy JSON config format
 	FlagConfigFileName   = ".lnkconfig"     // New flag-based config format
 	IgnoreFileName       = ".lnkignore"     // Gitignore-style ignore file
 )

@@ -42,7 +42,7 @@
   {
     "name": "Remove legacy constant from constants.go",
     "description": "Remove ConfigFileName = \".lnk.json\" constant",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Rename CreateLinksWithOptions to CreateLinks",

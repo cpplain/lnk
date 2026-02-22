@@ -378,3 +378,39 @@ Initialization complete. Ready for cleanup execution.
 - **Total: ~873 lines removed (97% of goal)**
 
 **Next task:** Task 9 - Remove legacy constant from constants.go
+
+## Session 10: Remove Legacy Constant from constants.go (Complete)
+
+### Task: Remove legacy constant from constants.go
+
+**Removed 1 legacy constant:**
+1. `ConfigFileName = ".lnk.json"` - line 18 (1 line, plus comment)
+
+**Notes:**
+- This constant represented the old JSON-based config file name
+- The new flag-based config system uses `FlagConfigFileName = ".lnkconfig"` instead
+- This will later be renamed to `ConfigFileName` in Task 22 (Phase 0)
+
+**Verification:**
+- ✅ No references to `ConfigFileName` in production code (cmd/ or internal/lnk/*.go)
+- ✅ Grep confirmed only documentation references remain
+- ✅ LSP diagnostics show no new errors related to this removal
+- ⚠️ Build verification blocked by sandbox restrictions on go build cache
+  - However, verified via grep that no production code uses removed constant
+  - All existing compilation errors are in test files only (expected, from previous tasks)
+
+**Legacy code removed so far:**
+- Session 2: ~250 lines from config.go (functions)
+- Session 3: ~200 lines from linker.go
+- Session 4: ~93 lines from status.go
+- Session 5: ~98 lines from adopt.go
+- Session 6: ~121 lines from orphan.go
+- Session 7: ~92 lines from link_utils.go
+- Session 8: ~17 lines from config.go (types)
+- Session 9: ~2 lines from errors.go
+- Session 10: ~1 line from constants.go
+- **Total: ~874 lines removed (97% of goal)**
+
+**Phase 1 Complete!** All legacy types, constants, and errors have been removed.
+
+**Next task:** Task 10 - Begin Phase 0 renames: Rename CreateLinksWithOptions to CreateLinks
