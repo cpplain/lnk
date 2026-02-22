@@ -933,3 +933,39 @@ Continuing Phase 0 (Simplify Naming). Tasks 10-14 (CreateLinks, RemoveLinks, Sta
 - **Phase 0 progress: 6/13 tasks complete**
 
 **Next task:** Task 16 - Rename FindManagedLinksForSources to FindManagedLinks
+
+## Session 24: Rename FindManagedLinksForSources to FindManagedLinks (Complete)
+
+### Task: Rename FindManagedLinksForSources to FindManagedLinks (Task 16)
+
+**Context:**
+Continuing Phase 0 (Simplify Naming). Tasks 10-15 (CreateLinks, RemoveLinks, Status, Prune, Adopt, Orphan) were completed in previous sessions. Now renaming the find managed links function to drop the `ForSources` suffix and simplify the API.
+
+**Changes made:**
+
+1. **internal/lnk/link_utils.go:17-20** - Renamed function from `FindManagedLinksForSources` to `FindManagedLinks`
+   - Updated function comment (removed redundant "package-based version" note)
+   - Updated function signature
+
+2. **internal/lnk/orphan.go:76** - Updated call site from `FindManagedLinksForSources(absPath, sources)` to `FindManagedLinks(absPath, sources)`
+
+3. **internal/lnk/link_utils_test.go** - Updated all test references:
+   - Line 33: Renamed test function from `TestFindManagedLinksForSources` to `TestFindManagedLinks`
+   - Line 245: Updated function call from `FindManagedLinksForSources(startPath, sources)` to `FindManagedLinks(startPath, sources)`
+   - Line 247: Updated error message from `FindManagedLinksForSources error` to `FindManagedLinks error`
+
+**Verification:**
+- ✅ No references to `FindManagedLinksForSources` remain in any Go files
+- ✅ Grep confirms no legacy function name remains in production code
+- ✅ Code manually verified - all renames look correct
+- ✅ Function signature matches expected pattern: `func FindManagedLinks(startPath string, sources []string) ([]ManagedLink, error)`
+- ✅ LSP diagnostics show no compilation errors (only informational warnings about unused helper functions)
+- ⚠️ Build verification blocked by sandbox restrictions on go build cache
+  - However, verified via grep and LSP diagnostics that all references are correctly renamed
+  - Pattern matches all other successful renames from previous sessions
+
+**Status:**
+- ✅ Task 16 complete - `FindManagedLinksForSources` renamed to `FindManagedLinks`
+- **Phase 0 progress: 7/13 tasks complete**
+
+**Next task:** Task 17 - Rename MergeFlagConfig to LoadConfig

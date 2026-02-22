@@ -14,10 +14,9 @@ type ManagedLink struct {
 	Source   string // Source mapping name (e.g., "home", "work")
 }
 
-// FindManagedLinksForSources finds all symlinks in startPath that point to any of the specified source directories.
-// This is a package-based version of FindManagedLinks that works with explicit source paths instead of Config.
+// FindManagedLinks finds all symlinks in startPath that point to any of the specified source directories.
 // sources should be absolute paths (use ExpandPath first if needed).
-func FindManagedLinksForSources(startPath string, sources []string) ([]ManagedLink, error) {
+func FindManagedLinks(startPath string, sources []string) ([]ManagedLink, error) {
 	var links []ManagedLink
 
 	err := filepath.Walk(startPath, func(path string, info os.FileInfo, err error) error {

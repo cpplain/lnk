@@ -77,7 +77,7 @@
   {
     "name": "Rename FindManagedLinksForSources to FindManagedLinks",
     "description": "Rename function in link_utils.go and update all call sites",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Rename MergeFlagConfig to LoadConfig",

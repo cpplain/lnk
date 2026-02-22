@@ -73,7 +73,7 @@ func Orphan(opts OrphanOptions) error {
 		if linkInfo.IsDir() && linkInfo.Mode()&os.ModeSymlink == 0 {
 			// For directories, find all managed symlinks within that point to source dir
 			sources := []string{absSourceDir}
-			managed, err := FindManagedLinksForSources(absPath, sources)
+			managed, err := FindManagedLinks(absPath, sources)
 			if err != nil {
 				PrintErrorWithHint(WithHint(
 					fmt.Errorf("failed to find managed links in %s: %w", path, err),

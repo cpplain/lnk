@@ -30,7 +30,7 @@ func TestManagedLinkStruct(t *testing.T) {
 	}
 }
 
-func TestFindManagedLinksForSources(t *testing.T) {
+func TestFindManagedLinks(t *testing.T) {
 	tests := []struct {
 		name          string
 		setupFunc     func(t *testing.T) (startPath string, sources []string, cleanup func())
@@ -242,9 +242,9 @@ func TestFindManagedLinksForSources(t *testing.T) {
 			startPath, sources, cleanup := tt.setupFunc(t)
 			defer cleanup()
 
-			links, err := FindManagedLinksForSources(startPath, sources)
+			links, err := FindManagedLinks(startPath, sources)
 			if err != nil {
-				t.Fatalf("FindManagedLinksForSources error: %v", err)
+				t.Fatalf("FindManagedLinks error: %v", err)
 			}
 
 			if len(links) != tt.expectedLinks {
