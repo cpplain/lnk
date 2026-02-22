@@ -1,1 +1,172 @@
-[]
+[
+  {
+    "name": "Remove legacy functions from config.go",
+    "description": "Remove getDefaultConfig(), LoadConfig(), loadConfigFromFile(), LoadConfigWithOptions(), Config.Save(), Config.GetMapping(), Config.ShouldIgnore(), Config.Validate(), and DetermineSourceMapping() functions",
+    "passes": false
+  },
+  {
+    "name": "Remove legacy functions from linker.go",
+    "description": "Remove CreateLinks(config *Config), RemoveLinks(config *Config), removeLinks(), and PruneLinks(config *Config) functions",
+    "passes": false
+  },
+  {
+    "name": "Remove legacy Status function from status.go",
+    "description": "Remove Status(config *Config) function, keep StatusWithOptions",
+    "passes": false
+  },
+  {
+    "name": "Remove legacy functions from adopt.go",
+    "description": "Remove ensureSourceDirExists() and Adopt(source string, config *Config) functions",
+    "passes": false
+  },
+  {
+    "name": "Remove legacy Orphan function from orphan.go",
+    "description": "Remove Orphan(link string, config *Config) function",
+    "passes": false
+  },
+  {
+    "name": "Remove legacy functions from link_utils.go",
+    "description": "Remove FindManagedLinks(startPath string, config *Config) and checkManagedLink(linkPath string, config *Config) functions",
+    "passes": false
+  },
+  {
+    "name": "Remove legacy types from config.go",
+    "description": "Remove LinkMapping struct, old Config struct with LinkMappings, and ConfigOptions struct",
+    "passes": false
+  },
+  {
+    "name": "Remove legacy error from errors.go",
+    "description": "Remove ErrNoLinkMappings error constant",
+    "passes": false
+  },
+  {
+    "name": "Remove legacy constant from constants.go",
+    "description": "Remove ConfigFileName = \".lnk.json\" constant",
+    "passes": false
+  },
+  {
+    "name": "Rename CreateLinksWithOptions to CreateLinks",
+    "description": "Rename function in linker.go and update all call sites",
+    "passes": false
+  },
+  {
+    "name": "Rename RemoveLinksWithOptions to RemoveLinks",
+    "description": "Rename function in linker.go and update all call sites",
+    "passes": false
+  },
+  {
+    "name": "Rename StatusWithOptions to Status",
+    "description": "Rename function in status.go and update all call sites",
+    "passes": false
+  },
+  {
+    "name": "Rename PruneWithOptions to Prune",
+    "description": "Rename function in linker.go and update all call sites",
+    "passes": false
+  },
+  {
+    "name": "Rename AdoptWithOptions to Adopt",
+    "description": "Rename function in adopt.go and update all call sites",
+    "passes": false
+  },
+  {
+    "name": "Rename OrphanWithOptions to Orphan",
+    "description": "Rename function in orphan.go and update all call sites",
+    "passes": false
+  },
+  {
+    "name": "Rename FindManagedLinksForSources to FindManagedLinks",
+    "description": "Rename function in link_utils.go and update all call sites",
+    "passes": false
+  },
+  {
+    "name": "Rename MergeFlagConfig to LoadConfig",
+    "description": "Rename function in config.go and update all call sites",
+    "passes": false
+  },
+  {
+    "name": "Rename LoadFlagConfig to loadConfigFile (unexported)",
+    "description": "Rename function in config.go to unexported name and update all call sites",
+    "passes": false
+  },
+  {
+    "name": "Rename parseFlagConfigFile to parseConfigFile (unexported)",
+    "description": "Rename function in config.go to unexported name and update all call sites",
+    "passes": false
+  },
+  {
+    "name": "Rename FlagConfig to FileConfig",
+    "description": "Rename type in config.go and update all references",
+    "passes": false
+  },
+  {
+    "name": "Rename MergedConfig to Config",
+    "description": "Rename type in config.go and update all references (note: old Config will be deleted first)",
+    "passes": false
+  },
+  {
+    "name": "Rename FlagConfigFileName to ConfigFileName",
+    "description": "Rename constant in constants.go and update all references",
+    "passes": false
+  },
+  {
+    "name": "Remove legacy tests from config_test.go",
+    "description": "Remove tests for legacy JSON config functions and types",
+    "passes": false
+  },
+  {
+    "name": "Remove legacy tests from linker_test.go",
+    "description": "Remove tests using old *Config parameter pattern",
+    "passes": false
+  },
+  {
+    "name": "Remove legacy tests from status_test.go",
+    "description": "Remove tests for Status(config *Config) function",
+    "passes": false
+  },
+  {
+    "name": "Remove legacy tests from adopt_test.go",
+    "description": "Remove tests for legacy Adopt() function",
+    "passes": false
+  },
+  {
+    "name": "Remove legacy tests from orphan_test.go",
+    "description": "Remove tests for legacy Orphan() function",
+    "passes": false
+  },
+  {
+    "name": "Remove legacy tests from link_utils_test.go",
+    "description": "Remove tests for legacy FindManagedLinks() function",
+    "passes": false
+  },
+  {
+    "name": "Remove legacy tests from errors_test.go",
+    "description": "Remove tests for ErrNoLinkMappings error",
+    "passes": false
+  },
+  {
+    "name": "Verify all tests pass after cleanup",
+    "description": "Run 'make test' to ensure all unit and e2e tests pass",
+    "passes": false
+  },
+  {
+    "name": "Verify build succeeds after cleanup",
+    "description": "Run 'make build' to ensure binary builds successfully",
+    "passes": false
+  },
+  {
+    "name": "Verify no legacy references remain",
+    "description": "Run grep commands to verify no LinkMapping, WithOptions, FlagConfig, MergedConfig, or .lnk.json references remain",
+    "passes": false
+  },
+  {
+    "name": "Rewrite README.md",
+    "description": "Complete rewrite to reflect new flag-based CLI with examples, config file docs, and usage instructions",
+    "passes": false
+  },
+  {
+    "name": "Update CLAUDE.md configuration section",
+    "description": "Update Configuration Structure section to show FileConfig and Config types, remove references to subcommands and JSON config",
+    "passes": false
+  }
+]
