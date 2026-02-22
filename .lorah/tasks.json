@@ -12,7 +12,7 @@
   {
     "name": "Remove legacy Status function from status.go",
     "description": "Remove Status(config *Config) function, keep StatusWithOptions",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove legacy functions from adopt.go",

@@ -184,3 +184,28 @@ Initialization complete. Ready for cleanup execution.
 - **Total: ~450 lines removed (50% of goal)**
 
 **Next task:** Task 3 - Remove legacy Status function from status.go
+
+## Session 4: Remove Legacy Status Function from status.go (Complete)
+
+### Task: Remove legacy Status function from status.go
+
+**Removed 1 legacy function:**
+1. `Status(config *Config)` - lines 28-120 (93 lines)
+
+**Verification:**
+- ✅ No references to removed function in production code (cmd/ or internal/lnk/*.go)
+- ✅ Only test files reference this function (will be cleaned up in Task 25)
+- ✅ LSP diagnostics show errors only in test files:
+  - status_test.go:52 - undefined: Status
+  - status_json_test.go:63 - undefined: Status
+  - status_json_test.go:135 - undefined: Status
+- ⚠️ Build verification blocked by sandbox restrictions on go build cache
+  - However, verified via grep and LSP that no production code uses removed function
+
+**Legacy code removed so far:**
+- Session 2: ~250 lines from config.go
+- Session 3: ~200 lines from linker.go
+- Session 4: ~93 lines from status.go
+- **Total: ~543 lines removed (60% of goal)**
+
+**Next task:** Task 4 - Remove legacy functions from adopt.go
