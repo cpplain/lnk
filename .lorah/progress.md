@@ -546,3 +546,45 @@ After removing the legacy functions (`CreateLinks`, `removeLinks`, `PruneLinks`)
   - link_utils_test.go (Task 28) - has errors per diagnostics
 
 **Next task:** Task 25 - Remove legacy tests from status_test.go
+
+## Session 14: Remove Legacy Tests from status_test.go (Complete)
+
+### Task: Remove legacy tests from status_test.go (Task 25)
+
+**Context:**
+After removing the legacy `Status(config *Config)` function in Session 4, the test files status_test.go and status_json_test.go had tests using the old `*Config` parameter pattern with `LinkMappings` that needed cleanup.
+
+**Removed from status_test.go:**
+1. `TestStatusWithLinkMappings` - tested legacy `Status(config *Config)` with old `Config{LinkMappings}` (lines 10-79)
+2. `TestDetermineSourceMapping` - tested legacy `DetermineSourceMapping()` function (lines 81-126)
+
+**Kept in status_test.go:**
+1. `TestStatusWithOptions` - tests `StatusWithOptions(opts LinkOptions)` (new API)
+
+**Removed status_json_test.go entirely:**
+- `TestStatusJSON` - used legacy `Config` and `Status()` function
+- `TestStatusJSONEmpty` - used legacy `Config` and `Status()` function
+- Both tests used the old JSON config system, entire file deleted
+
+**Statistics:**
+- status_test.go: reduced from 360 lines to 241 lines (**119 lines removed**)
+- status_json_test.go: deleted (**163 lines removed**)
+- **Total: 282 lines removed from test files**
+
+**Verification:**
+- ✅ No references to `Status(config` remain in internal/lnk/ test files
+- ✅ No references to `DetermineSourceMapping` remain in production code (only in documentation)
+- ✅ status_test.go no longer has any references to legacy `Config` or `LinkMapping`
+- ✅ Grep confirms all legacy function references removed
+- ⚠️ Build verification blocked by sandbox restrictions
+  - However, verified via grep that no legacy code references remain
+  - LSP diagnostics should no longer show errors in status_test.go
+
+**Status:**
+- ✅ Task 25 complete - status_test.go and status_json_test.go have been successfully cleaned up
+- Test files still needing cleanup:
+  - adopt_test.go (Task 26) - has errors per diagnostics
+  - orphan_test.go (Task 27) - has errors per diagnostics
+  - link_utils_test.go (Task 28) - has errors per diagnostics
+
+**Next task:** Task 26 - Remove legacy tests from adopt_test.go

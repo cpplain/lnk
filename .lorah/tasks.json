@@ -122,7 +122,7 @@
   {
     "name": "Remove legacy tests from status_test.go",
     "description": "Remove tests for Status(config *Config) function",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove legacy tests from adopt_test.go",
