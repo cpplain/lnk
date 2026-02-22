@@ -176,10 +176,10 @@ func LoadIgnoreFile(sourceDir string) ([]string, error) {
 	return patterns, nil
 }
 
-// MergeFlagConfig merges CLI options with config files to produce final configuration
+// LoadConfig merges CLI options with config files to produce final configuration
 // Precedence for target: CLI flag > .lnkconfig > default (~)
 // Precedence for ignore patterns: All sources are combined (built-in + config + .lnkignore + CLI)
-func MergeFlagConfig(sourceDir, cliTarget string, cliIgnorePatterns []string) (*MergedConfig, error) {
+func LoadConfig(sourceDir, cliTarget string, cliIgnorePatterns []string) (*MergedConfig, error) {
 	PrintVerbose("Merging configuration from sourceDir=%s, cliTarget=%s, cliIgnorePatterns=%v",
 		sourceDir, cliTarget, cliIgnorePatterns)
 

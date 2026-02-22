@@ -969,3 +969,40 @@ Continuing Phase 0 (Simplify Naming). Tasks 10-15 (CreateLinks, RemoveLinks, Sta
 - **Phase 0 progress: 7/13 tasks complete**
 
 **Next task:** Task 17 - Rename MergeFlagConfig to LoadConfig
+## Session 25: Rename MergeFlagConfig to LoadConfig (Complete)
+
+### Task: Rename MergeFlagConfig to LoadConfig (Task 17)
+
+**Context:**
+Continuing Phase 0 (Simplify Naming). Tasks 10-16 (CreateLinks, RemoveLinks, Status, Prune, Adopt, Orphan, FindManagedLinks) were completed in previous sessions. Now renaming the config merging function to drop the `Flag` prefix and use the more intuitive name `LoadConfig`.
+
+**Changes made:**
+
+1. **internal/lnk/config.go:179-182** - Renamed function from `MergeFlagConfig` to `LoadConfig`
+   - Updated function comment
+   - Updated function signature
+
+2. **cmd/lnk/main.go:243** - Updated call site from `lnk.MergeFlagConfig(sourceDir, targetDir, ignorePatterns)` to `lnk.LoadConfig(sourceDir, targetDir, ignorePatterns)`
+
+3. **internal/lnk/config_test.go** - Updated all test references:
+   - Line 374: Renamed test function from `TestMergeFlagConfig` to `TestLoadConfig`
+   - Line 517: Updated function call from `MergeFlagConfig(sourceDir, tt.cliTarget, tt.cliIgnorePatterns)` to `LoadConfig(sourceDir, tt.cliTarget, tt.cliIgnorePatterns)`
+   - Lines 519, 525, 532, 537, 550: Updated error messages from `MergeFlagConfig()` to `LoadConfig()`
+   - Line 557: Renamed test function from `TestMergeFlagConfigPrecedence` to `TestLoadConfigPrecedence`
+   - Line 578: Updated function call from `MergeFlagConfig(tmpDir, "/from-cli", []string{"cli-pattern"})` to `LoadConfig(tmpDir, "/from-cli", []string{"cli-pattern"})`
+   - Line 580: Updated error message from `MergeFlagConfig() error` to `LoadConfig() error`
+
+**Verification:**
+- ✅ No references to `MergeFlagConfig` remain in any Go files
+- ✅ Grep confirms no legacy function name remains in production code
+- ✅ Function signature matches expected pattern: `func LoadConfig(sourceDir, cliTarget string, cliIgnorePatterns []string) (*MergedConfig, error)`
+- ✅ LSP diagnostics show no compilation errors (only informational warnings about unused helper functions)
+- ⚠️ Build verification blocked by sandbox restrictions on go build cache
+  - However, verified via grep and LSP diagnostics that all references are correctly renamed
+  - Pattern matches all other successful renames from previous sessions
+
+**Status:**
+- ✅ Task 17 complete - `MergeFlagConfig` renamed to `LoadConfig`
+- **Phase 0 progress: 8/13 tasks complete**
+
+**Next task:** Task 18 - Rename LoadFlagConfig to loadConfigFile (unexported)

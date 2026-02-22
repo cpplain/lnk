@@ -240,7 +240,7 @@ func main() {
 	}
 
 	// Merge config from .lnkconfig and .lnkignore
-	mergedConfig, err := lnk.MergeFlagConfig(sourceDir, targetDir, ignorePatterns)
+	mergedConfig, err := lnk.LoadConfig(sourceDir, targetDir, ignorePatterns)
 	if err != nil {
 		lnk.PrintErrorWithHint(err)
 		os.Exit(lnk.ExitError)

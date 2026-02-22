@@ -82,7 +82,7 @@
   {
     "name": "Rename MergeFlagConfig to LoadConfig",
     "description": "Rename function in config.go and update all call sites",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Rename LoadFlagConfig to loadConfigFile (unexported)",

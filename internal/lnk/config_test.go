@@ -371,7 +371,7 @@ node_modules/`
 	}
 }
 
-func TestMergeFlagConfig(t *testing.T) {
+func TestLoadConfig(t *testing.T) {
 	tests := []struct {
 		name               string
 		setupFiles         func(tmpDir string) error
@@ -514,27 +514,27 @@ dist/
 			}
 
 			// Merge config
-			merged, err := MergeFlagConfig(sourceDir, tt.cliTarget, tt.cliIgnorePatterns)
+			merged, err := LoadConfig(sourceDir, tt.cliTarget, tt.cliIgnorePatterns)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("MergeFlagConfig() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("LoadConfig() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if tt.wantErr {
 				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
-					t.Errorf("MergeFlagConfig() error = %v, want error containing %q", err, tt.errContains)
+					t.Errorf("LoadConfig() error = %v, want error containing %q", err, tt.errContains)
 				}
 				return
 			}
 
 			// Check target directory
 			if merged.TargetDir != tt.wantTargetDir {
-				t.Errorf("MergeFlagConfig() TargetDir = %v, want %v", merged.TargetDir, tt.wantTargetDir)
+				t.Errorf("LoadConfig() TargetDir = %v, want %v", merged.TargetDir, tt.wantTargetDir)
 			}
 
 			// Check source directory is set
 			if merged.SourceDir != sourceDir {
-				t.Errorf("MergeFlagConfig() SourceDir = %v, want %v", merged.SourceDir, sourceDir)
+				t.Errorf("LoadConfig() SourceDir = %v, want %v", merged.SourceDir, sourceDir)
 			}
 
 			// Check that wanted patterns are present
@@ -547,14 +547,14 @@ dist/
 					}
 				}
 				if !found {
-					t.Errorf("MergeFlagConfig() missing ignore pattern %q in %v", wantPattern, merged.IgnorePatterns)
+					t.Errorf("LoadConfig() missing ignore pattern %q in %v", wantPattern, merged.IgnorePatterns)
 				}
 			}
 		})
 	}
 }
 
-func TestMergeFlagConfigPrecedence(t *testing.T) {
+func TestLoadConfigPrecedence(t *testing.T) {
 	// Create temporary directory
 	tmpDir, err := os.MkdirTemp("", "lnk-test")
 	if err != nil {
@@ -575,9 +575,9 @@ func TestMergeFlagConfigPrecedence(t *testing.T) {
 	}
 
 	// Test precedence: CLI > config > default
-	merged, err := MergeFlagConfig(tmpDir, "/from-cli", []string{"cli-pattern"})
+	merged, err := LoadConfig(tmpDir, "/from-cli", []string{"cli-pattern"})
 	if err != nil {
-		t.Fatalf("MergeFlagConfig() error = %v", err)
+		t.Fatalf("LoadConfig() error = %v", err)
 	}
 
 	// CLI target should win
