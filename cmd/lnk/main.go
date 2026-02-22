@@ -54,7 +54,6 @@ func main() {
 	var actionSet bool = false           // track if action was explicitly set
 	var sourceDir string = "."           // default: current directory
 	var targetDir string = "~"           // default: home directory
-	var orphanPath string                // for --orphan PATH
 	var ignorePatterns []string
 	var dryRun bool
 	var verbose bool
@@ -62,7 +61,7 @@ func main() {
 	var noColor bool
 	var showVersion bool
 	var showHelp bool
-	var packages []string
+	var paths []string
 
 	args := os.Args[1:]
 	for i := 0; i < len(args); i++ {
@@ -70,13 +69,13 @@ func main() {
 
 		// Stop parsing flags after --
 		if arg == "--" {
-			packages = append(packages, args[i+1:]...)
+			paths = append(paths, args[i+1:]...)
 			break
 		}
 
-		// Non-flag argument = package
+		// Non-flag argument = path (positional argument)
 		if !strings.HasPrefix(arg, "-") {
-			packages = append(packages, arg)
+			paths = append(paths, arg)
 			continue
 		}
 
@@ -137,16 +136,8 @@ func main() {
 					"Use only one of: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan"))
 				os.Exit(lnk.ExitUsage)
 			}
-			if !hasValue {
-				lnk.PrintErrorWithHint(lnk.WithHint(
-					fmt.Errorf("--orphan requires a PATH argument"),
-					"Example: lnk --orphan ~/.bashrc"))
-				os.Exit(lnk.ExitUsage)
-			}
 			action = actionOrphan
 			actionSet = true
-			orphanPath = value
-			i += consumed
 
 		// Directory flags
 		case "-s", "--source":
@@ -231,12 +222,22 @@ func main() {
 		lnk.SetVerbosity(lnk.VerbosityVerbose)
 	}
 
-	// Validate package requirements based on action
-	if action != actionPrune && action != actionOrphan && len(packages) == 0 {
+	// Validate path requirements based on action
+	// For C/R/S: need at least one path (source directory)
+	// For A/O: need at least one path (files to operate on)
+	// For P: optional (defaults to current source)
+	if action != actionPrune && len(paths) == 0 {
 		lnk.PrintErrorWithHint(lnk.WithHint(
-			fmt.Errorf("at least one package is required"),
-			"Example: lnk . (flat repo) or lnk home (nested repo)\nUse '.' to link all files in source directory"))
+			fmt.Errorf("at least one path is required"),
+			"Example: lnk . (link from current directory) or lnk -A ~/.bashrc (adopt file)"))
 		os.Exit(lnk.ExitUsage)
+	}
+
+	// For C/R/S actions, use the first path as the source directory
+	if action == actionCreate || action == actionRemove || action == actionStatus {
+		if len(paths) > 0 {
+			sourceDir = paths[0]
+		}
 	}
 
 	// Merge config from .lnkconfig and .lnkignore
@@ -249,8 +250,8 @@ func main() {
 	// Show effective configuration in verbose mode
 	lnk.PrintVerbose("Source directory: %s", mergedConfig.SourceDir)
 	lnk.PrintVerbose("Target directory: %s", mergedConfig.TargetDir)
-	if len(packages) > 0 {
-		lnk.PrintVerbose("Packages: %s", strings.Join(packages, ", "))
+	if len(paths) > 0 {
+		lnk.PrintVerbose("Paths: %s", strings.Join(paths, ", "))
 	}
 
 	// Execute the appropriate action
@@ -259,7 +260,6 @@ func main() {
 		opts := lnk.LinkOptions{
 			SourceDir:      mergedConfig.SourceDir,
 			TargetDir:      mergedConfig.TargetDir,
-			Packages:       packages,
 			IgnorePatterns: mergedConfig.IgnorePatterns,
 			DryRun:         dryRun,
 		}
@@ -272,7 +272,6 @@ func main() {
 		opts := lnk.LinkOptions{
 			SourceDir:      mergedConfig.SourceDir,
 			TargetDir:      mergedConfig.TargetDir,
-			Packages:       packages,
 			IgnorePatterns: mergedConfig.IgnorePatterns,
 			DryRun:         dryRun,
 		}
@@ -285,7 +284,6 @@ func main() {
 		opts := lnk.LinkOptions{
 			SourceDir:      mergedConfig.SourceDir,
 			TargetDir:      mergedConfig.TargetDir,
-			Packages:       packages,
 			IgnorePatterns: mergedConfig.IgnorePatterns,
 			DryRun:         false, // status doesn't use dry-run
 		}
@@ -295,15 +293,21 @@ func main() {
 		}
 
 	case actionPrune:
-		// Prune defaults to "." if no packages specified
-		prunePackages := packages
-		if len(prunePackages) == 0 {
-			prunePackages = []string{"."}
+		// For prune, use current source if no path specified
+		pruneSource := mergedConfig.SourceDir
+		if len(paths) > 0 {
+			pruneSource = paths[0]
+			// Re-merge config with the specified source
+			pruneConfig, err := lnk.LoadConfig(pruneSource, targetDir, ignorePatterns)
+			if err != nil {
+				lnk.PrintErrorWithHint(err)
+				os.Exit(lnk.ExitError)
+			}
+			mergedConfig = pruneConfig
 		}
 		opts := lnk.LinkOptions{
 			SourceDir:      mergedConfig.SourceDir,
 			TargetDir:      mergedConfig.TargetDir,
-			Packages:       prunePackages,
 			IgnorePatterns: mergedConfig.IgnorePatterns,
 			DryRun:         dryRun,
 		}
@@ -313,19 +317,17 @@ func main() {
 		}
 
 	case actionAdopt:
-		// For adopt, we need at least 2 args: package + at least one file path
-		if len(packages) < 2 {
+		// For adopt, all paths are files to adopt
+		if len(paths) == 0 {
 			lnk.PrintErrorWithHint(lnk.WithHint(
-				fmt.Errorf("adopt requires a package and at least one file path"),
-				"Example: lnk -A home ~/.bashrc ~/.vimrc"))
+				fmt.Errorf("adopt requires at least one file path"),
+				"Example: lnk -A ~/.bashrc ~/.vimrc"))
 			os.Exit(lnk.ExitUsage)
 		}
-		// First arg is package, rest are file paths
 		opts := lnk.AdoptOptions{
 			SourceDir: mergedConfig.SourceDir,
 			TargetDir: mergedConfig.TargetDir,
-			Package:   packages[0],
-			Paths:     packages[1:],
+			Paths:     paths,
 			DryRun:    dryRun,
 		}
 		if err := lnk.Adopt(opts); err != nil {
@@ -334,14 +336,19 @@ func main() {
 		}
 
 	case actionOrphan:
-		// Orphan file(s) from management
+		// For orphan, all paths are symlinks to orphan
+		if len(paths) == 0 {
+			lnk.PrintErrorWithHint(lnk.WithHint(
+				fmt.Errorf("orphan requires at least one path"),
+				"Example: lnk -O ~/.bashrc"))
+			os.Exit(lnk.ExitUsage)
+		}
 		opts := lnk.OrphanOptions{
-			SourceDir: sourceDir,
-			TargetDir: targetDir,
-			Paths:     []string{orphanPath},
+			SourceDir: mergedConfig.SourceDir,
+			TargetDir: mergedConfig.TargetDir,
+			Paths:     paths,
 			DryRun:    dryRun,
 		}
-
 		if err := lnk.Orphan(opts); err != nil {
 			lnk.PrintErrorWithHint(err)
 			os.Exit(lnk.ExitError)
@@ -350,13 +357,13 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Printf("%s lnk [options] <packages...>\n", lnk.Bold("Usage:"))
+	fmt.Printf("%s lnk [action] [flags] <path(s)>\n", lnk.Bold("Usage:"))
 	fmt.Println()
 	fmt.Println("An opinionated symlink manager for dotfiles and more")
 	fmt.Println()
-	fmt.Println("At least one package is required for link operations.")
-	fmt.Println("Use '.' for flat repository (all files in source directory)")
-	fmt.Println("or specify subdirectories for nested repository (e.g., 'home', 'private/home')")
+	fmt.Println("Paths are positional arguments that come last (POSIX-style).")
+	fmt.Println("For create/remove/status: path is the source directory to link from.")
+	fmt.Println("For adopt/orphan: paths are the files to operate on.")
 	fmt.Println()
 
 	lnk.PrintHelpSection("Action Flags (mutually exclusive):")
@@ -365,14 +372,14 @@ func printUsage() {
 		{"-R, --remove", "Remove symlinks"},
 		{"-S, --status", "Show status of symlinks"},
 		{"-P, --prune", "Remove broken symlinks"},
-		{"-A, --adopt", "Adopt files into package"},
-		{"-O, --orphan PATH", "Remove file from management"},
+		{"-A, --adopt", "Adopt files into source directory"},
+		{"-O, --orphan", "Remove files from management"},
 	})
 	fmt.Println()
 
 	lnk.PrintHelpSection("Directory Flags:")
 	lnk.PrintHelpItems([][]string{
-		{"-s, --source DIR", "Source directory (default: current directory)"},
+		{"-s, --source DIR", "Source directory (default: cwd for adopt/orphan)"},
 		{"-t, --target DIR", "Target directory (default: ~)"},
 	})
 	fmt.Println()
@@ -391,16 +398,18 @@ func printUsage() {
 
 	lnk.PrintHelpSection("Examples:")
 	lnk.PrintHelpItems([][]string{
-		{"lnk .", "Create links from flat repository"},
-		{"lnk home", "Create links from home/ package"},
-		{"lnk home private/home", "Create links from multiple packages"},
-		{"lnk -s ~/dotfiles home", "Specify source directory"},
-		{"lnk -t ~ home", "Specify target directory"},
-		{"lnk -n home", "Dry-run (preview without changes)"},
-		{"lnk -R home", "Remove links from home/ package"},
-		{"lnk -S home", "Show status of home/ package"},
-		{"lnk -P", "Prune broken symlinks"},
-		{"lnk --ignore '*.swp' home", "Add ignore pattern"},
+		{"lnk .", "Create links from current directory"},
+		{"lnk -C .", "Explicit create from current directory"},
+		{"lnk -C -t /tmp .", "Create with custom target"},
+		{"lnk -C ~/git/dotfiles", "Create from absolute path"},
+		{"lnk -n .", "Dry-run (preview without changes)"},
+		{"lnk -R .", "Remove links"},
+		{"lnk -S .", "Show status"},
+		{"lnk -P", "Prune broken symlinks from current source"},
+		{"lnk -A ~/.bashrc ~/.vimrc", "Adopt files into current directory"},
+		{"lnk -A -s ~/dotfiles ~/.bashrc", "Adopt with explicit source"},
+		{"lnk -O ~/.bashrc", "Orphan file (remove from management)"},
+		{"lnk --ignore '*.swp' .", "Add ignore pattern"},
 	})
 	fmt.Println()
 

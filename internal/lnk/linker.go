@@ -13,11 +13,10 @@ type PlannedLink struct {
 	Target string
 }
 
-// LinkOptions holds configuration for package-based linking operations
+// LinkOptions holds configuration for linking operations
 type LinkOptions struct {
-	SourceDir      string   // base directory (e.g., ~/git/dotfiles)
+	SourceDir      string   // source directory - what to link from (e.g., ~/git/dotfiles)
 	TargetDir      string   // where to create links (default: ~)
-	Packages       []string // subdirs to process (e.g., ["home", "private/home"])
 	IgnorePatterns []string // combined ignore patterns from all sources
 	DryRun         bool     // preview mode without making changes
 }
@@ -62,15 +61,9 @@ func collectPlannedLinksWithPatterns(sourcePath, targetPath string, ignorePatter
 	return links, err
 }
 
-// CreateLinks creates symlinks using package-based options
+// CreateLinks creates symlinks using the provided options
 func CreateLinks(opts LinkOptions) error {
 	PrintCommandHeader("Creating Symlinks")
-
-	// Validate inputs
-	if len(opts.Packages) == 0 {
-		return NewValidationErrorWithHint("packages", "", "no packages specified",
-			"Specify at least one package to link. Example: lnk home")
-	}
 
 	// Expand source and target directories
 	sourceDir, err := ExpandPath(opts.SourceDir)
@@ -87,49 +80,22 @@ func CreateLinks(opts LinkOptions) error {
 	if info, err := os.Stat(sourceDir); err != nil {
 		if os.IsNotExist(err) {
 			return NewValidationErrorWithHint("source directory", sourceDir, "directory does not exist",
-				"Ensure the source directory exists or use -s/--source to specify a different location")
+				"Ensure the source directory exists or specify a different path")
 		}
 		return fmt.Errorf("failed to check source directory: %w", err)
 	} else if !info.IsDir() {
 		return NewValidationErrorWithHint("source directory", sourceDir, "path is not a directory",
-			"The source path must be a directory containing packages to link")
+			"The source path must be a directory containing files to link")
 	}
 
-	// Phase 1: Collect all files to link from all packages
+	// Phase 1: Collect all files to link
 	PrintVerbose("Starting phase 1: collecting files to link")
-	var plannedLinks []PlannedLink
+	PrintVerbose("Source directory: %s", sourceDir)
+	PrintVerbose("Target directory: %s", targetDir)
 
-	for _, pkg := range opts.Packages {
-		PrintVerbose("Processing package: %s", pkg)
-
-		// For package ".", use the source directory directly
-		var pkgSourcePath string
-		if pkg == "." {
-			pkgSourcePath = sourceDir
-		} else {
-			pkgSourcePath = filepath.Join(sourceDir, pkg)
-		}
-
-		// Check if package directory exists
-		if info, err := os.Stat(pkgSourcePath); err != nil {
-			if os.IsNotExist(err) {
-				PrintSkip("Skipping package %s: directory does not exist", pkg)
-				continue
-			}
-			return fmt.Errorf("failed to check package %s: %w", pkg, err)
-		} else if !info.IsDir() {
-			return fmt.Errorf("package %s is not a directory: %s", pkg, pkgSourcePath)
-		}
-
-		PrintVerbose("Package source path: %s", pkgSourcePath)
-		PrintVerbose("Target directory: %s", targetDir)
-
-		// Collect files from this package
-		links, err := collectPlannedLinksWithPatterns(pkgSourcePath, targetDir, opts.IgnorePatterns)
-		if err != nil {
-			return fmt.Errorf("collecting files for package %s: %w", pkg, err)
-		}
-		plannedLinks = append(plannedLinks, links...)
+	plannedLinks, err := collectPlannedLinksWithPatterns(sourceDir, targetDir, opts.IgnorePatterns)
+	if err != nil {
+		return fmt.Errorf("collecting files to link: %w", err)
 	}
 
 	if len(plannedLinks) == 0 {
@@ -160,21 +126,9 @@ func CreateLinks(opts LinkOptions) error {
 	return executePlannedLinks(plannedLinks)
 }
 
-// findManagedLinksForPackages finds all symlinks in targetDir that point to the specified packages
-func findManagedLinksForPackages(targetDir, sourceDir string, packages []string) ([]ManagedLink, error) {
+// findManagedLinksForSource finds all symlinks in targetDir that point to the source directory
+func findManagedLinksForSource(targetDir, sourceDir string) ([]ManagedLink, error) {
 	var links []ManagedLink
-
-	// Build list of absolute package source paths
-	var packagePaths []string
-	for _, pkg := range packages {
-		var pkgPath string
-		if pkg == "." {
-			pkgPath = sourceDir
-		} else {
-			pkgPath = filepath.Join(sourceDir, pkg)
-		}
-		packagePaths = append(packagePaths, pkgPath)
-	}
 
 	err := filepath.Walk(targetDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -215,24 +169,16 @@ func findManagedLinksForPackages(targetDir, sourceDir string, packages []string)
 			return nil
 		}
 
-		// Check if target points to any of our packages
-		var managedByPackage string
-		for i, pkgPath := range packagePaths {
-			relPath, err := filepath.Rel(pkgPath, cleanTarget)
-			if err == nil && !strings.HasPrefix(relPath, "..") && relPath != "." {
-				managedByPackage = packages[i]
-				break
-			}
-		}
-
-		if managedByPackage == "" {
+		// Check if target points to our source directory
+		relPath, err := filepath.Rel(sourceDir, cleanTarget)
+		if err != nil || strings.HasPrefix(relPath, "..") || relPath == "." {
 			return nil
 		}
 
 		link := ManagedLink{
 			Path:   path,
 			Target: target,
-			Source: managedByPackage,
+			Source: sourceDir,
 		}
 
 		// Check if link is broken
@@ -247,15 +193,9 @@ func findManagedLinksForPackages(targetDir, sourceDir string, packages []string)
 	return links, err
 }
 
-// RemoveLinks removes symlinks using package-based options
+// RemoveLinks removes symlinks managed by the source directory
 func RemoveLinks(opts LinkOptions) error {
 	PrintCommandHeader("Removing Symlinks")
-
-	// Validate inputs
-	if len(opts.Packages) == 0 {
-		return NewValidationErrorWithHint("packages", "", "no packages specified",
-			"Specify at least one package to remove links for. Example: lnk -R home")
-	}
 
 	// Expand source and target directories
 	sourceDir, err := ExpandPath(opts.SourceDir)
@@ -272,17 +212,17 @@ func RemoveLinks(opts LinkOptions) error {
 	if info, err := os.Stat(sourceDir); err != nil {
 		if os.IsNotExist(err) {
 			return NewValidationErrorWithHint("source directory", sourceDir, "directory does not exist",
-				"Ensure the source directory exists or use -s/--source to specify a different location")
+				"Ensure the source directory exists or specify a different path")
 		}
 		return fmt.Errorf("failed to check source directory: %w", err)
 	} else if !info.IsDir() {
 		return NewValidationErrorWithHint("source directory", sourceDir, "path is not a directory",
-			"The source path must be a directory containing packages")
+			"The source path must be a directory")
 	}
 
-	// Find all managed links for the specified packages
+	// Find all managed links for the source directory
 	PrintVerbose("Searching for managed links in %s", targetDir)
-	links, err := findManagedLinksForPackages(targetDir, sourceDir, opts.Packages)
+	links, err := findManagedLinksForSource(targetDir, sourceDir)
 	if err != nil {
 		return fmt.Errorf("failed to find managed links: %w", err)
 	}
@@ -329,15 +269,9 @@ func RemoveLinks(opts LinkOptions) error {
 	return nil
 }
 
-// Prune removes broken symlinks using package-based options
+// Prune removes broken symlinks managed by the source directory
 func Prune(opts LinkOptions) error {
 	PrintCommandHeader("Pruning Broken Symlinks")
-
-	// For prune, packages are optional - if none specified, default to "." (all packages)
-	packages := opts.Packages
-	if len(packages) == 0 {
-		packages = []string{"."}
-	}
 
 	// Expand source and target directories
 	sourceDir, err := ExpandPath(opts.SourceDir)
@@ -354,17 +288,17 @@ func Prune(opts LinkOptions) error {
 	if info, err := os.Stat(sourceDir); err != nil {
 		if os.IsNotExist(err) {
 			return NewValidationErrorWithHint("source directory", sourceDir, "directory does not exist",
-				"Ensure the source directory exists or use -s/--source to specify a different location")
+				"Ensure the source directory exists or specify a different path")
 		}
 		return fmt.Errorf("failed to check source directory: %w", err)
 	} else if !info.IsDir() {
 		return NewValidationErrorWithHint("source directory", sourceDir, "path is not a directory",
-			"The source path must be a directory containing packages")
+			"The source path must be a directory")
 	}
 
-	// Find all managed links for the specified packages
+	// Find all managed links for the source directory
 	PrintVerbose("Searching for managed links in %s", targetDir)
-	links, err := findManagedLinksForPackages(targetDir, sourceDir, packages)
+	links, err := findManagedLinksForSource(targetDir, sourceDir)
 	if err != nil {
 		return fmt.Errorf("failed to find managed links: %w", err)
 	}
@@ -420,44 +354,6 @@ func Prune(opts LinkOptions) error {
 }
 
 // shouldIgnoreEntry determines if an entry should be ignored based on patterns
-// collectPlannedLinks walks a source directory and collects all files that should be linked
-func collectPlannedLinks(sourcePath, targetPath string, ignorePatterns []string) ([]PlannedLink, error) {
-	var links []PlannedLink
-
-	err := filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Skip directories - we only link files
-		if info.IsDir() {
-			return nil
-		}
-
-		// Get relative path from source directory
-		relPath, err := filepath.Rel(sourcePath, path)
-		if err != nil {
-			return fmt.Errorf("failed to calculate relative path: %w", err)
-		}
-
-		// Check if this file should be ignored
-		if MatchesPattern(relPath, ignorePatterns) {
-			return nil
-		}
-
-		// Build target path
-		target := filepath.Join(targetPath, relPath)
-
-		links = append(links, PlannedLink{
-			Source: path,
-			Target: target,
-		})
-
-		return nil
-	})
-
-	return links, err
-}
 
 // executePlannedLinks creates the symlinks according to the plan
 func executePlannedLinks(links []PlannedLink) error {

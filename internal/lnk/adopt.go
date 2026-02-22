@@ -7,11 +7,10 @@ import (
 	"strings"
 )
 
-// AdoptOptions holds options for adopting files into a package
+// AdoptOptions holds options for adopting files into the source directory
 type AdoptOptions struct {
 	SourceDir string   // base directory for dotfiles (e.g., ~/git/dotfiles)
 	TargetDir string   // where files currently are (default: ~)
-	Package   string   // package to adopt into (e.g., "home" or ".")
 	Paths     []string // files to adopt (e.g., ["~/.bashrc", "~/.vimrc"])
 	DryRun    bool     // preview mode
 }
@@ -48,38 +47,6 @@ func validateAdoptSource(absSource, absSourceDir string) error {
 		}
 	}
 	return nil
-}
-
-// determineRelativePath determines the relative path from home directory
-func determineRelativePath(absSource string) (string, string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	relPath, err := getRelativePathFromHome(absSource, homeDir)
-	if err != nil {
-		return "", "", NewPathErrorWithHint("adopt", absSource,
-			fmt.Errorf("source must be within home directory: %w", err),
-			"lnk can only manage files within your home directory")
-	}
-
-	return relPath, homeDir, nil
-}
-
-// getRelativePathFromHome attempts to get a relative path from the given home directory
-func getRelativePathFromHome(absSource, homeDir string) (string, error) {
-	relPath, err := filepath.Rel(homeDir, absSource)
-	if err != nil {
-		return "", err
-	}
-
-	// Ensure the path doesn't escape the home directory
-	if strings.HasPrefix(relPath, "..") {
-		return "", fmt.Errorf("path is outside home directory")
-	}
-
-	return relPath, nil
 }
 
 // performAdoption performs the actual file move and symlink creation
@@ -287,13 +254,9 @@ func Adopt(opts AdoptOptions) error {
 	PrintCommandHeader("Adopting Files")
 
 	// Validate inputs
-	if opts.Package == "" {
-		return NewValidationErrorWithHint("package", "", "package argument is required",
-			"Specify which package to adopt into, e.g.: lnk -A home ~/.bashrc")
-	}
 	if len(opts.Paths) == 0 {
 		return NewValidationErrorWithHint("paths", "", "at least one file path is required",
-			"Specify which files to adopt, e.g.: lnk -A home ~/.bashrc ~/.vimrc")
+			"Specify which files to adopt, e.g.: lnk -A ~/.bashrc ~/.vimrc")
 	}
 
 	// Expand paths
@@ -315,24 +278,6 @@ func Adopt(opts AdoptOptions) error {
 			fmt.Sprintf("Create it first: mkdir -p %s", absSourceDir))
 	}
 
-	// Determine package directory
-	var packageDir string
-	if opts.Package == "." {
-		// Flat repository: adopt into source root
-		packageDir = absSourceDir
-	} else {
-		// Nested repository: adopt into package subdirectory
-		packageDir = filepath.Join(absSourceDir, opts.Package)
-	}
-	PrintVerbose("Package directory: %s", packageDir)
-
-	// Create package directory if it doesn't exist (only if not dry-run)
-	if !opts.DryRun {
-		if err := os.MkdirAll(packageDir, 0755); err != nil {
-			return fmt.Errorf("failed to create package directory %s: %w", packageDir, err)
-		}
-	}
-
 	// Process each file path
 	adopted := 0
 	for _, path := range opts.Paths {
@@ -346,7 +291,7 @@ func Adopt(opts AdoptOptions) error {
 		}
 
 		// Validate the file exists and isn't already adopted
-		if err := validateAdoptSource(absPath, packageDir); err != nil {
+		if err := validateAdoptSource(absPath, absSourceDir); err != nil {
 			PrintErrorWithHint(err)
 			continue
 		}
@@ -360,8 +305,8 @@ func Adopt(opts AdoptOptions) error {
 			continue
 		}
 
-		// Destination path in package
-		destPath := filepath.Join(packageDir, relPath)
+		// Destination path in source directory
+		destPath := filepath.Join(absSourceDir, relPath)
 
 		// Check if source is a directory
 		sourceInfo, err := os.Stat(absPath)
@@ -376,7 +321,7 @@ func Adopt(opts AdoptOptions) error {
 		if !sourceInfo.IsDir() {
 			if _, err := os.Stat(destPath); err == nil {
 				PrintErrorWithHint(WithHint(
-					fmt.Errorf("destination %s already exists in package", ContractPath(destPath)),
+					fmt.Errorf("destination %s already exists", ContractPath(destPath)),
 					"Remove the existing file first or choose a different file"))
 				continue
 			}

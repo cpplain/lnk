@@ -4,9 +4,9 @@ An opinionated symlink manager for dotfiles.
 
 ## Key Features
 
-- **Simple CLI** - Flag-based interface with sensible defaults
+- **Simple CLI** - POSIX-style interface with flags before paths
 - **Recursive file linking** - Links individual files throughout directory trees
-- **Package-based organization** - Support for multiple packages (public/private configs)
+- **Flexible organization** - Support for multiple source directories
 - **Safety first** - Dry-run mode and clear status reporting
 - **Flexible configuration** - Optional config files with CLI override
 - **No dependencies** - Single binary, stdlib only (git integration optional)
@@ -20,38 +20,42 @@ brew install cpplain/tap/lnk
 ## Quick Start
 
 ```bash
-# From your dotfiles directory
+# Link from current directory (default action is create)
 cd ~/git/dotfiles
-lnk .                    # Flat repo: link everything
-lnk home                 # Nested repo: link home/ package
-lnk home private/home    # Multiple packages
+lnk .                         # Link everything from current directory
+
+# Link from a specific subdirectory
+lnk home                      # Link everything from home/ subdirectory
+
+# Link from an absolute path
+lnk ~/git/dotfiles           # Link from specific path
 ```
 
 ## Usage
 
 ```bash
-lnk [options] <packages...>
+lnk [action] [flags] <path>
 ```
 
-At least one package is required for link operations. Use `.` for flat repository (all files in source directory) or specify subdirectories for nested repository (e.g., `home`, `private/home`).
+Path can be a relative or absolute directory. For create/remove/status operations, the path is the source directory to link from. For adopt/orphan operations, paths are the files to manage.
 
 ### Action Flags (mutually exclusive)
 
-| Flag                | Description                      |
-| ------------------- | -------------------------------- |
-| `-C, --create`      | Create symlinks (default action) |
-| `-R, --remove`      | Remove symlinks                  |
-| `-S, --status`      | Show status of symlinks          |
-| `-P, --prune`       | Remove broken symlinks           |
-| `-A, --adopt`       | Adopt files into package         |
-| `-O, --orphan PATH` | Remove file from management      |
+| Flag            | Description                      |
+| --------------- | -------------------------------- |
+| `-C, --create`  | Create symlinks (default action) |
+| `-R, --remove`  | Remove symlinks                  |
+| `-S, --status`  | Show status of symlinks          |
+| `-P, --prune`   | Remove broken symlinks           |
+| `-A, --adopt`   | Adopt files into source          |
+| `-O, --orphan`  | Remove files from management     |
 
 ### Directory Flags
 
-| Flag               | Description                                   |
-| ------------------ | --------------------------------------------- |
-| `-s, --source DIR` | Source directory (default: current directory) |
-| `-t, --target DIR` | Target directory (default: `~`)               |
+| Flag               | Description                                           |
+| ------------------ | ----------------------------------------------------- |
+| `-s, --source DIR` | Source directory (for adopt/orphan, default: cwd)     |
+| `-t, --target DIR` | Target directory (default: `~`)                       |
 
 ### Other Flags
 
@@ -70,53 +74,59 @@ At least one package is required for link operations. Use `.` for flat repositor
 ### Creating Links
 
 ```bash
-# Flat repository (all files in source directory)
+# Link from current directory
 lnk .
 
-# Nested repository
+# Link from a subdirectory
 lnk home
 
-# Multiple packages
-lnk home private/home
-
-# Specify source directory
-lnk -s ~/dotfiles home
+# Link from absolute path
+lnk ~/git/dotfiles
 
 # Specify target directory
-lnk -t ~ home
+lnk -t ~ .
 
 # Dry-run to preview changes
-lnk -n home
+lnk -n .
 
 # Add ignore pattern
-lnk --ignore '*.swp' home
+lnk --ignore '*.swp' .
 ```
 
 ### Removing Links
 
 ```bash
-# Remove links from package
+# Remove links from source directory
+lnk -R .
+
+# Remove links from subdirectory
 lnk -R home
 
 # Dry-run to preview removal
-lnk -n -R home
+lnk -n -R .
 ```
 
 ### Checking Status
 
 ```bash
-# Show status of links in package
+# Show status of links from current directory
+lnk -S .
+
+# Show status from subdirectory
 lnk -S home
 
 # Show status with verbose output
-lnk -v -S home
+lnk -v -S .
 ```
 
 ### Pruning Broken Links
 
 ```bash
-# Remove broken symlinks
+# Remove broken symlinks from current directory
 lnk -P
+
+# Remove broken symlinks from specific source
+lnk -P home
 
 # Dry-run to preview pruning
 lnk -n -P
@@ -125,11 +135,14 @@ lnk -n -P
 ### Adopting Files
 
 ```bash
-# Adopt files into package
-lnk -A home ~/.bashrc ~/.vimrc
+# Adopt files into current directory
+lnk -A ~/.bashrc ~/.vimrc
+
+# Adopt into specific source directory
+lnk -A -s ~/git/dotfiles ~/.bashrc
 
 # Adopt with dry-run
-lnk -n -A home ~/.gitconfig
+lnk -n -A ~/.gitconfig
 ```
 
 ### Orphaning Files
@@ -137,6 +150,9 @@ lnk -n -A home ~/.gitconfig
 ```bash
 # Remove file from management
 lnk -O ~/.bashrc
+
+# Orphan with specific source
+lnk -O -s ~/git/dotfiles ~/.bashrc
 
 # Dry-run to preview orphaning
 lnk -n -O ~/.config/oldapp
@@ -185,17 +201,17 @@ lnk automatically ignores these patterns:
 
 ### Recursive File Linking
 
-lnk recursively traverses your source directories and creates individual symlinks for each file (not directories). This approach:
+lnk recursively traverses your source directory and creates individual symlinks for each file (not directories). This approach:
 
-- Allows multiple packages to map to the same target directory
+- Allows you to mix managed and unmanaged files in the same target directory
 - Preserves your ability to have local-only files alongside managed configs
 - Creates parent directories as needed (never as symlinks)
 
-**Example:** With package `home` mapped from `~/dotfiles/home` to `~`:
+**Example:** Linking from `~/dotfiles` to `~`:
 
 ```
 Source:                              Target:
-~/dotfiles/home/
+~/dotfiles/
   .bashrc                     →      ~/.bashrc (symlink)
   .config/
     git/
@@ -206,9 +222,9 @@ Source:                              Target:
 
 The directories `.config`, `.config/git`, and `.config/nvim` are created as regular directories, not symlinks. This allows you to have local configs in `~/.config/localapp/` that aren't managed by lnk.
 
-### Package Organization
+### Repository Organization
 
-lnk uses a package-based approach. A package is a subdirectory in your source that maps to a target directory. Common patterns:
+You can organize your dotfiles in different ways:
 
 **Flat Repository:**
 
@@ -219,7 +235,7 @@ lnk uses a package-based approach. A package is a subdirectory in your source th
   .gitconfig
 ```
 
-Use: `lnk .`
+Use: `lnk .` from within the directory
 
 **Nested Repository:**
 
@@ -228,13 +244,12 @@ Use: `lnk .`
   home/          # Public configs
     .bashrc
     .vimrc
-  private/
-    home/        # Private configs
-      .ssh/
-        config
+  private/       # Private configs (e.g., git submodule)
+    .ssh/
+      config
 ```
 
-Use: `lnk home private/home`
+Use: `lnk home` to link public configs, or `lnk ~/dotfiles/private` for private configs
 
 ### Config File Precedence
 
@@ -272,22 +287,25 @@ cd ~/dotfiles
 git submodule update --init
 
 # 3. Create links (dry-run first to preview)
-lnk -n home private/home
+lnk -n .
 
 # 4. Create links for real
-lnk home private/home
+lnk .
 ```
 
 ### Adding New Configurations
 
 ```bash
 # Adopt a new app config into your repository
-lnk -A home ~/.config/newapp
+lnk -A ~/.config/newapp
 
 # This will:
-# 1. Move ~/.config/newapp to ~/dotfiles/home/.config/newapp
+# 1. Move ~/.config/newapp to ~/dotfiles/.config/newapp (from cwd)
 # 2. Create symlinks for each file in the directory tree
 # 3. Preserve the directory structure
+
+# Or specify source directory explicitly
+lnk -A -s ~/dotfiles ~/.config/newapp
 ```
 
 ### Managing Public and Private Configs
@@ -298,12 +316,22 @@ cd ~/dotfiles
 git submodule add git@github.com:you/dotfiles-private.git private
 
 # Structure:
-# ~/dotfiles/home/         (public configs)
-# ~/dotfiles/private/home/ (private configs via submodule)
+# ~/dotfiles/public/    (public configs)
+# ~/dotfiles/private/   (private configs via submodule)
 
-# Adopt to appropriate location
-lnk -A home ~/.bashrc              # Public config
-lnk -A private/home ~/.ssh/config  # Private config
+# Link public configs
+cd ~/dotfiles
+lnk public
+
+# Link private configs
+lnk private
+
+# Or adopt to appropriate location
+cd ~/dotfiles/public
+lnk -A ~/.bashrc              # Public config to current dir
+
+cd ~/dotfiles/private
+lnk -A ~/.ssh/config          # Private config to current dir
 ```
 
 ### Migrating from Other Dotfile Managers
@@ -313,17 +341,18 @@ lnk -A private/home ~/.ssh/config  # Private config
 stow -D home  # Example: GNU Stow
 
 # 2. Create links with lnk
-lnk home
+cd ~/dotfiles
+lnk .
 
 # lnk creates individual file symlinks instead of directory symlinks,
-# so you can gradually migrate and test package by package
+# so you can gradually migrate and test
 ```
 
 ## Tips
 
 - **Always dry-run first** - Use `-n` to preview changes before making them
 - **Check status regularly** - Use `-S` to check for broken links
-- **Use packages** - Separate public and private configs into different packages
+- **Organize your dotfiles** - Separate public and private configs into subdirectories
 - **Leverage .lnkignore** - Exclude build artifacts, local configs, and README files
 - **Test on VM first** - When setting up a new machine, test in a VM before production
 - **Version your configs** - Keep `.lnkconfig` and `.lnkignore` in git for reproducibility
@@ -359,19 +388,20 @@ lnk is designed for users who:
 ### Broken Links After Moving Dotfiles
 
 ```bash
-# Remove old links
-lnk -R home
+# Remove old links (from original location)
+cd /old/path/to/dotfiles
+lnk -R .
 
 # Recreate from new location
 cd /new/path/to/dotfiles
-lnk home
+lnk .
 ```
 
 ### Some Files Not Linking
 
 ```bash
 # Check if they're ignored
-lnk -v home  # Verbose mode shows ignored files
+lnk -v .  # Verbose mode shows ignored files
 
 # Check .lnkignore and .lnkconfig
 cat .lnkignore
@@ -382,10 +412,10 @@ cat .lnkconfig
 
 ```bash
 # Check file permissions in source
-ls -la ~/dotfiles/home/.ssh
+ls -la ~/dotfiles/.ssh
 
 # Files should be readable
-chmod 600 ~/dotfiles/home/.ssh/config
+chmod 600 ~/dotfiles/.ssh/config
 ```
 
 ## License

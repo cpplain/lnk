@@ -17,14 +17,16 @@ func TestCompleteWorkflow(t *testing.T) {
 
 	// Step 1: Initial status - should have no links
 	t.Run("initial status", func(t *testing.T) {
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir, "-S", "home")
+		homeSourceDir := filepath.Join(sourceDir, "home")
+		result := runCommand(t, "-S", "-t", targetDir, homeSourceDir)
 		assertExitCode(t, result, 0)
 		assertContains(t, result.Stdout, "No active links found")
 	})
 
 	// Step 2: Create links
 	t.Run("create links", func(t *testing.T) {
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir, "home", "private/home")
+		homeSourceDir := filepath.Join(sourceDir, "home")
+		result := runCommand(t, "-C", "-t", targetDir, homeSourceDir)
 		assertExitCode(t, result, 0)
 		// Note: sandbox allows non-dotfiles and .ssh/
 		assertContains(t, result.Stdout, "Created")
@@ -32,7 +34,8 @@ func TestCompleteWorkflow(t *testing.T) {
 
 	// Step 3: Verify status shows links
 	t.Run("status after create", func(t *testing.T) {
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir, "-S", "home", "private/home")
+		homeSourceDir := filepath.Join(sourceDir, "home")
+		result := runCommand(t, "-S", "-t", targetDir, homeSourceDir)
 		assertExitCode(t, result, 0)
 		// Note: sandbox allows non-dotfiles and .ssh/
 		// Should have at least readonly/test or .ssh/config
@@ -47,19 +50,20 @@ func TestCompleteWorkflow(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir, "-A", "home", newFile)
+		homeSourceDir := filepath.Join(sourceDir, "home")
+		result := runCommand(t, "-A", "-s", homeSourceDir, "-t", targetDir, newFile)
 		assertExitCode(t, result, 0)
 		assertContains(t, result.Stdout, "Adopted", ".workflow-adoptrc")
 
 		// Verify it's now a symlink
-		homeSourceDir := filepath.Join(sourceDir, "home")
 		assertSymlink(t, newFile, filepath.Join(homeSourceDir, ".workflow-adoptrc"))
 	})
 
 	// Step 5: Orphan a file
 	t.Run("orphan a file", func(t *testing.T) {
 		// Orphan the adopted file from step 4
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir, "-O",
+		homeSourceDir := filepath.Join(sourceDir, "home")
+		result := runCommand(t, "-O", "-s", homeSourceDir, "-t", targetDir,
 			filepath.Join(targetDir, ".workflow-adoptrc"))
 		assertExitCode(t, result, 0)
 		assertContains(t, result.Stdout, "Orphaned", ".workflow-adoptrc")
@@ -70,7 +74,8 @@ func TestCompleteWorkflow(t *testing.T) {
 
 	// Step 6: Remove all links
 	t.Run("remove all links", func(t *testing.T) {
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir, "-R", "home", "private/home")
+		homeSourceDir := filepath.Join(sourceDir, "home")
+		result := runCommand(t, "-R", "-t", targetDir, homeSourceDir)
 		assertExitCode(t, result, 0)
 		// May say "Removed" or "No symlinks to remove" depending on what was created
 		// Just verify command succeeded
@@ -78,87 +83,47 @@ func TestCompleteWorkflow(t *testing.T) {
 
 	// Step 7: Final status - should have no links again
 	t.Run("final status", func(t *testing.T) {
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir, "-S", "home", "private/home")
+		homeSourceDir := filepath.Join(sourceDir, "home")
+		result := runCommand(t, "-S", "-t", targetDir, homeSourceDir)
 		assertExitCode(t, result, 0)
 		// Should show no links after removal
 		assertContains(t, result.Stdout, "No active links found")
 	})
 }
 
-// TestMultiPackageWorkflow tests working with multiple packages
-func TestMultiPackageWorkflow(t *testing.T) {
-	cleanup := setupTestEnv(t)
-	defer cleanup()
-
-	projectRoot := getProjectRoot(t)
-	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
-	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
-
-	// Step 1: Create links from both home and private/home packages
-	t.Run("create from multiple packages", func(t *testing.T) {
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir, "home", "private/home")
-		assertExitCode(t, result, 0)
-		// Note: sandbox allows .ssh/config but blocks top-level dotfiles
-		assertContains(t, result.Stdout, "Created", ".ssh/config")
-	})
-
-	// Step 2: Status should show links from both packages
-	t.Run("status shows all packages", func(t *testing.T) {
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir, "-S", "home", "private/home")
-		assertExitCode(t, result, 0)
-		// Note: sandbox blocks top-level dotfiles from home package
-		// Only allowed files: .config/nvim from home, .ssh/config from private
-		assertContains(t, result.Stdout, ".ssh/config")
-	})
-
-	// Step 3: Remove only home package links
-	t.Run("remove specific package", func(t *testing.T) {
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir, "-R", "home")
-		assertExitCode(t, result, 0)
-		// May have no home links due to sandbox restrictions
-		// Just check command succeeded
-
-		// Verify private/home links remain
-		privateSourceDir := filepath.Join(sourceDir, "private", "home")
-		assertSymlink(t,
-			filepath.Join(targetDir, ".ssh", "config"),
-			filepath.Join(privateSourceDir, ".ssh", "config"))
-	})
-}
-
-// TestFlatRepositoryWorkflow tests using a flat repository (package ".")
+// TestFlatRepositoryWorkflow tests using a source directory directly
 func TestFlatRepositoryWorkflow(t *testing.T) {
 	cleanup := setupTestEnv(t)
 	defer cleanup()
 
 	projectRoot := getProjectRoot(t)
-	// Use private/home directory as flat source (has .ssh/ which works in sandbox)
+	// Use private/home directory as source (has .ssh/ which works in sandbox)
 	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles", "private", "home")
 	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
 
-	// Step 1: Create links from flat repository
-	t.Run("create from flat repo", func(t *testing.T) {
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir, ".")
+	// Step 1: Create links from source directory
+	t.Run("create from source directory", func(t *testing.T) {
+		result := runCommand(t, "-C", "-t", targetDir, sourceDir)
 		assertExitCode(t, result, 0)
 		// .ssh/config is allowed in sandbox
 		assertContains(t, result.Stdout, "Created", ".ssh/config")
 
-		// Verify links point to source directory (not source/.)
+		// Verify links point to source directory
 		assertSymlink(t,
 			filepath.Join(targetDir, ".ssh", "config"),
 			filepath.Join(sourceDir, ".ssh", "config"))
 	})
 
-	// Step 2: Status with flat repo
-	t.Run("status from flat repo", func(t *testing.T) {
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir, "-S", ".")
+	// Step 2: Status of source directory
+	t.Run("status from source directory", func(t *testing.T) {
+		result := runCommand(t, "-S", "-t", targetDir, sourceDir)
 		assertExitCode(t, result, 0)
 		assertContains(t, result.Stdout, ".ssh/config")
 	})
 
-	// Step 3: Remove from flat repo
-	t.Run("remove from flat repo", func(t *testing.T) {
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir, "-R", ".")
+	// Step 3: Remove links from source directory
+	t.Run("remove from source directory", func(t *testing.T) {
+		result := runCommand(t, "-R", "-t", targetDir, sourceDir)
 		assertExitCode(t, result, 0)
 		assertContains(t, result.Stdout, "Removed")
 		assertNoSymlink(t, filepath.Join(targetDir, ".ssh"))
@@ -183,15 +148,9 @@ func TestEdgeCases(t *testing.T) {
 	}{
 		{
 			name:     "non-existent source directory",
-			args:     []string{"-s", "/nonexistent", "-t", targetDir, "home"},
+			args:     []string{"-C", "-t", targetDir, "/nonexistent"},
 			wantExit: 1,
 			contains: []string{"does not exist"},
-		},
-		{
-			name:     "non-existent package",
-			args:     []string{"-s", sourceDir, "-t", targetDir, "nonexistent"},
-			wantExit: 0, // Should skip gracefully
-			contains: []string{"Skipping", "nonexistent", "does not exist"},
 		},
 		{
 			name: "create with existing non-symlink file",
@@ -203,12 +162,13 @@ func TestEdgeCases(t *testing.T) {
 				}
 
 				// Also create it in source so lnk tries to link it
-				sourceFile := filepath.Join(sourceDir, "home", ".regularfile")
+				homeSourceDir := filepath.Join(sourceDir, "home")
+				sourceFile := filepath.Join(homeSourceDir, ".regularfile")
 				if err := os.WriteFile(sourceFile, []byte("source file"), 0644); err != nil {
 					t.Fatal(err)
 				}
 			},
-			args:     []string{"-s", sourceDir, "-t", targetDir, "home"},
+			args:     []string{"-C", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			wantExit: 0,
 			contains: []string{"Failed to link", ".regularfile"},
 		},
@@ -221,7 +181,7 @@ func TestEdgeCases(t *testing.T) {
 					t.Fatal(err)
 				}
 			},
-			args: []string{"-s", sourceDir, "-t", targetDir, "-O",
+			args: []string{"-O", "-s", sourceDir, "-t", targetDir,
 				filepath.Join(targetDir, ".regular")},
 			wantExit: 0, // Graceful error handling
 			contains: []string{"not a symlink"},
@@ -230,11 +190,12 @@ func TestEdgeCases(t *testing.T) {
 			name: "adopt already managed file",
 			setup: func(t *testing.T) {
 				// Create a link first (using .ssh/config which works in sandbox)
-				// Create link from private/home package
-				result := runCommand(t, "-s", sourceDir, "-t", targetDir, "private/home")
+				// Create link from private/home source directory
+				privateHomeSourceDir := filepath.Join(sourceDir, "private", "home")
+				result := runCommand(t, "-C", "-t", targetDir, privateHomeSourceDir)
 				assertExitCode(t, result, 0)
 			},
-			args: []string{"-s", sourceDir, "-t", targetDir, "-A", "private/home",
+			args: []string{"-A", "-s", filepath.Join(sourceDir, "private", "home"), "-t", targetDir,
 				filepath.Join(targetDir, ".ssh", "config")},
 			wantExit: 0, // Graceful error handling
 			contains: []string{"already adopted"},
@@ -289,7 +250,8 @@ func TestPermissionHandling(t *testing.T) {
 		defer os.Chmod(readOnlyDir, 0755) // Restore permissions for cleanup
 
 		// Create a source file that would be linked there
-		sourceFile := filepath.Join(sourceDir, "home", "readonly", "test")
+		homeSourceDir := filepath.Join(sourceDir, "home")
+		sourceFile := filepath.Join(homeSourceDir, "readonly", "test")
 		if err := os.MkdirAll(filepath.Dir(sourceFile), 0755); err != nil {
 			t.Fatal(err)
 		}
@@ -297,7 +259,7 @@ func TestPermissionHandling(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir, "home")
+		result := runCommand(t, "-C", "-t", targetDir, homeSourceDir)
 		// Should handle permission error gracefully
 		assertExitCode(t, result, 0) // Other links should still be created
 		// Check both stdout and stderr for permission error
@@ -316,9 +278,10 @@ func TestIgnorePatterns(t *testing.T) {
 	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
 
 	t.Run("ignore pattern via CLI flag", func(t *testing.T) {
-		// Use home package and ignore readonly
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir,
-			"--ignore", "readonly/*", "home")
+		// Use home source directory and ignore readonly
+		homeSourceDir := filepath.Join(sourceDir, "home")
+		result := runCommand(t, "-C", "-t", targetDir,
+			"--ignore", "readonly/*", homeSourceDir)
 		assertExitCode(t, result, 0)
 
 		// readonly should be ignored (no files created since all others are dotfiles)
@@ -328,10 +291,11 @@ func TestIgnorePatterns(t *testing.T) {
 	t.Run("multiple ignore patterns", func(t *testing.T) {
 		cleanup()
 
-		result := runCommand(t, "-s", sourceDir, "-t", targetDir,
+		homeSourceDir := filepath.Join(sourceDir, "home")
+		result := runCommand(t, "-C", "-t", targetDir,
 			"--ignore", ".config/*",
 			"--ignore", "readonly/*",
-			"home")
+			homeSourceDir)
 		assertExitCode(t, result, 0)
 
 		// Should not create .config or readonly (both ignored)

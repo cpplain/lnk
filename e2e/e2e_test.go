@@ -71,7 +71,7 @@ func TestHelp(t *testing.T) {
 			name:     "no arguments shows usage",
 			args:     []string{},
 			wantExit: 2,
-			contains: []string{"at least one package is required"},
+			contains: []string{"at least one path is required"},
 		},
 	}
 
@@ -119,7 +119,7 @@ func TestInvalidFlags(t *testing.T) {
 			name:     "missing package argument",
 			args:     []string{"-C"},
 			wantExit: 2,
-			contains: []string{"at least one package is required"},
+			contains: []string{"at least one path is required"},
 		},
 	}
 
@@ -151,16 +151,17 @@ func TestStatus(t *testing.T) {
 	}{
 		{
 			name:     "status with no links",
-			args:     []string{"-s", sourceDir, "-t", targetDir, "-S", "home"},
+			args:     []string{"-S", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			wantExit: 0,
 			contains: []string{"No active links found"},
 		},
 		{
 			name: "status with links",
-			args: []string{"-s", sourceDir, "-t", targetDir, "-S", "home"},
+			args: []string{"-S", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			setup: func(t *testing.T) {
 				// First create some links
-				result := runCommand(t, "-s", sourceDir, "-t", targetDir, "home")
+				homeSourceDir := filepath.Join(sourceDir, "home")
+				result := runCommand(t, "-C", "-t", targetDir, homeSourceDir)
 				assertExitCode(t, result, 0)
 			},
 			wantExit: 0,
@@ -168,11 +169,12 @@ func TestStatus(t *testing.T) {
 			contains: []string{"readonly/test"},
 		},
 		{
-			name: "status with private package",
-			args: []string{"-s", sourceDir, "-t", targetDir, "-S", "private/home"},
+			name: "status with private directory",
+			args: []string{"-S", "-t", targetDir, filepath.Join(sourceDir, "private", "home")},
 			setup: func(t *testing.T) {
-				// Create links from private/home package
-				result := runCommand(t, "-s", sourceDir, "-t", targetDir, "private/home")
+				// Create links from private/home source directory
+				privateHomeSourceDir := filepath.Join(sourceDir, "private", "home")
+				result := runCommand(t, "-C", "-t", targetDir, privateHomeSourceDir)
 				assertExitCode(t, result, 0)
 			},
 			wantExit: 0,
@@ -180,7 +182,7 @@ func TestStatus(t *testing.T) {
 		},
 		{
 			name:     "status with verbose",
-			args:     []string{"-s", sourceDir, "-t", targetDir, "-S", "-v", "home"},
+			args:     []string{"-S", "-v", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			wantExit: 0,
 			contains: []string{"Source directory:", "Target directory:"},
 		},
@@ -226,7 +228,7 @@ func TestCreate(t *testing.T) {
 	}{
 		{
 			name:     "create dry-run",
-			args:     []string{"-s", sourceDir, "-t", targetDir, "-n", "home"},
+			args:     []string{"-C", "-n", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			wantExit: 0,
 			// Dry-run shows all files that would be linked
 			contains: []string{"dry-run:", "Would create"},
@@ -236,8 +238,8 @@ func TestCreate(t *testing.T) {
 			},
 		},
 		{
-			name:     "create links from home package",
-			args:     []string{"-s", sourceDir, "-t", targetDir, "home"},
+			name:     "create links from home source directory",
+			args:     []string{"-C", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			wantExit: 0,
 			// Note: sandbox only allows non-dotfiles
 			contains: []string{"Created", "readonly/test"},
@@ -251,18 +253,18 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			name:     "create with quiet mode",
-			args:     []string{"-s", sourceDir, "-t", targetDir, "-q", "home"},
+			args:     []string{"-C", "-q", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			wantExit: 0,
 			contains: []string{}, // Should have no output
 		},
 		{
-			name:     "create from multiple packages",
-			args:     []string{"-s", sourceDir, "-t", targetDir, "home", "private/home"},
+			name:     "create from private source directory",
+			args:     []string{"-C", "-t", targetDir, filepath.Join(sourceDir, "private", "home")},
 			wantExit: 0,
 			// Note: sandbox allows .ssh/config but blocks top-level dotfiles
 			contains: []string{".ssh/config"},
 			verify: func(t *testing.T) {
-				// Verify links from both packages were created (where allowed)
+				// Verify links were created (where allowed)
 				privateSourceDir := filepath.Join(sourceDir, "private", "home")
 				assertSymlink(t,
 					filepath.Join(targetDir, ".ssh", "config"),
@@ -303,7 +305,8 @@ func TestRemove(t *testing.T) {
 	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
 
 	// First create some links
-	result := runCommand(t, "-s", sourceDir, "-t", targetDir, "home")
+	homeSourceDir := filepath.Join(sourceDir, "home")
+	result := runCommand(t, "-C", "-t", targetDir, homeSourceDir)
 	assertExitCode(t, result, 0)
 
 	tests := []struct {
@@ -315,12 +318,11 @@ func TestRemove(t *testing.T) {
 	}{
 		{
 			name:     "remove dry-run",
-			args:     []string{"-s", sourceDir, "-t", targetDir, "-R", "-n", "home"},
+			args:     []string{"-R", "-n", "-t", targetDir, homeSourceDir},
 			wantExit: 0,
 			contains: []string{"dry-run:", "Would remove"},
 			verify: func(t *testing.T) {
 				// Verify links still exist for allowed files (non-dotfiles only)
-				homeSourceDir := filepath.Join(sourceDir, "home")
 				assertSymlink(t,
 					filepath.Join(targetDir, "readonly", "test"),
 					filepath.Join(homeSourceDir, "readonly", "test"))
@@ -328,7 +330,7 @@ func TestRemove(t *testing.T) {
 		},
 		{
 			name:     "remove links",
-			args:     []string{"-s", sourceDir, "-t", targetDir, "-R", "home"},
+			args:     []string{"-R", "-t", targetDir, homeSourceDir},
 			wantExit: 0,
 			contains: []string{"Removed"},
 			verify: func(t *testing.T) {
@@ -377,7 +379,7 @@ func TestAdopt(t *testing.T) {
 					t.Fatal(err)
 				}
 			},
-			args:     []string{"-s", sourceDir, "-t", targetDir, "-A", "home", filepath.Join(targetDir, ".adopt-test")},
+			args:     []string{"-A", "-s", filepath.Join(sourceDir, "home"), "-t", targetDir, filepath.Join(targetDir, ".adopt-test")},
 			wantExit: 0,
 			contains: []string{"Adopted", ".adopt-test"},
 			verify: func(t *testing.T) {
@@ -389,14 +391,14 @@ func TestAdopt(t *testing.T) {
 			},
 		},
 		{
-			name:     "adopt missing package",
-			args:     []string{"-s", sourceDir, "-t", targetDir, "-A"},
+			name:     "adopt missing paths",
+			args:     []string{"-A", "-s", sourceDir, "-t", targetDir},
 			wantExit: 2,
-			contains: []string{"at least one package is required"},
+			contains: []string{"at least one path is required"},
 		},
 		{
 			name: "adopt non-existent file",
-			args: []string{"-s", sourceDir, "-t", targetDir, "-A", "home",
+			args: []string{"-A", "-s", filepath.Join(sourceDir, "home"), "-t", targetDir,
 				filepath.Join(targetDir, ".doesnotexist")},
 			wantExit: 0, // Continues processing (graceful error handling)
 			contains: []string{"No files were adopted"},
@@ -410,7 +412,7 @@ func TestAdopt(t *testing.T) {
 					t.Fatal(err)
 				}
 			},
-			args: []string{"-s", sourceDir, "-t", targetDir, "-A", "-n", "home",
+			args: []string{"-A", "-n", "-s", filepath.Join(sourceDir, "home"), "-t", targetDir,
 				filepath.Join(targetDir, ".dryruntest")},
 			wantExit: 0,
 			contains: []string{"dry-run:", "Would adopt"},
@@ -432,7 +434,7 @@ func TestAdopt(t *testing.T) {
 					t.Fatal(err)
 				}
 			},
-			args: []string{"-s", sourceDir, "-t", targetDir, "-A", "home",
+			args: []string{"-A", "-s", filepath.Join(sourceDir, "home"), "-t", targetDir,
 				filepath.Join(targetDir, ".multi1"),
 				filepath.Join(targetDir, ".multi2")},
 			wantExit: 0,
@@ -471,9 +473,15 @@ func TestOrphan(t *testing.T) {
 	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
 	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
 
-	// Create links first from both packages
-	result := runCommand(t, "-s", sourceDir, "-t", targetDir, "home", "private/home")
+	// Create links from home source directory (has readonly/test)
+	homeSourceDir := filepath.Join(sourceDir, "home")
+	result := runCommand(t, "-C", "-t", targetDir, homeSourceDir)
 	assertExitCode(t, result, 0)
+
+	// Also create links from private/home (has .ssh/config)
+	privateHomeSourceDir := filepath.Join(sourceDir, "private", "home")
+	result2 := runCommand(t, "-C", "-t", targetDir, privateHomeSourceDir)
+	assertExitCode(t, result2, 0)
 
 	tests := []struct {
 		name     string
@@ -484,7 +492,7 @@ func TestOrphan(t *testing.T) {
 	}{
 		{
 			name: "orphan a file",
-			args: []string{"-s", sourceDir, "-t", targetDir, "-O",
+			args: []string{"-O", "-s", homeSourceDir, "-t", targetDir,
 				filepath.Join(targetDir, "readonly", "test")},
 			wantExit: 0,
 			contains: []string{"Orphaned", "test"},
@@ -495,20 +503,19 @@ func TestOrphan(t *testing.T) {
 		},
 		{
 			name:     "orphan missing path",
-			args:     []string{"-s", sourceDir, "-t", targetDir, "-O"},
+			args:     []string{"-O", "-s", sourceDir, "-t", targetDir},
 			wantExit: 2,
-			contains: []string{"--orphan requires a PATH argument"},
+			contains: []string{"at least one path is required"},
 		},
 		{
 			name: "orphan dry-run",
-			args: []string{"-s", sourceDir, "-t", targetDir, "-O",
-				filepath.Join(targetDir, ".ssh", "config"), "-n"},
+			args: []string{"-O", "-n", "-s", privateHomeSourceDir, "-t", targetDir,
+				filepath.Join(targetDir, ".ssh", "config")},
 			wantExit: 0,
 			contains: []string{"dry-run:", "Would orphan"},
 			verify: func(t *testing.T) {
 				// Verify link still exists
-				privateSourceDir := filepath.Join(sourceDir, "private", "home")
-				assertSymlink(t, filepath.Join(targetDir, ".ssh", "config"), filepath.Join(privateSourceDir, ".ssh", "config"))
+				assertSymlink(t, filepath.Join(targetDir, ".ssh", "config"), filepath.Join(privateHomeSourceDir, ".ssh", "config"))
 			},
 		},
 	}
@@ -621,14 +628,14 @@ func TestGlobalFlags(t *testing.T) {
 		},
 		{
 			name:        "quiet mode suppresses output",
-			args:        []string{"-s", sourceDir, "-t", targetDir, "-q", "-S", "home"},
+			args:        []string{"-q", "-S", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			wantExit:    0,
 			contains:    []string{},
 			notContains: []string{"No active links found"},
 		},
 		{
 			name:     "verbose mode shows extra info",
-			args:     []string{"-s", sourceDir, "-t", targetDir, "-v", "-S", "home"},
+			args:     []string{"-v", "-S", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			wantExit: 0,
 			contains: []string{"Source directory:", "Target directory:"},
 		},

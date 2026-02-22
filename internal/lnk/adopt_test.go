@@ -12,7 +12,6 @@ func TestAdopt(t *testing.T) {
 	tests := []struct {
 		name          string
 		setupFiles    map[string]string // files to create in target dir
-		package_      string            // package to adopt into
 		paths         []string          // paths to adopt (relative to target)
 		expectError   bool
 		errorContains string
@@ -22,8 +21,7 @@ func TestAdopt(t *testing.T) {
 			setupFiles: map[string]string{
 				".bashrc": "bash config",
 			},
-			package_: "home",
-			paths:    []string{".bashrc"},
+			paths: []string{".bashrc"},
 		},
 		{
 			name: "adopt multiple files to package",
@@ -31,35 +29,24 @@ func TestAdopt(t *testing.T) {
 				".bashrc": "bash config",
 				".vimrc":  "vim config",
 			},
-			package_: "home",
-			paths:    []string{".bashrc", ".vimrc"},
+			paths: []string{".bashrc", ".vimrc"},
 		},
 		{
 			name: "adopt file to flat repository (.)",
 			setupFiles: map[string]string{
 				".zshrc": "zsh config",
 			},
-			package_: ".",
-			paths:    []string{".zshrc"},
+			paths: []string{".zshrc"},
 		},
 		{
 			name: "adopt nested file",
 			setupFiles: map[string]string{
 				".config/nvim/init.vim": "nvim config",
 			},
-			package_: "home",
-			paths:    []string{".config/nvim/init.vim"},
-		},
-		{
-			name:          "error: no package specified",
-			package_:      "",
-			paths:         []string{".bashrc"},
-			expectError:   true,
-			errorContains: "package argument is required",
+			paths: []string{".config/nvim/init.vim"},
 		},
 		{
 			name:          "error: no paths specified",
-			package_:      "home",
 			paths:         []string{},
 			expectError:   true,
 			errorContains: "at least one file path is required",
@@ -95,7 +82,6 @@ func TestAdopt(t *testing.T) {
 			opts := AdoptOptions{
 				SourceDir: sourceDir,
 				TargetDir: targetDir,
-				Package:   tt.package_,
 				Paths:     adoptPaths,
 				DryRun:    false,
 			}
@@ -130,16 +116,10 @@ func TestAdopt(t *testing.T) {
 					continue
 				}
 
-				// Verify target exists in package
-				var expectedTarget string
-				if tt.package_ == "." {
-					expectedTarget = filepath.Join(sourceDir, relPath)
-				} else {
-					expectedTarget = filepath.Join(sourceDir, tt.package_, relPath)
-				}
-
+				// Verify target exists in source directory
+				expectedTarget := filepath.Join(sourceDir, relPath)
 				if _, err := os.Stat(expectedTarget); err != nil {
-					t.Errorf("target not found in package for %s: %v", relPath, err)
+					t.Errorf("target not found in source for %s: %v", relPath, err)
 				}
 
 				// Verify symlink points to correct location
@@ -171,7 +151,6 @@ func TestAdoptDryRun(t *testing.T) {
 	opts := AdoptOptions{
 		SourceDir: sourceDir,
 		TargetDir: targetDir,
-		Package:   "home",
 		Paths:     []string{testFile},
 		DryRun:    true,
 	}
@@ -209,7 +188,6 @@ func TestAdoptSourceDirNotExist(t *testing.T) {
 	opts := AdoptOptions{
 		SourceDir: filepath.Join(tempDir, "nonexistent"),
 		TargetDir: targetDir,
-		Package:   "home",
 		Paths:     []string{testFile},
 		DryRun:    false,
 	}

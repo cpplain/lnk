@@ -90,40 +90,38 @@ func TestCreateLinks(t *testing.T) {
 		checkResult func(t *testing.T, tmpDir, configRepo string)
 	}{
 		{
-			name: "single package",
+			name: "single source directory",
 			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
 				configRepo := filepath.Join(tmpDir, "repo")
-				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc")
+				createTestFile(t, filepath.Join(configRepo, ".bashrc"), "# bashrc")
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      filepath.Join(tmpDir, "home"),
-					Packages:       []string{"home"},
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}
 			},
 			checkResult: func(t *testing.T, tmpDir, configRepo string) {
 				linkPath := filepath.Join(tmpDir, "home", ".bashrc")
-				assertSymlink(t, linkPath, filepath.Join(configRepo, "home", ".bashrc"))
+				assertSymlink(t, linkPath, filepath.Join(configRepo, ".bashrc"))
 			},
 		},
 		{
-			name: "multiple packages",
+			name: "multiple files",
 			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
 				configRepo := filepath.Join(tmpDir, "repo")
-				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc")
-				createTestFile(t, filepath.Join(configRepo, "config", ".vimrc"), "# vimrc")
+				createTestFile(t, filepath.Join(configRepo, ".bashrc"), "# bashrc")
+				createTestFile(t, filepath.Join(configRepo, ".vimrc"), "# vimrc")
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      filepath.Join(tmpDir, "home"),
-					Packages:       []string{"home", "config"},
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}
 			},
 			checkResult: func(t *testing.T, tmpDir, configRepo string) {
-				assertSymlink(t, filepath.Join(tmpDir, "home", ".bashrc"), filepath.Join(configRepo, "home", ".bashrc"))
-				assertSymlink(t, filepath.Join(tmpDir, "home", ".vimrc"), filepath.Join(configRepo, "config", ".vimrc"))
+				assertSymlink(t, filepath.Join(tmpDir, "home", ".bashrc"), filepath.Join(configRepo, ".bashrc"))
+				assertSymlink(t, filepath.Join(tmpDir, "home", ".vimrc"), filepath.Join(configRepo, ".vimrc"))
 			},
 		},
 		{
@@ -135,7 +133,6 @@ func TestCreateLinks(t *testing.T) {
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      filepath.Join(tmpDir, "home"),
-					Packages:       []string{"."},
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}
@@ -146,40 +143,38 @@ func TestCreateLinks(t *testing.T) {
 			},
 		},
 		{
-			name: "nested package path",
+			name: "nested directory structure",
 			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
 				configRepo := filepath.Join(tmpDir, "repo")
-				createTestFile(t, filepath.Join(configRepo, "private", "home", ".ssh", "config"), "# ssh config")
+				createTestFile(t, filepath.Join(configRepo, ".ssh", "config"), "# ssh config")
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      filepath.Join(tmpDir, "home"),
-					Packages:       []string{"private/home"},
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}
 			},
 			checkResult: func(t *testing.T, tmpDir, configRepo string) {
-				assertSymlink(t, filepath.Join(tmpDir, "home", ".ssh", "config"), filepath.Join(configRepo, "private", "home", ".ssh", "config"))
+				assertSymlink(t, filepath.Join(tmpDir, "home", ".ssh", "config"), filepath.Join(configRepo, ".ssh", "config"))
 			},
 		},
 		{
 			name: "ignore patterns",
 			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
 				configRepo := filepath.Join(tmpDir, "repo")
-				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc")
-				createTestFile(t, filepath.Join(configRepo, "home", "README.md"), "# readme")
-				createTestFile(t, filepath.Join(configRepo, "home", ".vimrc"), "# vimrc")
+				createTestFile(t, filepath.Join(configRepo, ".bashrc"), "# bashrc")
+				createTestFile(t, filepath.Join(configRepo, "README.md"), "# readme")
+				createTestFile(t, filepath.Join(configRepo, ".vimrc"), "# vimrc")
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      filepath.Join(tmpDir, "home"),
-					Packages:       []string{"home"},
 					IgnorePatterns: []string{"README.md"},
 					DryRun:         false,
 				}
 			},
 			checkResult: func(t *testing.T, tmpDir, configRepo string) {
-				assertSymlink(t, filepath.Join(tmpDir, "home", ".bashrc"), filepath.Join(configRepo, "home", ".bashrc"))
-				assertSymlink(t, filepath.Join(tmpDir, "home", ".vimrc"), filepath.Join(configRepo, "home", ".vimrc"))
+				assertSymlink(t, filepath.Join(tmpDir, "home", ".bashrc"), filepath.Join(configRepo, ".bashrc"))
+				assertSymlink(t, filepath.Join(tmpDir, "home", ".vimrc"), filepath.Join(configRepo, ".vimrc"))
 				assertNotExists(t, filepath.Join(tmpDir, "home", "README.md"))
 			},
 		},
@@ -187,11 +182,10 @@ func TestCreateLinks(t *testing.T) {
 			name: "dry run mode",
 			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
 				configRepo := filepath.Join(tmpDir, "repo")
-				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc")
+				createTestFile(t, filepath.Join(configRepo, ".bashrc"), "# bashrc")
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      filepath.Join(tmpDir, "home"),
-					Packages:       []string{"home"},
 					IgnorePatterns: []string{},
 					DryRun:         true,
 				}
@@ -202,36 +196,18 @@ func TestCreateLinks(t *testing.T) {
 			},
 		},
 		{
-			name: "non-existent package skipped",
+			name: "empty source directory",
 			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
 				configRepo := filepath.Join(tmpDir, "repo")
-				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc")
+				os.MkdirAll(configRepo, 0755)
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      filepath.Join(tmpDir, "home"),
-					Packages:       []string{"home", "nonexistent"},
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}
 			},
-			checkResult: func(t *testing.T, tmpDir, configRepo string) {
-				// Should create link from existing package
-				assertSymlink(t, filepath.Join(tmpDir, "home", ".bashrc"), filepath.Join(configRepo, "home", ".bashrc"))
-			},
-		},
-		{
-			name: "no packages specified",
-			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
-				configRepo := filepath.Join(tmpDir, "repo")
-				return configRepo, LinkOptions{
-					SourceDir:      configRepo,
-					TargetDir:      filepath.Join(tmpDir, "home"),
-					Packages:       []string{},
-					IgnorePatterns: []string{},
-					DryRun:         false,
-				}
-			},
-			wantErr: true,
+			wantErr: false, // Gracefully handles empty directory
 		},
 		{
 			name: "source directory does not exist",
@@ -239,7 +215,6 @@ func TestCreateLinks(t *testing.T) {
 				return "", LinkOptions{
 					SourceDir:      filepath.Join(tmpDir, "nonexistent"),
 					TargetDir:      filepath.Join(tmpDir, "home"),
-					Packages:       []string{"home"},
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}
@@ -282,23 +257,22 @@ func TestRemoveLinks(t *testing.T) {
 		checkResult func(t *testing.T, tmpDir, configRepo string)
 	}{
 		{
-			name: "remove links from single package",
+			name: "remove links from source directory",
 			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
 				configRepo := filepath.Join(tmpDir, "repo")
 				homeDir := filepath.Join(tmpDir, "home")
 
 				// Create source files
-				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc content")
-				createTestFile(t, filepath.Join(configRepo, "home", ".vimrc"), "# vimrc content")
+				createTestFile(t, filepath.Join(configRepo, ".bashrc"), "# bashrc content")
+				createTestFile(t, filepath.Join(configRepo, ".vimrc"), "# vimrc content")
 
 				// Create symlinks
-				createTestSymlink(t, filepath.Join(configRepo, "home", ".bashrc"), filepath.Join(homeDir, ".bashrc"))
-				createTestSymlink(t, filepath.Join(configRepo, "home", ".vimrc"), filepath.Join(homeDir, ".vimrc"))
+				createTestSymlink(t, filepath.Join(configRepo, ".bashrc"), filepath.Join(homeDir, ".bashrc"))
+				createTestSymlink(t, filepath.Join(configRepo, ".vimrc"), filepath.Join(homeDir, ".vimrc"))
 
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      homeDir,
-					Packages:       []string{"home"},
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}
@@ -311,23 +285,22 @@ func TestRemoveLinks(t *testing.T) {
 			},
 		},
 		{
-			name: "remove links from multiple packages",
+			name: "remove links with subdirectories",
 			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
 				configRepo := filepath.Join(tmpDir, "repo")
 				homeDir := filepath.Join(tmpDir, "home")
 
-				// Create source files
-				createTestFile(t, filepath.Join(configRepo, "package1", ".bashrc"), "# bashrc")
-				createTestFile(t, filepath.Join(configRepo, "package2", ".vimrc"), "# vimrc")
+				// Create source files in subdirectories
+				createTestFile(t, filepath.Join(configRepo, "subdir1", ".bashrc"), "# bashrc")
+				createTestFile(t, filepath.Join(configRepo, "subdir2", ".vimrc"), "# vimrc")
 
-				// Create symlinks
-				createTestSymlink(t, filepath.Join(configRepo, "package1", ".bashrc"), filepath.Join(homeDir, ".bashrc"))
-				createTestSymlink(t, filepath.Join(configRepo, "package2", ".vimrc"), filepath.Join(homeDir, ".vimrc"))
+				// Create symlinks (preserving directory structure)
+				createTestSymlink(t, filepath.Join(configRepo, "subdir1", ".bashrc"), filepath.Join(homeDir, "subdir1", ".bashrc"))
+				createTestSymlink(t, filepath.Join(configRepo, "subdir2", ".vimrc"), filepath.Join(homeDir, "subdir2", ".vimrc"))
 
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      homeDir,
-					Packages:       []string{"package1", "package2"},
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}
@@ -335,8 +308,8 @@ func TestRemoveLinks(t *testing.T) {
 			checkResult: func(t *testing.T, tmpDir, configRepo string) {
 				homeDir := filepath.Join(tmpDir, "home")
 				// Both links should be removed
-				assertNotExists(t, filepath.Join(homeDir, ".bashrc"))
-				assertNotExists(t, filepath.Join(homeDir, ".vimrc"))
+				assertNotExists(t, filepath.Join(homeDir, "subdir1", ".bashrc"))
+				assertNotExists(t, filepath.Join(homeDir, "subdir2", ".vimrc"))
 			},
 		},
 		{
@@ -346,15 +319,14 @@ func TestRemoveLinks(t *testing.T) {
 				homeDir := filepath.Join(tmpDir, "home")
 
 				// Create source file
-				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc content")
+				createTestFile(t, filepath.Join(configRepo, ".bashrc"), "# bashrc content")
 
 				// Create symlink
-				createTestSymlink(t, filepath.Join(configRepo, "home", ".bashrc"), filepath.Join(homeDir, ".bashrc"))
+				createTestSymlink(t, filepath.Join(configRepo, ".bashrc"), filepath.Join(homeDir, ".bashrc"))
 
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      homeDir,
-					Packages:       []string{"home"},
 					IgnorePatterns: []string{},
 					DryRun:         true,
 				}
@@ -362,7 +334,7 @@ func TestRemoveLinks(t *testing.T) {
 			checkResult: func(t *testing.T, tmpDir, configRepo string) {
 				homeDir := filepath.Join(tmpDir, "home")
 				// Link should still exist (dry-run)
-				assertSymlink(t, filepath.Join(homeDir, ".bashrc"), filepath.Join(configRepo, "home", ".bashrc"))
+				assertSymlink(t, filepath.Join(homeDir, ".bashrc"), filepath.Join(configRepo, ".bashrc"))
 			},
 		},
 		{
@@ -372,12 +344,11 @@ func TestRemoveLinks(t *testing.T) {
 				homeDir := filepath.Join(tmpDir, "home")
 
 				// Create source file but no symlinks
-				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc content")
+				createTestFile(t, filepath.Join(configRepo, ".bashrc"), "# bashrc content")
 
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      homeDir,
-					Packages:       []string{"home"},
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}
@@ -401,7 +372,6 @@ func TestRemoveLinks(t *testing.T) {
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      homeDir,
-					Packages:       []string{"."},
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}
@@ -413,56 +383,11 @@ func TestRemoveLinks(t *testing.T) {
 			},
 		},
 		{
-			name: "partial removal - only specified package",
-			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
-				configRepo := filepath.Join(tmpDir, "repo")
-				homeDir := filepath.Join(tmpDir, "home")
-
-				// Create source files in different packages
-				createTestFile(t, filepath.Join(configRepo, "package1", ".bashrc"), "# bashrc")
-				createTestFile(t, filepath.Join(configRepo, "package2", ".vimrc"), "# vimrc")
-
-				// Create symlinks for both
-				createTestSymlink(t, filepath.Join(configRepo, "package1", ".bashrc"), filepath.Join(homeDir, ".bashrc"))
-				createTestSymlink(t, filepath.Join(configRepo, "package2", ".vimrc"), filepath.Join(homeDir, ".vimrc"))
-
-				// Only remove package1
-				return configRepo, LinkOptions{
-					SourceDir:      configRepo,
-					TargetDir:      homeDir,
-					Packages:       []string{"package1"},
-					IgnorePatterns: []string{},
-					DryRun:         false,
-				}
-			},
-			checkResult: func(t *testing.T, tmpDir, configRepo string) {
-				homeDir := filepath.Join(tmpDir, "home")
-				// package1 link should be removed
-				assertNotExists(t, filepath.Join(homeDir, ".bashrc"))
-				// package2 link should still exist
-				assertSymlink(t, filepath.Join(homeDir, ".vimrc"), filepath.Join(configRepo, "package2", ".vimrc"))
-			},
-		},
-		{
-			name: "error: no packages specified",
-			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
-				return "", LinkOptions{
-					SourceDir:      tmpDir,
-					TargetDir:      filepath.Join(tmpDir, "home"),
-					Packages:       []string{},
-					IgnorePatterns: []string{},
-					DryRun:         false,
-				}
-			},
-			wantErr: true,
-		},
-		{
 			name: "error: source directory does not exist",
 			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
 				return "", LinkOptions{
 					SourceDir:      filepath.Join(tmpDir, "nonexistent"),
 					TargetDir:      filepath.Join(tmpDir, "home"),
-					Packages:       []string{"home"},
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}
@@ -504,23 +429,22 @@ func TestPrune(t *testing.T) {
 		checkResult func(t *testing.T, tmpDir, configRepo string)
 	}{
 		{
-			name: "prune broken links from single package",
+			name: "prune broken links from source directory",
 			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
 				configRepo := filepath.Join(tmpDir, "repo")
 				homeDir := filepath.Join(tmpDir, "home")
 
 				// Create source file that exists
-				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc content")
+				createTestFile(t, filepath.Join(configRepo, ".bashrc"), "# bashrc content")
 
 				// Create symlinks (one active, one broken)
-				createTestSymlink(t, filepath.Join(configRepo, "home", ".bashrc"), filepath.Join(homeDir, ".bashrc"))
+				createTestSymlink(t, filepath.Join(configRepo, ".bashrc"), filepath.Join(homeDir, ".bashrc"))
 				// Broken link - points to non-existent file
-				createTestSymlink(t, filepath.Join(configRepo, "home", ".missing"), filepath.Join(homeDir, ".missing"))
+				createTestSymlink(t, filepath.Join(configRepo, ".missing"), filepath.Join(homeDir, ".missing"))
 
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      homeDir,
-					Packages:       []string{"home"},
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}
@@ -538,23 +462,22 @@ func TestPrune(t *testing.T) {
 			},
 		},
 		{
-			name: "prune broken links from multiple packages",
+			name: "prune broken links in subdirectories",
 			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
 				configRepo := filepath.Join(tmpDir, "repo")
 				homeDir := filepath.Join(tmpDir, "home")
 
-				// Create package directories
-				os.MkdirAll(filepath.Join(configRepo, "home"), 0755)
-				os.MkdirAll(filepath.Join(configRepo, "work"), 0755)
+				// Create subdirectories
+				os.MkdirAll(filepath.Join(configRepo, "subdir1"), 0755)
+				os.MkdirAll(filepath.Join(configRepo, "subdir2"), 0755)
 
-				// Create broken links in different packages
-				createTestSymlink(t, filepath.Join(configRepo, "home", ".missing1"), filepath.Join(homeDir, ".missing1"))
-				createTestSymlink(t, filepath.Join(configRepo, "work", ".missing2"), filepath.Join(homeDir, ".missing2"))
+				// Create broken links in different subdirectories
+				createTestSymlink(t, filepath.Join(configRepo, "subdir1", ".missing1"), filepath.Join(homeDir, "subdir1", ".missing1"))
+				createTestSymlink(t, filepath.Join(configRepo, "subdir2", ".missing2"), filepath.Join(homeDir, "subdir2", ".missing2"))
 
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      homeDir,
-					Packages:       []string{"home", "work"},
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}
@@ -562,10 +485,10 @@ func TestPrune(t *testing.T) {
 			checkResult: func(t *testing.T, tmpDir, configRepo string) {
 				homeDir := filepath.Join(tmpDir, "home")
 				// Both broken links should be removed
-				if _, err := os.Lstat(filepath.Join(homeDir, ".missing1")); !os.IsNotExist(err) {
+				if _, err := os.Lstat(filepath.Join(homeDir, "subdir1", ".missing1")); !os.IsNotExist(err) {
 					t.Errorf("Broken link .missing1 should be removed")
 				}
-				if _, err := os.Lstat(filepath.Join(homeDir, ".missing2")); !os.IsNotExist(err) {
+				if _, err := os.Lstat(filepath.Join(homeDir, "subdir2", ".missing2")); !os.IsNotExist(err) {
 					t.Errorf("Broken link .missing2 should be removed")
 				}
 			},
@@ -576,16 +499,15 @@ func TestPrune(t *testing.T) {
 				configRepo := filepath.Join(tmpDir, "repo")
 				homeDir := filepath.Join(tmpDir, "home")
 
-				// Create package directory
-				os.MkdirAll(filepath.Join(configRepo, "home"), 0755)
+				// Create repo directory
+				os.MkdirAll(configRepo, 0755)
 
 				// Create broken link
-				createTestSymlink(t, filepath.Join(configRepo, "home", ".missing"), filepath.Join(homeDir, ".missing"))
+				createTestSymlink(t, filepath.Join(configRepo, ".missing"), filepath.Join(homeDir, ".missing"))
 
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      homeDir,
-					Packages:       []string{"home"},
 					IgnorePatterns: []string{},
 					DryRun:         true,
 				}
@@ -605,13 +527,12 @@ func TestPrune(t *testing.T) {
 				homeDir := filepath.Join(tmpDir, "home")
 
 				// Create active link only (no broken links)
-				createTestFile(t, filepath.Join(configRepo, "home", ".bashrc"), "# bashrc content")
-				createTestSymlink(t, filepath.Join(configRepo, "home", ".bashrc"), filepath.Join(homeDir, ".bashrc"))
+				createTestFile(t, filepath.Join(configRepo, ".bashrc"), "# bashrc content")
+				createTestSymlink(t, filepath.Join(configRepo, ".bashrc"), filepath.Join(homeDir, ".bashrc"))
 
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      homeDir,
-					Packages:       []string{"home"},
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}
@@ -639,69 +560,6 @@ func TestPrune(t *testing.T) {
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      homeDir,
-					Packages:       []string{"."},
-					IgnorePatterns: []string{},
-					DryRun:         false,
-				}
-			},
-			checkResult: func(t *testing.T, tmpDir, configRepo string) {
-				homeDir := filepath.Join(tmpDir, "home")
-				// Broken link should be removed
-				if _, err := os.Lstat(filepath.Join(homeDir, ".missing")); !os.IsNotExist(err) {
-					t.Errorf("Broken link .missing should be removed")
-				}
-			},
-		},
-		{
-			name: "partial pruning (only specified packages)",
-			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
-				configRepo := filepath.Join(tmpDir, "repo")
-				homeDir := filepath.Join(tmpDir, "home")
-
-				// Create package directories
-				os.MkdirAll(filepath.Join(configRepo, "home"), 0755)
-				os.MkdirAll(filepath.Join(configRepo, "work"), 0755)
-
-				// Create broken links in different packages
-				createTestSymlink(t, filepath.Join(configRepo, "home", ".missing1"), filepath.Join(homeDir, ".missing1"))
-				createTestSymlink(t, filepath.Join(configRepo, "work", ".missing2"), filepath.Join(homeDir, ".missing2"))
-
-				return configRepo, LinkOptions{
-					SourceDir:      configRepo,
-					TargetDir:      homeDir,
-					Packages:       []string{"home"}, // Only prune home package
-					IgnorePatterns: []string{},
-					DryRun:         false,
-				}
-			},
-			checkResult: func(t *testing.T, tmpDir, configRepo string) {
-				homeDir := filepath.Join(tmpDir, "home")
-				// Only home package broken link should be removed
-				if _, err := os.Lstat(filepath.Join(homeDir, ".missing1")); !os.IsNotExist(err) {
-					t.Errorf("Broken link .missing1 from home package should be removed")
-				}
-				// Work package broken link should still exist
-				if _, err := os.Lstat(filepath.Join(homeDir, ".missing2")); err != nil {
-					t.Errorf("Broken link .missing2 from work package should still exist: %v", err)
-				}
-			},
-		},
-		{
-			name: "no packages specified (defaults to .)",
-			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
-				configRepo := filepath.Join(tmpDir, "repo")
-				homeDir := filepath.Join(tmpDir, "home")
-
-				// Create repo directory
-				os.MkdirAll(configRepo, 0755)
-
-				// Create broken link in root of repo
-				createTestSymlink(t, filepath.Join(configRepo, ".missing"), filepath.Join(homeDir, ".missing"))
-
-				return configRepo, LinkOptions{
-					SourceDir:      configRepo,
-					TargetDir:      homeDir,
-					Packages:       []string{}, // No packages - should default to "."
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}
@@ -723,7 +581,6 @@ func TestPrune(t *testing.T) {
 				return configRepo, LinkOptions{
 					SourceDir:      configRepo,
 					TargetDir:      homeDir,
-					Packages:       []string{"home"},
 					IgnorePatterns: []string{},
 					DryRun:         false,
 				}

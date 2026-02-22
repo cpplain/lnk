@@ -15,51 +15,49 @@ func TestStatus(t *testing.T) {
 		wantContains []string
 	}{
 		{
-			name: "single package with active links",
+			name: "single source directory with active links",
 			setupFunc: func(tmpDir string) LinkOptions {
 				sourceDir := filepath.Join(tmpDir, "dotfiles")
 				targetDir := filepath.Join(tmpDir, "home")
-				os.MkdirAll(filepath.Join(sourceDir, "home"), 0755)
+				os.MkdirAll(sourceDir, 0755)
 				os.MkdirAll(targetDir, 0755)
 
 				// Create source files
-				os.WriteFile(filepath.Join(sourceDir, "home", ".bashrc"), []byte("test"), 0644)
-				os.WriteFile(filepath.Join(sourceDir, "home", ".vimrc"), []byte("test"), 0644)
+				os.WriteFile(filepath.Join(sourceDir, ".bashrc"), []byte("test"), 0644)
+				os.WriteFile(filepath.Join(sourceDir, ".vimrc"), []byte("test"), 0644)
 
 				// Create symlinks
-				createTestSymlink(t, filepath.Join(sourceDir, "home", ".bashrc"), filepath.Join(targetDir, ".bashrc"))
-				createTestSymlink(t, filepath.Join(sourceDir, "home", ".vimrc"), filepath.Join(targetDir, ".vimrc"))
+				createTestSymlink(t, filepath.Join(sourceDir, ".bashrc"), filepath.Join(targetDir, ".bashrc"))
+				createTestSymlink(t, filepath.Join(sourceDir, ".vimrc"), filepath.Join(targetDir, ".vimrc"))
 
 				return LinkOptions{
 					SourceDir: sourceDir,
 					TargetDir: targetDir,
-					Packages:  []string{"home"},
 				}
 			},
 			wantError:    false,
 			wantContains: []string{"active", ".bashrc", ".vimrc"},
 		},
 		{
-			name: "multiple packages",
+			name: "nested subdirectories",
 			setupFunc: func(tmpDir string) LinkOptions {
 				sourceDir := filepath.Join(tmpDir, "dotfiles")
 				targetDir := filepath.Join(tmpDir, "home")
-				os.MkdirAll(filepath.Join(sourceDir, "home"), 0755)
-				os.MkdirAll(filepath.Join(sourceDir, "work"), 0755)
+				os.MkdirAll(filepath.Join(sourceDir, "subdir1"), 0755)
+				os.MkdirAll(filepath.Join(sourceDir, "subdir2"), 0755)
 				os.MkdirAll(targetDir, 0755)
 
-				// Create source files
-				os.WriteFile(filepath.Join(sourceDir, "home", ".bashrc"), []byte("test"), 0644)
-				os.WriteFile(filepath.Join(sourceDir, "work", ".gitconfig"), []byte("test"), 0644)
+				// Create source files in subdirectories
+				os.WriteFile(filepath.Join(sourceDir, "subdir1", ".bashrc"), []byte("test"), 0644)
+				os.WriteFile(filepath.Join(sourceDir, "subdir2", ".gitconfig"), []byte("test"), 0644)
 
-				// Create symlinks
-				createTestSymlink(t, filepath.Join(sourceDir, "home", ".bashrc"), filepath.Join(targetDir, ".bashrc"))
-				createTestSymlink(t, filepath.Join(sourceDir, "work", ".gitconfig"), filepath.Join(targetDir, ".gitconfig"))
+				// Create symlinks (preserving directory structure)
+				createTestSymlink(t, filepath.Join(sourceDir, "subdir1", ".bashrc"), filepath.Join(targetDir, "subdir1", ".bashrc"))
+				createTestSymlink(t, filepath.Join(sourceDir, "subdir2", ".gitconfig"), filepath.Join(targetDir, "subdir2", ".gitconfig"))
 
 				return LinkOptions{
 					SourceDir: sourceDir,
 					TargetDir: targetDir,
-					Packages:  []string{"home", "work"},
 				}
 			},
 			wantError:    false,
@@ -70,16 +68,15 @@ func TestStatus(t *testing.T) {
 			setupFunc: func(tmpDir string) LinkOptions {
 				sourceDir := filepath.Join(tmpDir, "dotfiles")
 				targetDir := filepath.Join(tmpDir, "home")
-				os.MkdirAll(filepath.Join(sourceDir, "home"), 0755)
+				os.MkdirAll(sourceDir, 0755)
 				os.MkdirAll(targetDir, 0755)
 
 				// Create source files but no symlinks
-				os.WriteFile(filepath.Join(sourceDir, "home", ".bashrc"), []byte("test"), 0644)
+				os.WriteFile(filepath.Join(sourceDir, ".bashrc"), []byte("test"), 0644)
 
 				return LinkOptions{
 					SourceDir: sourceDir,
 					TargetDir: targetDir,
-					Packages:  []string{"home"},
 				}
 			},
 			wantError:    false,
@@ -102,7 +99,6 @@ func TestStatus(t *testing.T) {
 				return LinkOptions{
 					SourceDir: sourceDir,
 					TargetDir: targetDir,
-					Packages:  []string{"."},
 				}
 			},
 			wantError:    false,
@@ -113,65 +109,19 @@ func TestStatus(t *testing.T) {
 			setupFunc: func(tmpDir string) LinkOptions {
 				sourceDir := filepath.Join(tmpDir, "dotfiles")
 				targetDir := filepath.Join(tmpDir, "home")
-				os.MkdirAll(filepath.Join(sourceDir, "home"), 0755)
+				os.MkdirAll(sourceDir, 0755)
 				os.MkdirAll(targetDir, 0755)
 
 				// Create broken symlink (target doesn't exist)
-				createTestSymlink(t, filepath.Join(sourceDir, "home", ".missing"), filepath.Join(targetDir, ".missing"))
+				createTestSymlink(t, filepath.Join(sourceDir, ".missing"), filepath.Join(targetDir, ".missing"))
 
 				return LinkOptions{
 					SourceDir: sourceDir,
 					TargetDir: targetDir,
-					Packages:  []string{"home"},
 				}
 			},
 			wantError:    false,
 			wantContains: []string{"broken", ".missing"},
-		},
-		{
-			name: "partial status - only specified package",
-			setupFunc: func(tmpDir string) LinkOptions {
-				sourceDir := filepath.Join(tmpDir, "dotfiles")
-				targetDir := filepath.Join(tmpDir, "home")
-				os.MkdirAll(filepath.Join(sourceDir, "home"), 0755)
-				os.MkdirAll(filepath.Join(sourceDir, "work"), 0755)
-				os.MkdirAll(targetDir, 0755)
-
-				// Create source files
-				os.WriteFile(filepath.Join(sourceDir, "home", ".bashrc"), []byte("test"), 0644)
-				os.WriteFile(filepath.Join(sourceDir, "work", ".gitconfig"), []byte("test"), 0644)
-
-				// Create symlinks for both packages
-				createTestSymlink(t, filepath.Join(sourceDir, "home", ".bashrc"), filepath.Join(targetDir, ".bashrc"))
-				createTestSymlink(t, filepath.Join(sourceDir, "work", ".gitconfig"), filepath.Join(targetDir, ".gitconfig"))
-
-				// Only ask for status of "home" package
-				return LinkOptions{
-					SourceDir: sourceDir,
-					TargetDir: targetDir,
-					Packages:  []string{"home"},
-				}
-			},
-			wantError: false,
-			// Should contain bashrc but NOT gitconfig
-			wantContains: []string{"active", ".bashrc"},
-		},
-		{
-			name: "error - no packages specified",
-			setupFunc: func(tmpDir string) LinkOptions {
-				sourceDir := filepath.Join(tmpDir, "dotfiles")
-				targetDir := filepath.Join(tmpDir, "home")
-				os.MkdirAll(sourceDir, 0755)
-				os.MkdirAll(targetDir, 0755)
-
-				return LinkOptions{
-					SourceDir: sourceDir,
-					TargetDir: targetDir,
-					Packages:  []string{},
-				}
-			},
-			wantError:    true,
-			wantContains: []string{"no packages specified"},
 		},
 		{
 			name: "error - source directory does not exist",
@@ -183,7 +133,6 @@ func TestStatus(t *testing.T) {
 				return LinkOptions{
 					SourceDir: sourceDir,
 					TargetDir: targetDir,
-					Packages:  []string{"home"},
 				}
 			},
 			wantError:    true,

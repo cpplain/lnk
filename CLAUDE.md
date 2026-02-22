@@ -28,7 +28,7 @@ make check                  # Run fmt, test, and lint in sequence
 
 ### Core Components
 
-- **cmd/lnk/main.go**: CLI entry point with flag-based interface using stdlib `flag` package. Action flags (-C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan) determine the operation. Positional arguments specify packages to process.
+- **cmd/lnk/main.go**: CLI entry point with POSIX-style flag parsing. Action flags (-C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan) determine the operation. For C/R/S operations, the positional argument specifies the source directory. For A/O operations, positional arguments specify files to manage.
 
 - **internal/lnk/config.go**: Configuration system with `.lnkconfig` file support. Config files can specify target directory and ignore patterns using stow-style format (one flag per line). CLI flags override config file values. Config file search locations:
   1. `.lnkconfig` in source directory
@@ -84,9 +84,8 @@ type Config struct {
 
 // Options for linking operations
 type LinkOptions struct {
-    SourceDir      string   // base directory (e.g., ~/git/dotfiles)
+    SourceDir      string   // source directory - what to link from (e.g., ~/git/dotfiles)
     TargetDir      string   // where to create links (default: ~)
-    Packages       []string // subdirs to process (e.g., ["home", "private/home"])
     IgnorePatterns []string // combined ignore patterns from all sources
     DryRun         bool     // preview mode without making changes
 }
@@ -95,7 +94,6 @@ type LinkOptions struct {
 type AdoptOptions struct {
     SourceDir string   // base directory for dotfiles (e.g., ~/git/dotfiles)
     TargetDir string   // where files currently are (default: ~)
-    Package   string   // package to adopt into (e.g., "home" or ".")
     Paths     []string // files to adopt (e.g., ["~/.bashrc", "~/.vimrc"])
     DryRun    bool     // preview mode
 }

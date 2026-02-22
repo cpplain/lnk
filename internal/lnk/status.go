@@ -25,14 +25,8 @@ type StatusOutput struct {
 	} `json:"summary"`
 }
 
-// Status displays the status of managed symlinks for specific packages
+// Status displays the status of managed symlinks for the source directory
 func Status(opts LinkOptions) error {
-	// Validate inputs
-	if len(opts.Packages) == 0 {
-		return NewValidationErrorWithHint("packages", "", "no packages specified",
-			"Specify at least one package. Example: lnk status home")
-	}
-
 	// Expand source path
 	sourceDir, err := ExpandPath(opts.SourceDir)
 	if err != nil {
@@ -47,7 +41,7 @@ func Status(opts LinkOptions) error {
 		return fmt.Errorf("failed to check source directory: %w", err)
 	} else if !info.IsDir() {
 		return NewValidationErrorWithHint("source", sourceDir, "is not a directory",
-			"Source must be a directory containing package subdirectories")
+			"Source must be a directory")
 	}
 
 	// Expand target path
@@ -61,11 +55,10 @@ func Status(opts LinkOptions) error {
 		PrintCommandHeader("Symlink Status")
 		PrintVerbose("Source directory: %s", sourceDir)
 		PrintVerbose("Target directory: %s", targetDir)
-		PrintVerbose("Packages: %v", opts.Packages)
 	}
 
-	// Find all symlinks for the specified packages
-	managedLinks, err := findManagedLinksForPackages(targetDir, sourceDir, opts.Packages)
+	// Find all symlinks for the source directory
+	managedLinks, err := findManagedLinksForSource(targetDir, sourceDir)
 	if err != nil {
 		return fmt.Errorf("failed to find managed links: %w", err)
 	}
