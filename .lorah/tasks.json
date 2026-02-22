@@ -17,7 +17,7 @@
   {
     "name": "Remove legacy functions from adopt.go",
     "description": "Remove ensureSourceDirExists() and Adopt(source string, config *Config) functions",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Remove legacy Orphan function from orphan.go",

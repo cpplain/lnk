@@ -209,3 +209,35 @@ Initialization complete. Ready for cleanup execution.
 - **Total: ~543 lines removed (60% of goal)**
 
 **Next task:** Task 4 - Remove legacy functions from adopt.go
+
+## Session 5: Remove Legacy Functions from adopt.go (Complete)
+
+### Task: Remove legacy functions from adopt.go
+
+**Removed 1 legacy function:**
+1. `Adopt(source string, config *Config, sourceDir string, dryRun bool)` - lines 433-530 (98 lines)
+
+**Notes:**
+- `ensureSourceDirExists()` was already removed in Session 2 (it was dead code that depended on removed `GetMapping()`)
+- The legacy `Adopt` function used the old `*Config` type with `LinkMappings`
+- This function is still referenced in adopt_test.go but will be cleaned up in Task 26
+
+**Verification:**
+- ✅ No references to legacy `Adopt` in production code (cmd/ or internal/lnk/*.go)
+- ✅ Only test file references found (adopt_test.go has 3 calls - expected)
+- ✅ LSP diagnostics show errors only in adopt_test.go:
+  - Line 109: undefined: Adopt
+  - Line 221: undefined: Adopt
+  - Line 501: undefined: Adopt
+- ⚠️ Build verification blocked by sandbox restrictions on go build cache
+  - However, verified via grep and LSP that no production code uses removed function
+  - All compilation errors are in test files only (expected)
+
+**Legacy code removed so far:**
+- Session 2: ~250 lines from config.go
+- Session 3: ~200 lines from linker.go
+- Session 4: ~93 lines from status.go
+- Session 5: ~98 lines from adopt.go
+- **Total: ~641 lines removed (71% of goal)**
+
+**Next task:** Task 5 - Remove legacy Orphan function from orphan.go
