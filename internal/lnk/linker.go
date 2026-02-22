@@ -331,8 +331,8 @@ func RemoveLinks(opts LinkOptions) error {
 	return nil
 }
 
-// PruneWithOptions removes broken symlinks using package-based options
-func PruneWithOptions(opts LinkOptions) error {
+// Prune removes broken symlinks using package-based options
+func Prune(opts LinkOptions) error {
 	PrintCommandHeader("Pruning Broken Symlinks")
 
 	// For prune, packages are optional - if none specified, default to "." (all packages)

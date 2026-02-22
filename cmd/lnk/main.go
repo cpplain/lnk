@@ -307,7 +307,7 @@ func main() {
 			IgnorePatterns: mergedConfig.IgnorePatterns,
 			DryRun:         dryRun,
 		}
-		if err := lnk.PruneWithOptions(opts); err != nil {
+		if err := lnk.Prune(opts); err != nil {
 			lnk.PrintErrorWithHint(err)
 			os.Exit(lnk.ExitError)
 		}

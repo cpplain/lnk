@@ -822,3 +822,37 @@ Continuing Phase 0 (Simplify Naming). Tasks 10 (CreateLinks) and 11 (RemoveLinks
 - **Phase 0 progress: 3/13 tasks complete**
 
 **Next task:** Task 13 - Rename PruneWithOptions to Prune
+
+## Session 21: Rename PruneWithOptions to Prune (Complete)
+
+### Task: Rename PruneWithOptions to Prune (Task 13)
+
+**Context:**
+Continuing Phase 0 (Simplify Naming). Tasks 10 (CreateLinks), 11 (RemoveLinks), and 12 (Status) were completed in previous sessions. Now renaming the prune function to drop the `WithOptions` suffix.
+
+**Changes made:**
+
+1. **internal/lnk/linker.go:334-335** - Renamed function from `PruneWithOptions` to `Prune`
+   - Updated function comment
+   - Updated function signature
+
+2. **cmd/lnk/main.go:310** - Updated call site from `lnk.PruneWithOptions(opts)` to `lnk.Prune(opts)`
+
+3. **internal/lnk/linker_test.go** - Updated all test references:
+   - Line 499: Renamed test function from `TestPruneWithOptions` to `TestPrune`
+   - Line 741: Updated function call from `PruneWithOptions(opts)` to `Prune(opts)`
+   - Line 743: Updated error message from `PruneWithOptions()` to `Prune()`
+
+**Verification:**
+- ✅ No references to `PruneWithOptions` remain in any Go files
+- ✅ Grep confirms only documentation references remain (.lorah/)
+- ✅ Code manually verified - all renames look correct
+- ✅ Function signature matches expected pattern: `func Prune(opts LinkOptions) error`
+- ⚠️ Build verification blocked by sandbox restrictions on go build cache
+  - However, verified via grep and manual code inspection that all references are correctly renamed
+
+**Status:**
+- ✅ Task 13 complete - `PruneWithOptions` renamed to `Prune`
+- **Phase 0 progress: 4/13 tasks complete**
+
+**Next task:** Task 14 - Rename AdoptWithOptions to Adopt

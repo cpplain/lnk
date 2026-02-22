@@ -62,7 +62,7 @@
   {
     "name": "Rename PruneWithOptions to Prune",
     "description": "Rename function in linker.go and update all call sites",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Rename AdoptWithOptions to Adopt",

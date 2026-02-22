@@ -496,7 +496,7 @@ func TestRemoveLinks(t *testing.T) {
 	}
 }
 
-func TestPruneWithOptions(t *testing.T) {
+func TestPrune(t *testing.T) {
 	tests := []struct {
 		name        string
 		setup       func(t *testing.T, tmpDir string) (string, LinkOptions)
@@ -738,9 +738,9 @@ func TestPruneWithOptions(t *testing.T) {
 
 			configRepo, opts := tt.setup(t, tmpDir)
 
-			err := PruneWithOptions(opts)
+			err := Prune(opts)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("PruneWithOptions() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Prune() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
