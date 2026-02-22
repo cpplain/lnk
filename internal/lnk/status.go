@@ -25,20 +25,40 @@ type StatusOutput struct {
 	} `json:"summary"`
 }
 
-// Status displays the status of all managed symlinks
-func Status(config *Config) error {
+// Status displays the status of managed symlinks for the source directory
+func Status(opts LinkOptions) error {
+	// Expand source path
+	sourceDir, err := ExpandPath(opts.SourceDir)
+	if err != nil {
+		return fmt.Errorf("expanding source directory: %w", err)
+	}
+
+	// Check if source directory exists
+	if info, err := os.Stat(sourceDir); err != nil {
+		if os.IsNotExist(err) {
+			return NewPathError("source directory", sourceDir, err)
+		}
+		return fmt.Errorf("failed to check source directory: %w", err)
+	} else if !info.IsDir() {
+		return NewValidationErrorWithHint("source", sourceDir, "is not a directory",
+			"Source must be a directory")
+	}
+
+	// Expand target path
+	targetDir, err := ExpandPath(opts.TargetDir)
+	if err != nil {
+		return fmt.Errorf("expanding target directory: %w", err)
+	}
+
 	// Only print header in human format
 	if !IsJSONFormat() {
 		PrintCommandHeader("Symlink Status")
+		PrintVerbose("Source directory: %s", sourceDir)
+		PrintVerbose("Target directory: %s", targetDir)
 	}
 
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	// Find all symlinks pointing to configured source directories
-	managedLinks, err := FindManagedLinks(homeDir, config)
+	// Find all symlinks for the source directory
+	managedLinks, err := findManagedLinksForSource(targetDir, sourceDir)
 	if err != nil {
 		return fmt.Errorf("failed to find managed links: %w", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // PlannedLink represents a source file and its target symlink location
@@ -12,55 +13,89 @@ type PlannedLink struct {
 	Target string
 }
 
-// CreateLinks creates symlinks from the source directories to the target directories
-func CreateLinks(config *Config, dryRun bool) error {
+// LinkOptions holds configuration for linking operations
+type LinkOptions struct {
+	SourceDir      string   // source directory - what to link from (e.g., ~/git/dotfiles)
+	TargetDir      string   // where to create links (default: ~)
+	IgnorePatterns []string // combined ignore patterns from all sources
+	DryRun         bool     // preview mode without making changes
+}
+
+// collectPlannedLinksWithPatterns walks a source directory and collects all files that should be linked
+// Uses ignore patterns directly instead of a Config object
+func collectPlannedLinksWithPatterns(sourcePath, targetPath string, ignorePatterns []string) ([]PlannedLink, error) {
+	var links []PlannedLink
+
+	err := filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip directories - we only link files
+		if info.IsDir() {
+			return nil
+		}
+
+		// Get relative path from source directory
+		relPath, err := filepath.Rel(sourcePath, path)
+		if err != nil {
+			return fmt.Errorf("failed to calculate relative path: %w", err)
+		}
+
+		// Check if this file should be ignored
+		if MatchesPattern(relPath, ignorePatterns) {
+			return nil
+		}
+
+		// Build target path
+		target := filepath.Join(targetPath, relPath)
+
+		links = append(links, PlannedLink{
+			Source: path,
+			Target: target,
+		})
+
+		return nil
+	})
+
+	return links, err
+}
+
+// CreateLinks creates symlinks using the provided options
+func CreateLinks(opts LinkOptions) error {
 	PrintCommandHeader("Creating Symlinks")
 
-	// Require LinkMappings to be defined
-	if len(config.LinkMappings) == 0 {
-		return NewValidationErrorWithHint("link mappings", "", "no link mappings defined",
-			"Add at least one mapping to your .lnk.json file. Example: {\"source\": \"home\", \"target\": \"~/\"}")
+	// Expand source and target directories
+	sourceDir, err := ExpandPath(opts.SourceDir)
+	if err != nil {
+		return fmt.Errorf("expanding source directory %s: %w", opts.SourceDir, err)
+	}
+
+	targetDir, err := ExpandPath(opts.TargetDir)
+	if err != nil {
+		return fmt.Errorf("expanding target directory %s: %w", opts.TargetDir, err)
+	}
+
+	// Check if source directory exists
+	if info, err := os.Stat(sourceDir); err != nil {
+		if os.IsNotExist(err) {
+			return NewValidationErrorWithHint("source directory", sourceDir, "directory does not exist",
+				"Ensure the source directory exists or specify a different path")
+		}
+		return fmt.Errorf("failed to check source directory: %w", err)
+	} else if !info.IsDir() {
+		return NewValidationErrorWithHint("source directory", sourceDir, "path is not a directory",
+			"The source path must be a directory containing files to link")
 	}
 
 	// Phase 1: Collect all files to link
 	PrintVerbose("Starting phase 1: collecting files to link")
-	var plannedLinks []PlannedLink
-	for _, mapping := range config.LinkMappings {
-		PrintVerbose("Processing mapping: %s -> %s", mapping.Source, mapping.Target)
+	PrintVerbose("Source directory: %s", sourceDir)
+	PrintVerbose("Target directory: %s", targetDir)
 
-		// Expand the source path (handle ~/)
-		sourcePath, err := ExpandPath(mapping.Source)
-		if err != nil {
-			return fmt.Errorf("expanding source path for mapping %s: %w", mapping.Source, err)
-		}
-		PrintVerbose("Source path: %s", sourcePath)
-
-		// Expand the target path (handle ~/)
-		targetPath, err := ExpandPath(mapping.Target)
-		if err != nil {
-			return fmt.Errorf("expanding target path for mapping %s: %w", mapping.Source, err)
-		}
-		PrintVerbose("Expanded target path: %s", targetPath)
-
-		// Check if source directory exists
-		if info, err := os.Stat(sourcePath); err != nil {
-			if os.IsNotExist(err) {
-				PrintSkip("Skipping %s: source directory does not exist", mapping.Source)
-				continue
-			}
-			return fmt.Errorf("failed to check source directory for mapping %s: %w", mapping.Source, err)
-		} else if !info.IsDir() {
-			return fmt.Errorf("failed to process mapping %s: source path is not a directory: %s", mapping.Source, sourcePath)
-		}
-
-		PrintVerbose("Processing mapping: %s -> %s", mapping.Source, mapping.Target)
-
-		// Collect files from this mapping
-		links, err := collectPlannedLinks(sourcePath, targetPath, &mapping, config)
-		if err != nil {
-			return fmt.Errorf("collecting files for mapping %s: %w", mapping.Source, err)
-		}
-		plannedLinks = append(plannedLinks, links...)
+	plannedLinks, err := collectPlannedLinksWithPatterns(sourceDir, targetDir, opts.IgnorePatterns)
+	if err != nil {
+		return fmt.Errorf("collecting files to link: %w", err)
 	}
 
 	if len(plannedLinks) == 0 {
@@ -76,7 +111,7 @@ func CreateLinks(config *Config, dryRun bool) error {
 	}
 
 	// Phase 3: Execute (or show dry-run)
-	if dryRun {
+	if opts.DryRun {
 		fmt.Println()
 		PrintDryRun("Would create %d symlink(s):", len(plannedLinks))
 		for _, link := range plannedLinks {
@@ -91,23 +126,103 @@ func CreateLinks(config *Config, dryRun bool) error {
 	return executePlannedLinks(plannedLinks)
 }
 
-// RemoveLinks removes all symlinks pointing to the config repository
-func RemoveLinks(config *Config, dryRun bool, force bool) error {
-	return removeLinks(config, dryRun, force)
+// findManagedLinksForSource finds all symlinks in targetDir that point to the source directory
+func findManagedLinksForSource(targetDir, sourceDir string) ([]ManagedLink, error) {
+	var links []ManagedLink
+
+	err := filepath.Walk(targetDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			PrintVerbose("Error walking path %s: %v", path, err)
+			return nil
+		}
+
+		// Skip directories
+		if info.IsDir() {
+			name := filepath.Base(path)
+			// Skip specific system directories
+			if name == LibraryDir || name == TrashDir {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		// Check if it's a symlink
+		if info.Mode()&os.ModeSymlink == 0 {
+			return nil
+		}
+
+		// Read symlink target
+		target, err := os.Readlink(path)
+		if err != nil {
+			PrintVerbose("Failed to read symlink %s: %v", path, err)
+			return nil
+		}
+
+		// Get absolute target path
+		absTarget := target
+		if !filepath.IsAbs(target) {
+			absTarget = filepath.Join(filepath.Dir(path), target)
+		}
+		cleanTarget, err := filepath.Abs(absTarget)
+		if err != nil {
+			PrintVerbose("Failed to get absolute path for target %s: %v", target, err)
+			return nil
+		}
+
+		// Check if target points to our source directory
+		relPath, err := filepath.Rel(sourceDir, cleanTarget)
+		if err != nil || strings.HasPrefix(relPath, "..") || relPath == "." {
+			return nil
+		}
+
+		link := ManagedLink{
+			Path:   path,
+			Target: target,
+			Source: sourceDir,
+		}
+
+		// Check if link is broken
+		if _, err := os.Stat(cleanTarget); err != nil {
+			link.IsBroken = true
+		}
+
+		links = append(links, link)
+		return nil
+	})
+
+	return links, err
 }
 
-// removeLinks is the internal implementation that allows skipping confirmation
-func removeLinks(config *Config, dryRun bool, skipConfirm bool) error {
+// RemoveLinks removes symlinks managed by the source directory
+func RemoveLinks(opts LinkOptions) error {
 	PrintCommandHeader("Removing Symlinks")
 
-	homeDir, err := os.UserHomeDir()
+	// Expand source and target directories
+	sourceDir, err := ExpandPath(opts.SourceDir)
 	if err != nil {
-		return NewPathErrorWithHint("get home directory", "~", err,
-			"Check that the HOME environment variable is set correctly")
+		return fmt.Errorf("expanding source directory %s: %w", opts.SourceDir, err)
 	}
 
-	// Find all symlinks pointing to configured source directories
-	links, err := FindManagedLinks(homeDir, config)
+	targetDir, err := ExpandPath(opts.TargetDir)
+	if err != nil {
+		return fmt.Errorf("expanding target directory %s: %w", opts.TargetDir, err)
+	}
+
+	// Check if source directory exists
+	if info, err := os.Stat(sourceDir); err != nil {
+		if os.IsNotExist(err) {
+			return NewValidationErrorWithHint("source directory", sourceDir, "directory does not exist",
+				"Ensure the source directory exists or specify a different path")
+		}
+		return fmt.Errorf("failed to check source directory: %w", err)
+	} else if !info.IsDir() {
+		return NewValidationErrorWithHint("source directory", sourceDir, "path is not a directory",
+			"The source path must be a directory")
+	}
+
+	// Find all managed links for the source directory
+	PrintVerbose("Searching for managed links in %s", targetDir)
+	links, err := findManagedLinksForSource(targetDir, sourceDir)
 	if err != nil {
 		return fmt.Errorf("failed to find managed links: %w", err)
 	}
@@ -118,33 +233,15 @@ func removeLinks(config *Config, dryRun bool, skipConfirm bool) error {
 	}
 
 	// Show what will be removed in dry-run mode
-	if dryRun {
+	if opts.DryRun {
+		fmt.Println()
+		PrintDryRun("Would remove %d symlink(s):", len(links))
 		for _, link := range links {
 			PrintDryRun("Would remove: %s", ContractPath(link.Path))
 		}
 		fmt.Println()
 		PrintDryRunSummary()
 		return nil
-	}
-
-	// Confirm action if not skipped
-	if !skipConfirm {
-		fmt.Println()
-		var prompt string
-		if len(links) == 1 {
-			prompt = fmt.Sprintf("This will remove 1 symlink. Continue? (y/N): ")
-		} else {
-			prompt = fmt.Sprintf("This will remove %d symlink(s). Continue? (y/N): ", len(links))
-		}
-
-		confirmed, err := ConfirmAction(prompt)
-		if err != nil {
-			return fmt.Errorf("failed to read confirmation: %w", err)
-		}
-		if !confirmed {
-			PrintInfo("Operation cancelled.")
-			return nil
-		}
 	}
 
 	// Track results for summary
@@ -164,7 +261,6 @@ func removeLinks(config *Config, dryRun bool, skipConfirm bool) error {
 	// Print summary
 	if removed > 0 {
 		PrintSummary("Removed %d symlink(s) successfully", removed)
-		PrintNextStep("create", "recreate links or 'lnk status' to see remaining links")
 	}
 	if failed > 0 {
 		PrintWarning("Failed to remove %d symlink(s)", failed)
@@ -173,39 +269,57 @@ func removeLinks(config *Config, dryRun bool, skipConfirm bool) error {
 	return nil
 }
 
-// PruneLinks removes broken symlinks pointing to configured source directories
-func PruneLinks(config *Config, dryRun bool, force bool) error {
+// Prune removes broken symlinks managed by the source directory
+func Prune(opts LinkOptions) error {
 	PrintCommandHeader("Pruning Broken Symlinks")
 
-	homeDir, err := os.UserHomeDir()
+	// Expand source and target directories
+	sourceDir, err := ExpandPath(opts.SourceDir)
 	if err != nil {
-		return NewPathErrorWithHint("get home directory", "~", err,
-			"Check that the HOME environment variable is set correctly")
+		return fmt.Errorf("expanding source directory %s: %w", opts.SourceDir, err)
 	}
 
-	// Find all symlinks pointing to configured source directories
-	links, err := FindManagedLinks(homeDir, config)
+	targetDir, err := ExpandPath(opts.TargetDir)
+	if err != nil {
+		return fmt.Errorf("expanding target directory %s: %w", opts.TargetDir, err)
+	}
+
+	// Check if source directory exists
+	if info, err := os.Stat(sourceDir); err != nil {
+		if os.IsNotExist(err) {
+			return NewValidationErrorWithHint("source directory", sourceDir, "directory does not exist",
+				"Ensure the source directory exists or specify a different path")
+		}
+		return fmt.Errorf("failed to check source directory: %w", err)
+	} else if !info.IsDir() {
+		return NewValidationErrorWithHint("source directory", sourceDir, "path is not a directory",
+			"The source path must be a directory")
+	}
+
+	// Find all managed links for the source directory
+	PrintVerbose("Searching for managed links in %s", targetDir)
+	links, err := findManagedLinksForSource(targetDir, sourceDir)
 	if err != nil {
 		return fmt.Errorf("failed to find managed links: %w", err)
 	}
 
-	// Collect all broken links first
+	// Filter to only broken links
 	var brokenLinks []ManagedLink
 	for _, link := range links {
-		// Check if link is broken
 		if link.IsBroken {
 			brokenLinks = append(brokenLinks, link)
 		}
 	}
 
-	// If no broken links found, report and return
 	if len(brokenLinks) == 0 {
 		PrintEmptyResult("broken symlinks")
 		return nil
 	}
 
 	// Show what will be pruned in dry-run mode
-	if dryRun {
+	if opts.DryRun {
+		fmt.Println()
+		PrintDryRun("Would prune %d broken symlink(s):", len(brokenLinks))
 		for _, link := range brokenLinks {
 			PrintDryRun("Would prune: %s", ContractPath(link.Path))
 		}
@@ -214,33 +328,13 @@ func PruneLinks(config *Config, dryRun bool, force bool) error {
 		return nil
 	}
 
-	// Confirm action if not forced
-	if !force {
-		fmt.Println()
-		var prompt string
-		if len(brokenLinks) == 1 {
-			prompt = fmt.Sprintf("This will remove 1 broken symlink. Continue? (y/N): ")
-		} else {
-			prompt = fmt.Sprintf("This will remove %d broken symlink(s). Continue? (y/N): ", len(brokenLinks))
-		}
-
-		confirmed, err := ConfirmAction(prompt)
-		if err != nil {
-			return fmt.Errorf("failed to read confirmation: %w", err)
-		}
-		if !confirmed {
-			PrintInfo("Operation cancelled.")
-			return nil
-		}
-	}
-
 	// Track results for summary
 	var pruned, failed int
 
 	// Remove the broken links
 	for _, link := range brokenLinks {
 		if err := os.Remove(link.Path); err != nil {
-			PrintError("Failed to remove %s: %v", ContractPath(link.Path), err)
+			PrintError("Failed to prune %s: %v", ContractPath(link.Path), err)
 			failed++
 			continue
 		}
@@ -251,7 +345,6 @@ func PruneLinks(config *Config, dryRun bool, force bool) error {
 	// Print summary
 	if pruned > 0 {
 		PrintSummary("Pruned %d broken symlink(s) successfully", pruned)
-		PrintNextStep("status", "check remaining links")
 	}
 	if failed > 0 {
 		PrintWarning("Failed to prune %d symlink(s)", failed)
@@ -261,54 +354,6 @@ func PruneLinks(config *Config, dryRun bool, force bool) error {
 }
 
 // shouldIgnoreEntry determines if an entry should be ignored based on patterns
-func shouldIgnoreEntry(sourceItem, sourcePath string, mapping *LinkMapping, config *Config) bool {
-	// Get relative path from source directory
-	relPath, err := filepath.Rel(sourcePath, sourceItem)
-	if err != nil {
-		// If we can't get relative path, don't ignore
-		return false
-	}
-	return config.ShouldIgnore(relPath)
-}
-
-// collectPlannedLinks walks a source directory and collects all files that should be linked
-func collectPlannedLinks(sourcePath, targetPath string, mapping *LinkMapping, config *Config) ([]PlannedLink, error) {
-	var links []PlannedLink
-
-	err := filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Skip directories - we only link files
-		if info.IsDir() {
-			return nil
-		}
-
-		// Check if this file should be ignored
-		if shouldIgnoreEntry(path, sourcePath, mapping, config) {
-			return nil
-		}
-
-		// Calculate relative path from source
-		relPath, err := filepath.Rel(sourcePath, path)
-		if err != nil {
-			return fmt.Errorf("failed to calculate relative path: %w", err)
-		}
-
-		// Build target path
-		target := filepath.Join(targetPath, relPath)
-
-		links = append(links, PlannedLink{
-			Source: path,
-			Target: target,
-		})
-
-		return nil
-	})
-
-	return links, err
-}
 
 // executePlannedLinks creates the symlinks according to the plan
 func executePlannedLinks(links []PlannedLink) error {

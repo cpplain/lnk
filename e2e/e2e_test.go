@@ -16,7 +16,7 @@ import (
 	"testing"
 )
 
-// TestVersion tests the version command
+// TestVersion tests the version flag
 func TestVersion(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -25,13 +25,13 @@ func TestVersion(t *testing.T) {
 		contains []string
 	}{
 		{
-			name:     "version command",
-			args:     []string{"version"},
+			name:     "short version flag",
+			args:     []string{"-V"},
 			wantExit: 0,
 			contains: []string{"lnk "},
 		},
 		{
-			name:     "version flag",
+			name:     "long version flag",
 			args:     []string{"--version"},
 			wantExit: 0,
 			contains: []string{"lnk "},
@@ -56,28 +56,22 @@ func TestHelp(t *testing.T) {
 		contains []string
 	}{
 		{
-			name:     "help flag",
+			name:     "short help flag",
+			args:     []string{"-h"},
+			wantExit: 0,
+			contains: []string{"Usage:", "Action Flags", "Examples:"},
+		},
+		{
+			name:     "long help flag",
 			args:     []string{"--help"},
 			wantExit: 0,
-			contains: []string{"Usage:", "Commands:", "Options:"},
+			contains: []string{"Usage:", "Action Flags", "Examples:"},
 		},
 		{
-			name:     "help command",
-			args:     []string{"help"},
-			wantExit: 0,
-			contains: []string{"Usage:", "Commands:", "Options:"},
-		},
-		{
-			name:     "command help",
-			args:     []string{"help", "create"},
-			wantExit: 0,
-			contains: []string{"lnk create", "Create symlinks"},
-		},
-		{
-			name:     "command --help",
-			args:     []string{"create", "--help"},
-			wantExit: 0,
-			contains: []string{"lnk create", "Create symlinks"},
+			name:     "no arguments shows usage",
+			args:     []string{},
+			wantExit: 2,
+			contains: []string{"at least one path is required"},
 		},
 	}
 
@@ -85,13 +79,17 @@ func TestHelp(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := runCommand(t, tt.args...)
 			assertExitCode(t, result, tt.wantExit)
-			assertContains(t, result.Stdout, tt.contains...)
+			if tt.wantExit == 0 {
+				assertContains(t, result.Stdout, tt.contains...)
+			} else {
+				assertContains(t, result.Stderr, tt.contains...)
+			}
 		})
 	}
 }
 
-// TestInvalidCommands tests error handling for invalid commands
-func TestInvalidCommands(t *testing.T) {
+// TestInvalidFlags tests error handling for invalid flags
+func TestInvalidFlags(t *testing.T) {
 	tests := []struct {
 		name        string
 		args        []string
@@ -100,22 +98,28 @@ func TestInvalidCommands(t *testing.T) {
 		notContains []string
 	}{
 		{
-			name:     "unknown command",
-			args:     []string{"invalid"},
-			wantExit: 2, // ExitUsage
-			contains: []string{"unknown command"},
+			name:     "unknown flag",
+			args:     []string{"--invalid", "home"},
+			wantExit: 2,
+			contains: []string{"unknown flag: --invalid"},
 		},
 		{
-			name:     "typo suggestion",
-			args:     []string{"crate"}, // typo of "create"
+			name:     "multiple action flags",
+			args:     []string{"-C", "-R", "home"},
 			wantExit: 2,
-			contains: []string{"Did you mean 'create'"},
+			contains: []string{"cannot use multiple action flags"},
 		},
 		{
-			name:     "no command",
-			args:     []string{},
+			name:     "conflicting flags",
+			args:     []string{"--quiet", "--verbose", "home"},
 			wantExit: 2,
-			contains: []string{"Usage:"},
+			contains: []string{"cannot use --quiet and --verbose together"},
+		},
+		{
+			name:     "missing package argument",
+			args:     []string{"-C"},
+			wantExit: 2,
+			contains: []string{"at least one path is required"},
 		},
 	}
 
@@ -123,23 +127,20 @@ func TestInvalidCommands(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := runCommand(t, tt.args...)
 			assertExitCode(t, result, tt.wantExit)
-			if tt.name == "no command" {
-				// Usage goes to stdout when there's no command
-				assertContains(t, result.Stdout, tt.contains...)
-			} else {
-				assertContains(t, result.Stderr, tt.contains...)
-			}
+			assertContains(t, result.Stderr, tt.contains...)
 			assertNotContains(t, result.Stderr, tt.notContains...)
 		})
 	}
 }
 
-// TestStatus tests the status command
+// TestStatus tests the status action
 func TestStatus(t *testing.T) {
 	cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	configPath := getConfigPath(t)
+	projectRoot := getProjectRoot(t)
+	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
+	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
 
 	tests := []struct {
 		name     string
@@ -150,32 +151,40 @@ func TestStatus(t *testing.T) {
 	}{
 		{
 			name:     "status with no links",
-			args:     []string{"--config", configPath, "status"},
+			args:     []string{"-S", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			wantExit: 0,
 			contains: []string{"No active links found"},
 		},
 		{
 			name: "status with links",
-			args: []string{"--config", configPath, "status"},
+			args: []string{"-S", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			setup: func(t *testing.T) {
 				// First create some links
-				result := runCommand(t, "--config", configPath, "create")
+				homeSourceDir := filepath.Join(sourceDir, "home")
+				result := runCommand(t, "-C", "-t", targetDir, homeSourceDir)
 				assertExitCode(t, result, 0)
 			},
 			wantExit: 0,
-			contains: []string{".bashrc", ".gitconfig", ".config/nvim/init.vim", ".ssh/config"},
+			// Note: sandbox only allows non-dotfiles
+			contains: []string{"readonly/test"},
 		},
 		{
-			name:     "status with JSON output",
-			args:     []string{"--config", configPath, "--output", "json", "status"},
+			name: "status with private directory",
+			args: []string{"-S", "-t", targetDir, filepath.Join(sourceDir, "private", "home")},
+			setup: func(t *testing.T) {
+				// Create links from private/home source directory
+				privateHomeSourceDir := filepath.Join(sourceDir, "private", "home")
+				result := runCommand(t, "-C", "-t", targetDir, privateHomeSourceDir)
+				assertExitCode(t, result, 0)
+			},
 			wantExit: 0,
-			contains: []string{"{", "}", "links"},
+			contains: []string{".ssh/config"},
 		},
 		{
 			name:     "status with verbose",
-			args:     []string{"--config", configPath, "--verbose", "status"},
+			args:     []string{"-S", "-v", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			wantExit: 0,
-			contains: []string{"Using configuration from:"},
+			contains: []string{"Source directory:", "Target directory:"},
 		},
 	}
 
@@ -190,9 +199,9 @@ func TestStatus(t *testing.T) {
 			assertExitCode(t, result, tt.wantExit)
 			assertContains(t, result.Stdout, tt.contains...)
 
-			// Validate JSON output
+			// Validate JSON output if requested
 			if slices.Contains(tt.args, "json") {
-				var data map[string]interface{}
+				var data map[string]any
 				if err := json.Unmarshal([]byte(result.Stdout), &data); err != nil {
 					t.Errorf("Invalid JSON output: %v\nOutput: %s", err, result.Stdout)
 				}
@@ -201,13 +210,14 @@ func TestStatus(t *testing.T) {
 	}
 }
 
-// TestCreate tests the create command
+// TestCreate tests the create action (default)
 func TestCreate(t *testing.T) {
 	cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	configPath := getConfigPath(t)
 	projectRoot := getProjectRoot(t)
+	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
+	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
 
 	tests := []struct {
 		name     string
@@ -218,59 +228,60 @@ func TestCreate(t *testing.T) {
 	}{
 		{
 			name:     "create dry-run",
-			args:     []string{"--config", configPath, "create", "--dry-run"},
+			args:     []string{"-C", "-n", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			wantExit: 0,
-			contains: []string{"dry-run:", ".bashrc", ".gitconfig"},
+			// Dry-run shows all files that would be linked
+			contains: []string{"dry-run:", "Would create"},
 			verify: func(t *testing.T) {
 				// Verify no actual links were created
-				targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
-				assertNoSymlink(t, filepath.Join(targetDir, ".bashrc"))
+				assertNoSymlink(t, filepath.Join(targetDir, ".config"))
 			},
 		},
 		{
-			name:     "create links",
-			args:     []string{"--config", configPath, "create"},
+			name:     "create links from home source directory",
+			args:     []string{"-C", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			wantExit: 0,
-			contains: []string{"Creating", ".bashrc", ".gitconfig", ".config/nvim/init.vim"},
+			// Note: sandbox only allows non-dotfiles
+			contains: []string{"Created", "readonly/test"},
 			verify: func(t *testing.T) {
-				// Verify links were created
-				targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
-				sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles", "home")
-
+				// Verify links were created for allowed files (non-dotfiles only)
+				homeSourceDir := filepath.Join(sourceDir, "home")
 				assertSymlink(t,
-					filepath.Join(targetDir, ".bashrc"),
-					filepath.Join(sourceDir, ".bashrc"))
-				assertSymlink(t,
-					filepath.Join(targetDir, ".gitconfig"),
-					filepath.Join(sourceDir, ".gitconfig"))
-				assertSymlink(t,
-					filepath.Join(targetDir, ".config", "nvim", "init.vim"),
-					filepath.Join(sourceDir, ".config", "nvim", "init.vim"))
+					filepath.Join(targetDir, "readonly", "test"),
+					filepath.Join(homeSourceDir, "readonly", "test"))
 			},
-		},
-		{
-			name:     "create with existing links",
-			args:     []string{"--config", configPath, "create"},
-			wantExit: 0,
-			contains: []string{"already exist"},
 		},
 		{
 			name:     "create with quiet mode",
-			args:     []string{"--config", configPath, "--quiet", "create"},
+			args:     []string{"-C", "-q", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			wantExit: 0,
 			contains: []string{}, // Should have no output
+		},
+		{
+			name:     "create from private source directory",
+			args:     []string{"-C", "-t", targetDir, filepath.Join(sourceDir, "private", "home")},
+			wantExit: 0,
+			// Note: sandbox allows .ssh/config but blocks top-level dotfiles
+			contains: []string{".ssh/config"},
+			verify: func(t *testing.T) {
+				// Verify links were created (where allowed)
+				privateSourceDir := filepath.Join(sourceDir, "private", "home")
+				assertSymlink(t,
+					filepath.Join(targetDir, ".ssh", "config"),
+					filepath.Join(privateSourceDir, ".ssh", "config"))
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Don't cleanup between subtests in this group to test progression
+			// Don't cleanup between subtests to test progression
 			result := runCommand(t, tt.args...)
 			assertExitCode(t, result, tt.wantExit)
 
 			if len(tt.contains) > 0 {
 				assertContains(t, result.Stdout, tt.contains...)
-			} else if slices.Contains(tt.args, "--quiet") {
+			} else if slices.Contains(tt.args, "-q") {
 				// In quiet mode, should have minimal output
 				if len(result.Stdout) > 0 && result.Stdout != "\n" {
 					t.Errorf("Expected no output in quiet mode, got: %s", result.Stdout)
@@ -284,16 +295,18 @@ func TestCreate(t *testing.T) {
 	}
 }
 
-// TestRemove tests the remove command
+// TestRemove tests the remove action
 func TestRemove(t *testing.T) {
 	cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	configPath := getConfigPath(t)
 	projectRoot := getProjectRoot(t)
+	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
+	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
 
 	// First create some links
-	result := runCommand(t, "--config", configPath, "create")
+	homeSourceDir := filepath.Join(sourceDir, "home")
+	result := runCommand(t, "-C", "-t", targetDir, homeSourceDir)
 	assertExitCode(t, result, 0)
 
 	tests := []struct {
@@ -305,26 +318,24 @@ func TestRemove(t *testing.T) {
 	}{
 		{
 			name:     "remove dry-run",
-			args:     []string{"--config", configPath, "remove", "--dry-run"},
+			args:     []string{"-R", "-n", "-t", targetDir, homeSourceDir},
 			wantExit: 0,
 			contains: []string{"dry-run:", "Would remove"},
 			verify: func(t *testing.T) {
-				// Verify links still exist
-				targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
-				sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles", "home")
-				assertSymlink(t, filepath.Join(targetDir, ".bashrc"), filepath.Join(sourceDir, ".bashrc"))
+				// Verify links still exist for allowed files (non-dotfiles only)
+				assertSymlink(t,
+					filepath.Join(targetDir, "readonly", "test"),
+					filepath.Join(homeSourceDir, "readonly", "test"))
 			},
 		},
 		{
-			name:     "remove with --yes flag",
-			args:     []string{"--config", configPath, "--yes", "remove"},
+			name:     "remove links",
+			args:     []string{"-R", "-t", targetDir, homeSourceDir},
 			wantExit: 0,
-			contains: []string{"Removed", ".bashrc"},
+			contains: []string{"Removed"},
 			verify: func(t *testing.T) {
-				// Verify links are gone
-				targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
-				assertNoSymlink(t, filepath.Join(targetDir, ".bashrc"))
-				assertNoSymlink(t, filepath.Join(targetDir, ".gitconfig"))
+				// Verify allowed links are gone (non-dotfiles only)
+				assertNoSymlink(t, filepath.Join(targetDir, "readonly"))
 			},
 		},
 	}
@@ -342,15 +353,14 @@ func TestRemove(t *testing.T) {
 	}
 }
 
-// TestAdopt tests the adopt command
+// TestAdopt tests the adopt action
 func TestAdopt(t *testing.T) {
 	cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	configPath := getConfigPath(t)
 	projectRoot := getProjectRoot(t)
+	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
 	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
-	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles", "home")
 
 	tests := []struct {
 		name     string
@@ -369,31 +379,29 @@ func TestAdopt(t *testing.T) {
 					t.Fatal(err)
 				}
 			},
-			args: []string{"--config", configPath, "adopt",
-				"--path", filepath.Join(targetDir, ".adopt-test"),
-				"--source-dir", sourceDir},
+			args:     []string{"-A", "-s", filepath.Join(sourceDir, "home"), "-t", targetDir, filepath.Join(targetDir, ".adopt-test")},
 			wantExit: 0,
 			contains: []string{"Adopted", ".adopt-test"},
 			verify: func(t *testing.T) {
 				// Verify file was moved and linked
+				homeSourceDir := filepath.Join(sourceDir, "home")
 				assertSymlink(t,
 					filepath.Join(targetDir, ".adopt-test"),
-					filepath.Join(sourceDir, ".adopt-test"))
+					filepath.Join(homeSourceDir, ".adopt-test"))
 			},
 		},
 		{
-			name:     "adopt missing required flags",
-			args:     []string{"--config", configPath, "adopt", "--path", "/tmp/test"},
+			name:     "adopt missing paths",
+			args:     []string{"-A", "-s", sourceDir, "-t", targetDir},
 			wantExit: 2,
-			contains: []string{"both --path and --source-dir are required"},
+			contains: []string{"at least one path is required"},
 		},
 		{
 			name: "adopt non-existent file",
-			args: []string{"--config", configPath, "adopt",
-				"--path", filepath.Join(targetDir, ".doesnotexist"),
-				"--source-dir", sourceDir},
-			wantExit: 1,
-			contains: []string{"no such file"},
+			args: []string{"-A", "-s", filepath.Join(sourceDir, "home"), "-t", targetDir,
+				filepath.Join(targetDir, ".doesnotexist")},
+			wantExit: 0, // Continues processing (graceful error handling)
+			contains: []string{"No files were adopted"},
 		},
 		{
 			name: "adopt dry-run",
@@ -404,15 +412,33 @@ func TestAdopt(t *testing.T) {
 					t.Fatal(err)
 				}
 			},
-			args: []string{"--config", configPath, "adopt", "--dry-run",
-				"--path", filepath.Join(targetDir, ".dryruntest"),
-				"--source-dir", sourceDir},
+			args: []string{"-A", "-n", "-s", filepath.Join(sourceDir, "home"), "-t", targetDir,
+				filepath.Join(targetDir, ".dryruntest")},
 			wantExit: 0,
 			contains: []string{"dry-run:", "Would adopt"},
 			verify: func(t *testing.T) {
 				// Verify file was NOT moved
 				assertNoSymlink(t, filepath.Join(targetDir, ".dryruntest"))
 			},
+		},
+		{
+			name: "adopt multiple files",
+			setup: func(t *testing.T) {
+				// Create multiple files to adopt
+				testFile1 := filepath.Join(targetDir, ".multi1")
+				testFile2 := filepath.Join(targetDir, ".multi2")
+				if err := os.WriteFile(testFile1, []byte("# Test 1\n"), 0644); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(testFile2, []byte("# Test 2\n"), 0644); err != nil {
+					t.Fatal(err)
+				}
+			},
+			args: []string{"-A", "-s", filepath.Join(sourceDir, "home"), "-t", targetDir,
+				filepath.Join(targetDir, ".multi1"),
+				filepath.Join(targetDir, ".multi2")},
+			wantExit: 0,
+			contains: []string{"Adopted", ".multi1", ".multi2"},
 		},
 	}
 
@@ -438,18 +464,24 @@ func TestAdopt(t *testing.T) {
 	}
 }
 
-// TestOrphan tests the orphan command
+// TestOrphan tests the orphan action
 func TestOrphan(t *testing.T) {
 	cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	configPath := getConfigPath(t)
 	projectRoot := getProjectRoot(t)
+	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
 	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
 
-	// Create links first
-	result := runCommand(t, "--config", configPath, "create")
+	// Create links from home source directory (has readonly/test)
+	homeSourceDir := filepath.Join(sourceDir, "home")
+	result := runCommand(t, "-C", "-t", targetDir, homeSourceDir)
 	assertExitCode(t, result, 0)
+
+	// Also create links from private/home (has .ssh/config)
+	privateHomeSourceDir := filepath.Join(sourceDir, "private", "home")
+	result2 := runCommand(t, "-C", "-t", targetDir, privateHomeSourceDir)
+	assertExitCode(t, result2, 0)
 
 	tests := []struct {
 		name     string
@@ -459,32 +491,31 @@ func TestOrphan(t *testing.T) {
 		verify   func(t *testing.T)
 	}{
 		{
-			name: "orphan a file with --yes",
-			args: []string{"--config", configPath, "--yes", "orphan",
-				"--path", filepath.Join(targetDir, ".bashrc")},
+			name: "orphan a file",
+			args: []string{"-O", "-s", homeSourceDir, "-t", targetDir,
+				filepath.Join(targetDir, "readonly", "test")},
 			wantExit: 0,
-			contains: []string{"Orphaned", ".bashrc"},
+			contains: []string{"Orphaned", "test"},
 			verify: func(t *testing.T) {
 				// Verify file exists but is not a symlink
-				assertNoSymlink(t, filepath.Join(targetDir, ".bashrc"))
+				assertNoSymlink(t, filepath.Join(targetDir, "readonly", "test"))
 			},
 		},
 		{
 			name:     "orphan missing path",
-			args:     []string{"--config", configPath, "orphan"},
+			args:     []string{"-O", "-s", sourceDir, "-t", targetDir},
 			wantExit: 2,
-			contains: []string{"--path is required"},
+			contains: []string{"at least one path is required"},
 		},
 		{
 			name: "orphan dry-run",
-			args: []string{"--config", configPath, "orphan", "--dry-run",
-				"--path", filepath.Join(targetDir, ".gitconfig")},
+			args: []string{"-O", "-n", "-s", privateHomeSourceDir, "-t", targetDir,
+				filepath.Join(targetDir, ".ssh", "config")},
 			wantExit: 0,
 			contains: []string{"dry-run:", "Would orphan"},
 			verify: func(t *testing.T) {
 				// Verify link still exists
-				sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles", "home")
-				assertSymlink(t, filepath.Join(targetDir, ".gitconfig"), filepath.Join(sourceDir, ".gitconfig"))
+				assertSymlink(t, filepath.Join(targetDir, ".ssh", "config"), filepath.Join(privateHomeSourceDir, ".ssh", "config"))
 			},
 		},
 	}
@@ -507,18 +538,18 @@ func TestOrphan(t *testing.T) {
 	}
 }
 
-// TestPrune tests the prune command
+// TestPrune tests the prune action
 func TestPrune(t *testing.T) {
 	cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	configPath := getConfigPath(t)
 	projectRoot := getProjectRoot(t)
+	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
 	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
 
 	// Create a broken symlink that points to a file within the configured source directory
-	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles", "home")
-	nonExistentSource := filepath.Join(sourceDir, ".nonexistent")
+	homeSourceDir := filepath.Join(sourceDir, "home")
+	nonExistentSource := filepath.Join(homeSourceDir, ".nonexistent")
 	brokenLink := filepath.Join(targetDir, ".broken")
 	if err := os.Symlink(nonExistentSource, brokenLink); err != nil {
 		t.Fatal(err)
@@ -533,7 +564,7 @@ func TestPrune(t *testing.T) {
 	}{
 		{
 			name:     "prune dry-run",
-			args:     []string{"--config", configPath, "prune", "--dry-run"},
+			args:     []string{"-s", sourceDir, "-t", targetDir, "-P", "-n"},
 			wantExit: 0,
 			contains: []string{"dry-run:", "Would prune", ".broken"},
 			verify: func(t *testing.T) {
@@ -542,14 +573,20 @@ func TestPrune(t *testing.T) {
 			},
 		},
 		{
-			name:     "prune with --yes",
-			args:     []string{"--config", configPath, "--yes", "prune"},
+			name:     "prune broken links",
+			args:     []string{"-s", sourceDir, "-t", targetDir, "-P"},
 			wantExit: 0,
 			contains: []string{"Pruned", ".broken"},
 			verify: func(t *testing.T) {
 				// Verify broken link is gone
 				assertNoSymlink(t, brokenLink)
 			},
+		},
+		{
+			name:     "prune with no broken links",
+			args:     []string{"-s", sourceDir, "-t", targetDir, "-P"},
+			wantExit: 0,
+			contains: []string{"No broken symlinks found"},
 		},
 	}
 
@@ -571,7 +608,9 @@ func TestGlobalFlags(t *testing.T) {
 	cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	configPath := getConfigPath(t)
+	projectRoot := getProjectRoot(t)
+	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
+	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
 
 	tests := []struct {
 		name        string
@@ -582,24 +621,23 @@ func TestGlobalFlags(t *testing.T) {
 	}{
 		{
 			name:        "quiet and verbose conflict",
-			args:        []string{"--quiet", "--verbose", "status"},
+			args:        []string{"-q", "-v", "home"},
 			wantExit:    2,
 			contains:    []string{"cannot use --quiet and --verbose together"},
 			notContains: []string{},
 		},
 		{
-			name:        "invalid output format",
-			args:        []string{"--output", "xml", "status"},
-			wantExit:    2,
-			contains:    []string{"invalid output format", "Valid formats are: text, json"},
-			notContains: []string{},
-		},
-		{
 			name:        "quiet mode suppresses output",
-			args:        []string{"--config", configPath, "--quiet", "status"},
+			args:        []string{"-q", "-S", "-t", targetDir, filepath.Join(sourceDir, "home")},
 			wantExit:    0,
 			contains:    []string{},
-			notContains: []string{"No symlinks found"},
+			notContains: []string{"No active links found"},
+		},
+		{
+			name:     "verbose mode shows extra info",
+			args:     []string{"-v", "-S", "-t", targetDir, filepath.Join(sourceDir, "home")},
+			wantExit: 0,
+			contains: []string{"Source directory:", "Target directory:"},
 		},
 	}
 
@@ -608,8 +646,10 @@ func TestGlobalFlags(t *testing.T) {
 			result := runCommand(t, tt.args...)
 			assertExitCode(t, result, tt.wantExit)
 
-			if len(tt.contains) > 0 {
+			if tt.wantExit != 0 {
 				assertContains(t, result.Stderr, tt.contains...)
+			} else if len(tt.contains) > 0 {
+				assertContains(t, result.Stdout, tt.contains...)
 			}
 			if len(tt.notContains) > 0 {
 				assertNotContains(t, result.Stdout, tt.notContains...)

@@ -13,9 +13,6 @@ var (
 	// ErrInvalidConfig indicates that the configuration file is malformed
 	ErrInvalidConfig = errors.New("invalid configuration")
 
-	// ErrNoLinkMappings indicates that no link mappings are defined
-	ErrNoLinkMappings = errors.New("no link mappings defined")
-
 	// ErrNotSymlink indicates that the path is not a symlink
 	ErrNotSymlink = errors.New("not a symlink")
 

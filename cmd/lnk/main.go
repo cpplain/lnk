@@ -3,7 +3,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -16,18 +15,17 @@ var (
 	version = "dev"
 )
 
-// parseIgnorePatterns parses a comma-separated string of ignore patterns
-func parseIgnorePatterns(patterns string) []string {
-	if patterns == "" {
-		return nil
-	}
+// actionFlag represents the action to perform
+type actionFlag int
 
-	result := strings.Split(patterns, ",")
-	for i := range result {
-		result[i] = strings.TrimSpace(result[i])
-	}
-	return result
-}
+const (
+	actionCreate actionFlag = iota
+	actionRemove
+	actionStatus
+	actionPrune
+	actionAdopt
+	actionOrphan
+)
 
 // parseFlagValue parses a flag that might be in --flag=value or --flag value format
 // Returns the flag name, value, and whether a value was found
@@ -45,701 +43,389 @@ func parseFlagValue(arg string, args []string, index int) (flag string, value st
 	return arg, "", false, 0
 }
 
-// levenshteinDistance calculates the minimum edit distance between two strings
-func levenshteinDistance(s1, s2 string) int {
-	if len(s1) == 0 {
-		return len(s2)
-	}
-	if len(s2) == 0 {
-		return len(s1)
-	}
-
-	// Create a 2D slice for dynamic programming
-	matrix := make([][]int, len(s1)+1)
-	for i := range matrix {
-		matrix[i] = make([]int, len(s2)+1)
-	}
-
-	// Initialize first row and column
-	for i := 0; i <= len(s1); i++ {
-		matrix[i][0] = i
-	}
-	for j := 0; j <= len(s2); j++ {
-		matrix[0][j] = j
-	}
-
-	// Fill the matrix
-	for i := 1; i <= len(s1); i++ {
-		for j := 1; j <= len(s2); j++ {
-			cost := 0
-			if s1[i-1] != s2[j-1] {
-				cost = 1
-			}
-			matrix[i][j] = min(
-				matrix[i-1][j]+1,      // deletion
-				matrix[i][j-1]+1,      // insertion
-				matrix[i-1][j-1]+cost, // substitution
-			)
-		}
-	}
-
-	return matrix[len(s1)][len(s2)]
-}
-
-// suggestCommand finds the closest matching command
-func suggestCommand(input string) string {
-	commands := []string{"adopt", "create", "orphan", "prune", "remove", "status", "version"}
-
-	bestMatch := ""
-	bestDistance := len(input) + 1
-
-	for _, cmd := range commands {
-		dist := levenshteinDistance(input, cmd)
-		// Only suggest if the distance is reasonable (less than half the input length)
-		if dist < bestDistance && dist <= len(input)/2+1 {
-			bestMatch = cmd
-			bestDistance = dist
-		}
-	}
-
-	return bestMatch
-}
-
-// min returns the minimum of three integers
-func min(a, b, c int) int {
-	if a < b {
-		if a < c {
-			return a
-		}
-		return c
-	}
-	if b < c {
-		return b
-	}
-	return c
-}
-
 // printVersion prints the version information
 func printVersion() {
 	fmt.Printf("lnk %s\n", version)
 }
 
-func printConfigHelp() {
-	fmt.Printf("%s lnk help config\n", lnk.Bold("Usage:"))
-	fmt.Println("\nConfiguration discovery")
-	fmt.Println()
-	lnk.PrintHelpSection("Configuration Discovery:")
-	fmt.Println("  Configuration is loaded from the first available source:")
-	fmt.Println("    1. --config flag")
-	fmt.Println("    2. $XDG_CONFIG_HOME/lnk/config.json")
-	fmt.Println("    3. ~/.config/lnk/config.json")
-	fmt.Println("    4. ~/.lnk.json")
-	fmt.Printf("    5. %s in current directory\n", lnk.ConfigFileName)
-	fmt.Println("    6. Built-in defaults")
-	fmt.Println()
-	lnk.PrintHelpSection("Configuration Format:")
-	fmt.Println("  Configuration files use JSON format with LinkMapping structure:")
-	fmt.Println("  {")
-	fmt.Println("    \"mappings\": [")
-	fmt.Println("      {")
-	fmt.Println("        \"source\": \"~/dotfiles/home\",")
-	fmt.Println("        \"target\": \"~/\"")
-	fmt.Println("      }")
-	fmt.Println("    ],")
-	fmt.Println("    \"ignore\": [\".git\", \"*.swp\"]")
-	fmt.Println("  }")
-}
-
 func main() {
-	// Parse global flags first
-	var globalVerbose, globalQuiet, globalNoColor, globalVersion, globalYes bool
-	var globalConfig, globalIgnore, globalOutput string
-	remainingArgs := []string{}
+	// Parse flags
+	var action actionFlag = actionCreate // default action
+	var actionSet bool = false           // track if action was explicitly set
+	var sourceDir string = "."           // default: current directory
+	var targetDir string = "~"           // default: home directory
+	var ignorePatterns []string
+	var dryRun bool
+	var verbose bool
+	var quiet bool
+	var noColor bool
+	var showVersion bool
+	var showHelp bool
+	var paths []string
 
-	// Manual parsing to extract global flags before command
 	args := os.Args[1:]
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
+
+		// Stop parsing flags after --
+		if arg == "--" {
+			paths = append(paths, args[i+1:]...)
+			break
+		}
+
+		// Non-flag argument = path (positional argument)
+		if !strings.HasPrefix(arg, "-") {
+			paths = append(paths, arg)
+			continue
+		}
 
 		// Parse potential flag with value
 		flag, value, hasValue, consumed := parseFlagValue(arg, args, i)
 
 		switch flag {
-		case "--verbose", "-v":
-			globalVerbose = true
-		case "--quiet", "-q":
-			globalQuiet = true
-		case "--output":
-			if hasValue {
-				globalOutput = value
-				i += consumed
+		// Action flags (mutually exclusive)
+		case "-C", "--create":
+			if actionSet {
+				lnk.PrintErrorWithHint(lnk.WithHint(
+					fmt.Errorf("cannot use multiple action flags"),
+					"Use only one of: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan"))
+				os.Exit(lnk.ExitUsage)
 			}
-		case "--no-color":
-			globalNoColor = true
-		case "--version":
-			globalVersion = true
-		case "--yes", "-y":
-			globalYes = true
-		case "--config":
-			if hasValue {
-				globalConfig = value
-				i += consumed
+			action = actionCreate
+			actionSet = true
+		case "-R", "--remove":
+			if actionSet {
+				lnk.PrintErrorWithHint(lnk.WithHint(
+					fmt.Errorf("cannot use multiple action flags"),
+					"Use only one of: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan"))
+				os.Exit(lnk.ExitUsage)
 			}
+			action = actionRemove
+			actionSet = true
+		case "-S", "--status":
+			if actionSet {
+				lnk.PrintErrorWithHint(lnk.WithHint(
+					fmt.Errorf("cannot use multiple action flags"),
+					"Use only one of: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan"))
+				os.Exit(lnk.ExitUsage)
+			}
+			action = actionStatus
+			actionSet = true
+		case "-P", "--prune":
+			if actionSet {
+				lnk.PrintErrorWithHint(lnk.WithHint(
+					fmt.Errorf("cannot use multiple action flags"),
+					"Use only one of: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan"))
+				os.Exit(lnk.ExitUsage)
+			}
+			action = actionPrune
+			actionSet = true
+		case "-A", "--adopt":
+			if actionSet {
+				lnk.PrintErrorWithHint(lnk.WithHint(
+					fmt.Errorf("cannot use multiple action flags"),
+					"Use only one of: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan"))
+				os.Exit(lnk.ExitUsage)
+			}
+			action = actionAdopt
+			actionSet = true
+		case "-O", "--orphan":
+			if actionSet {
+				lnk.PrintErrorWithHint(lnk.WithHint(
+					fmt.Errorf("cannot use multiple action flags"),
+					"Use only one of: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan"))
+				os.Exit(lnk.ExitUsage)
+			}
+			action = actionOrphan
+			actionSet = true
+
+		// Directory flags
+		case "-s", "--source":
+			if !hasValue {
+				lnk.PrintErrorWithHint(lnk.WithHint(
+					fmt.Errorf("--source requires a directory argument"),
+					"Example: lnk --source ~/git/dotfiles"))
+				os.Exit(lnk.ExitUsage)
+			}
+			sourceDir = value
+			i += consumed
+		case "-t", "--target":
+			if !hasValue {
+				lnk.PrintErrorWithHint(lnk.WithHint(
+					fmt.Errorf("--target requires a directory argument"),
+					"Example: lnk --target ~"))
+				os.Exit(lnk.ExitUsage)
+			}
+			targetDir = value
+			i += consumed
+
+		// Other flags
 		case "--ignore":
-			if hasValue {
-				globalIgnore = value
-				i += consumed
+			if !hasValue {
+				lnk.PrintErrorWithHint(lnk.WithHint(
+					fmt.Errorf("--ignore requires a pattern argument"),
+					"Example: lnk --ignore '*.swp'"))
+				os.Exit(lnk.ExitUsage)
 			}
+			ignorePatterns = append(ignorePatterns, value)
+			i += consumed
+		case "-n", "--dry-run":
+			dryRun = true
+		case "-v", "--verbose":
+			verbose = true
+		case "-q", "--quiet":
+			quiet = true
+		case "--no-color":
+			noColor = true
+		case "-V", "--version":
+			showVersion = true
 		case "-h", "--help":
-			// Let it pass through to be handled later
-			remainingArgs = append(remainingArgs, arg)
+			showHelp = true
+
 		default:
-			remainingArgs = append(remainingArgs, arg)
+			lnk.PrintErrorWithHint(lnk.WithHint(
+				fmt.Errorf("unknown flag: %s", flag),
+				"Run 'lnk --help' to see available flags"))
+			os.Exit(lnk.ExitUsage)
 		}
 	}
 
 	// Set color preference first
-	if globalNoColor {
+	if noColor {
 		lnk.SetNoColor(true)
 	}
 
-	// Handle --version after processing color settings
-	if globalVersion {
+	// Handle --version
+	if showVersion {
 		printVersion()
 		return
 	}
 
-	// Set verbosity level based on flags
-	if globalQuiet && globalVerbose {
+	// Handle --help
+	if showHelp {
+		printUsage()
+		return
+	}
+
+	// Handle conflicting verbosity flags
+	if quiet && verbose {
 		lnk.PrintErrorWithHint(lnk.WithHint(
 			fmt.Errorf("cannot use --quiet and --verbose together"),
 			"Use either --quiet or --verbose, not both"))
 		os.Exit(lnk.ExitUsage)
 	}
-	if globalQuiet {
+
+	// Set verbosity level
+	if quiet {
 		lnk.SetVerbosity(lnk.VerbosityQuiet)
-	} else if globalVerbose {
+	} else if verbose {
 		lnk.SetVerbosity(lnk.VerbosityVerbose)
 	}
 
-	// Set output format
-	switch globalOutput {
-	case "json":
-		lnk.SetOutputFormat(lnk.FormatJSON)
-		// JSON output implies quiet mode for non-data output
-		if !globalVerbose {
-			lnk.SetVerbosity(lnk.VerbosityQuiet)
-		}
-	case "text", "":
-		// Default is already text/human format
-	default:
+	// Validate path requirements based on action
+	// For C/R/S: need at least one path (source directory)
+	// For A/O: need at least one path (files to operate on)
+	// For P: optional (defaults to current source)
+	if action != actionPrune && len(paths) == 0 {
 		lnk.PrintErrorWithHint(lnk.WithHint(
-			fmt.Errorf("invalid output format: %s", globalOutput),
-			"Valid formats are: text, json"))
+			fmt.Errorf("at least one path is required"),
+			"Example: lnk . (link from current directory) or lnk -A ~/.bashrc (adopt file)"))
 		os.Exit(lnk.ExitUsage)
 	}
 
-	if len(remainingArgs) < 1 {
-		printUsage()
-		os.Exit(lnk.ExitUsage)
-	}
-
-	command := remainingArgs[0]
-
-	// Handle global help
-	if command == "-h" || command == "--help" || command == "help" {
-		if len(remainingArgs) > 1 {
-			printCommandHelp(remainingArgs[1])
-		} else {
-			printUsage()
+	// For C/R/S actions, use the first path as the source directory
+	if action == actionCreate || action == actionRemove || action == actionStatus {
+		if len(paths) > 0 {
+			sourceDir = paths[0]
 		}
-		return
 	}
 
-	// Create global config options from parsed flags
-	globalOptions := &lnk.ConfigOptions{
-		ConfigPath:     globalConfig,
-		IgnorePatterns: parseIgnorePatterns(globalIgnore),
+	// Merge config from .lnkconfig and .lnkignore
+	mergedConfig, err := lnk.LoadConfig(sourceDir, targetDir, ignorePatterns)
+	if err != nil {
+		lnk.PrintErrorWithHint(err)
+		os.Exit(lnk.ExitError)
 	}
 
-	// Route to command handler with remaining args
-	commandArgs := remainingArgs[1:]
-	switch command {
-	case "status":
-		handleStatus(commandArgs, globalOptions)
-	case "adopt":
-		handleAdopt(commandArgs, globalOptions)
-	case "orphan":
-		handleOrphan(commandArgs, globalOptions, globalYes)
-	case "create":
-		handleCreate(commandArgs, globalOptions)
-	case "remove":
-		handleRemove(commandArgs, globalOptions, globalYes)
-	case "prune":
-		handlePrune(commandArgs, globalOptions, globalYes)
-	case "version":
-		handleVersion(commandArgs)
-	default:
-		suggestion := suggestCommand(command)
-		if suggestion != "" {
+	// Show effective configuration in verbose mode
+	lnk.PrintVerbose("Source directory: %s", mergedConfig.SourceDir)
+	lnk.PrintVerbose("Target directory: %s", mergedConfig.TargetDir)
+	if len(paths) > 0 {
+		lnk.PrintVerbose("Paths: %s", strings.Join(paths, ", "))
+	}
+
+	// Execute the appropriate action
+	switch action {
+	case actionCreate:
+		opts := lnk.LinkOptions{
+			SourceDir:      mergedConfig.SourceDir,
+			TargetDir:      mergedConfig.TargetDir,
+			IgnorePatterns: mergedConfig.IgnorePatterns,
+			DryRun:         dryRun,
+		}
+		if err := lnk.CreateLinks(opts); err != nil {
+			lnk.PrintErrorWithHint(err)
+			os.Exit(lnk.ExitError)
+		}
+
+	case actionRemove:
+		opts := lnk.LinkOptions{
+			SourceDir:      mergedConfig.SourceDir,
+			TargetDir:      mergedConfig.TargetDir,
+			IgnorePatterns: mergedConfig.IgnorePatterns,
+			DryRun:         dryRun,
+		}
+		if err := lnk.RemoveLinks(opts); err != nil {
+			lnk.PrintErrorWithHint(err)
+			os.Exit(lnk.ExitError)
+		}
+
+	case actionStatus:
+		opts := lnk.LinkOptions{
+			SourceDir:      mergedConfig.SourceDir,
+			TargetDir:      mergedConfig.TargetDir,
+			IgnorePatterns: mergedConfig.IgnorePatterns,
+			DryRun:         false, // status doesn't use dry-run
+		}
+		if err := lnk.Status(opts); err != nil {
+			lnk.PrintErrorWithHint(err)
+			os.Exit(lnk.ExitError)
+		}
+
+	case actionPrune:
+		// For prune, use current source if no path specified
+		pruneSource := mergedConfig.SourceDir
+		if len(paths) > 0 {
+			pruneSource = paths[0]
+			// Re-merge config with the specified source
+			pruneConfig, err := lnk.LoadConfig(pruneSource, targetDir, ignorePatterns)
+			if err != nil {
+				lnk.PrintErrorWithHint(err)
+				os.Exit(lnk.ExitError)
+			}
+			mergedConfig = pruneConfig
+		}
+		opts := lnk.LinkOptions{
+			SourceDir:      mergedConfig.SourceDir,
+			TargetDir:      mergedConfig.TargetDir,
+			IgnorePatterns: mergedConfig.IgnorePatterns,
+			DryRun:         dryRun,
+		}
+		if err := lnk.Prune(opts); err != nil {
+			lnk.PrintErrorWithHint(err)
+			os.Exit(lnk.ExitError)
+		}
+
+	case actionAdopt:
+		// For adopt, all paths are files to adopt
+		if len(paths) == 0 {
 			lnk.PrintErrorWithHint(lnk.WithHint(
-				fmt.Errorf("unknown command: %s", command),
-				fmt.Sprintf("Did you mean '%s'? Run 'lnk --help' to see available commands", suggestion)))
-		} else {
+				fmt.Errorf("adopt requires at least one file path"),
+				"Example: lnk -A ~/.bashrc ~/.vimrc"))
+			os.Exit(lnk.ExitUsage)
+		}
+		opts := lnk.AdoptOptions{
+			SourceDir: mergedConfig.SourceDir,
+			TargetDir: mergedConfig.TargetDir,
+			Paths:     paths,
+			DryRun:    dryRun,
+		}
+		if err := lnk.Adopt(opts); err != nil {
+			lnk.PrintErrorWithHint(err)
+			os.Exit(lnk.ExitError)
+		}
+
+	case actionOrphan:
+		// For orphan, all paths are symlinks to orphan
+		if len(paths) == 0 {
 			lnk.PrintErrorWithHint(lnk.WithHint(
-				fmt.Errorf("unknown command: %s", command),
-				"Run 'lnk --help' to see available commands"))
+				fmt.Errorf("orphan requires at least one path"),
+				"Example: lnk -O ~/.bashrc"))
+			os.Exit(lnk.ExitUsage)
 		}
-		os.Exit(lnk.ExitUsage)
-	}
-}
-
-func handleStatus(args []string, globalOptions *lnk.ConfigOptions) {
-	fs := flag.NewFlagSet("status", flag.ExitOnError)
-	fs.Usage = func() {
-		fmt.Printf("%s lnk status [options]\n", lnk.Bold("Usage:"))
-		fmt.Println("\nShow status of all managed symlinks")
-		fmt.Println()
-		lnk.PrintHelpSection("Options:")
-		// Collect all options including command-specific flags and config options
-		options := [][]string{}
-		fs.VisitAll(func(f *flag.Flag) {
-			usage := f.Usage
-			if f.DefValue != "" && f.DefValue != "false" {
-				usage += fmt.Sprintf(" (default: %s)", f.DefValue)
-			}
-			options = append(options, []string{"--" + f.Name, usage})
-		})
-		// Add config options
-		options = append(options,
-			[]string{"--config PATH", "Path to configuration file"},
-			[]string{"--ignore LIST", "Ignore patterns (comma-separated)"},
-		)
-		if len(options) == 0 {
-			fmt.Println("  (none)")
-		} else {
-			lnk.PrintHelpItems(options)
+		opts := lnk.OrphanOptions{
+			SourceDir: mergedConfig.SourceDir,
+			TargetDir: mergedConfig.TargetDir,
+			Paths:     paths,
+			DryRun:    dryRun,
 		}
-		fmt.Println()
-		lnk.PrintHelpSection("Examples:")
-		lnk.PrintHelpItems([][]string{
-			{"lnk status", ""},
-			{"lnk status --output json", ""},
-		})
-		fmt.Println()
-		lnk.PrintHelpSection("See also:")
-		fmt.Println("  create, prune")
-	}
-	fs.Parse(args)
-
-	config, configSource, err := lnk.LoadConfigWithOptions(globalOptions)
-	if err != nil {
-		lnk.PrintErrorWithHint(err)
-		os.Exit(lnk.ExitError)
-	}
-
-	// Show config source in verbose mode
-	lnk.PrintVerbose("Using configuration from: %s", configSource)
-
-	if err := lnk.Status(config); err != nil {
-		lnk.PrintErrorWithHint(err)
-		os.Exit(lnk.ExitError)
-	}
-}
-
-func handleAdopt(args []string, globalOptions *lnk.ConfigOptions) {
-	fs := flag.NewFlagSet("adopt", flag.ExitOnError)
-	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
-	path := fs.String("path", "", "The file or directory to adopt")
-	sourceDir := fs.String("source-dir", "", "The source directory (absolute path, e.g., ~/dotfiles/home)")
-
-	fs.Usage = func() {
-		fmt.Printf("%s lnk adopt [options]\n", lnk.Bold("Usage:"))
-		fmt.Println("\nAdopt a file or directory into the repository")
-		fmt.Println()
-		lnk.PrintHelpSection("Options:")
-		// Collect all options including command-specific flags
-		options := [][]string{}
-		fs.VisitAll(func(f *flag.Flag) {
-			usage := f.Usage
-			if f.DefValue != "" && f.DefValue != "false" {
-				usage += fmt.Sprintf(" (default: %s)", f.DefValue)
-			}
-			options = append(options, []string{"--" + f.Name, usage})
-		})
-		// Note: adopt doesn't need config options since it has its own --source-dir
-		if len(options) == 0 {
-			fmt.Println("  (none)")
-		} else {
-			lnk.PrintHelpItems(options)
+		if err := lnk.Orphan(opts); err != nil {
+			lnk.PrintErrorWithHint(err)
+			os.Exit(lnk.ExitError)
 		}
-		fmt.Println()
-		lnk.PrintHelpSection("Examples:")
-		lnk.PrintHelpItems([][]string{
-			{"lnk adopt --path ~/.gitconfig --source-dir ~/dotfiles/home", ""},
-			{"lnk adopt --path ~/.ssh/config --source-dir ~/dotfiles/private/home", ""},
-			{"lnk adopt --path ~/.bashrc --source-dir ~/dotfiles/home", ""},
-		})
-		fmt.Println()
-		lnk.PrintHelpSection("See also:")
-		fmt.Println("  orphan, create, status")
 	}
-
-	fs.Parse(args)
-
-	if *path == "" || *sourceDir == "" {
-		lnk.PrintErrorWithHint(lnk.WithHint(
-			fmt.Errorf("both --path and --source-dir are required"),
-			"Run 'lnk adopt --help' for usage examples"))
-		os.Exit(lnk.ExitUsage)
-	}
-
-	config, configSource, err := lnk.LoadConfigWithOptions(globalOptions)
-	if err != nil {
-		lnk.PrintErrorWithHint(err)
-		os.Exit(lnk.ExitError)
-	}
-
-	// Show config source in verbose mode
-	lnk.PrintVerbose("Using configuration from: %s", configSource)
-
-	if err := lnk.Adopt(*path, config, *sourceDir, *dryRun); err != nil {
-		lnk.PrintErrorWithHint(err)
-		os.Exit(lnk.ExitError)
-	}
-}
-
-func handleOrphan(args []string, globalOptions *lnk.ConfigOptions, globalYes bool) {
-	fs := flag.NewFlagSet("orphan", flag.ExitOnError)
-	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
-	path := fs.String("path", "", "The file or directory to orphan")
-
-	fs.Usage = func() {
-		fmt.Printf("%s lnk orphan [options]\n", lnk.Bold("Usage:"))
-		fmt.Println("\nRemove a file or directory from repository management")
-		fmt.Println("For directories, recursively orphans all managed symlinks within")
-		fmt.Println()
-		lnk.PrintHelpSection("Options:")
-		// Collect all options including command-specific flags and config options
-		options := [][]string{}
-		fs.VisitAll(func(f *flag.Flag) {
-			usage := f.Usage
-			if f.DefValue != "" && f.DefValue != "false" {
-				usage += fmt.Sprintf(" (default: %s)", f.DefValue)
-			}
-			options = append(options, []string{"--" + f.Name, usage})
-		})
-		// Add config options
-		options = append(options,
-			[]string{"--config PATH", "Path to configuration file"},
-			[]string{"--ignore LIST", "Ignore patterns (comma-separated)"},
-		)
-		if len(options) == 0 {
-			fmt.Println("  (none)")
-		} else {
-			lnk.PrintHelpItems(options)
-		}
-		fmt.Println()
-		lnk.PrintHelpSection("Examples:")
-		lnk.PrintHelpItems([][]string{
-			{"lnk orphan --path ~/.gitconfig", ""},
-			{"lnk orphan --path ~/.config/nvim", ""},
-			{"lnk orphan --path ~/.bashrc", ""},
-		})
-		fmt.Println()
-		lnk.PrintHelpSection("See also:")
-		fmt.Println("  adopt, status")
-	}
-
-	fs.Parse(args)
-
-	if *path == "" {
-		lnk.PrintErrorWithHint(lnk.WithHint(
-			fmt.Errorf("--path is required"),
-			"Run 'lnk orphan --help' for usage examples"))
-		os.Exit(lnk.ExitUsage)
-	}
-
-	config, configSource, err := lnk.LoadConfigWithOptions(globalOptions)
-	if err != nil {
-		lnk.PrintErrorWithHint(err)
-		os.Exit(lnk.ExitError)
-	}
-
-	// Show config source in verbose mode
-	lnk.PrintVerbose("Using configuration from: %s", configSource)
-
-	if err := lnk.Orphan(*path, config, *dryRun, globalYes); err != nil {
-		lnk.PrintErrorWithHint(err)
-		os.Exit(lnk.ExitError)
-	}
-}
-
-func handleCreate(args []string, globalOptions *lnk.ConfigOptions) {
-	fs := flag.NewFlagSet("create", flag.ExitOnError)
-	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
-
-	fs.Usage = func() {
-		fmt.Printf("%s lnk create [options]\n", lnk.Bold("Usage:"))
-		fmt.Println("\nCreate symlinks from repository to target directories")
-		fmt.Println()
-		lnk.PrintHelpSection("Options:")
-		// Collect all options including command-specific flags and config options
-		options := [][]string{}
-		fs.VisitAll(func(f *flag.Flag) {
-			usage := f.Usage
-			if f.DefValue != "" && f.DefValue != "false" {
-				usage += fmt.Sprintf(" (default: %s)", f.DefValue)
-			}
-			options = append(options, []string{"--" + f.Name, usage})
-		})
-		// Add config options
-		options = append(options,
-			[]string{"--config PATH", "Path to configuration file"},
-			[]string{"--ignore LIST", "Ignore patterns (comma-separated)"},
-		)
-		if len(options) == 0 {
-			fmt.Println("  (none)")
-		} else {
-			lnk.PrintHelpItems(options)
-		}
-		fmt.Println()
-		lnk.PrintHelpSection("Examples:")
-		lnk.PrintHelpItems([][]string{
-			{"lnk create", ""},
-			{"lnk create --dry-run", ""},
-		})
-		fmt.Println()
-		lnk.PrintHelpSection("See also:")
-		fmt.Println("  remove, status, adopt")
-	}
-
-	fs.Parse(args)
-
-	config, configSource, err := lnk.LoadConfigWithOptions(globalOptions)
-	if err != nil {
-		lnk.PrintErrorWithHint(err)
-		os.Exit(lnk.ExitError)
-	}
-
-	// Show config source in verbose mode
-	lnk.PrintVerbose("Using configuration from: %s", configSource)
-
-	if err := lnk.CreateLinks(config, *dryRun); err != nil {
-		lnk.PrintErrorWithHint(err)
-		os.Exit(lnk.ExitError)
-	}
-}
-
-func handleRemove(args []string, globalOptions *lnk.ConfigOptions, globalYes bool) {
-	fs := flag.NewFlagSet("remove", flag.ExitOnError)
-	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
-
-	fs.Usage = func() {
-		fmt.Printf("%s lnk remove [options]\n", lnk.Bold("Usage:"))
-		fmt.Println("\nRemove all managed symlinks")
-		fmt.Println()
-		lnk.PrintHelpSection("Options:")
-		// Collect all options including command-specific flags and config options
-		options := [][]string{}
-		fs.VisitAll(func(f *flag.Flag) {
-			usage := f.Usage
-			if f.DefValue != "" && f.DefValue != "false" {
-				usage += fmt.Sprintf(" (default: %s)", f.DefValue)
-			}
-			options = append(options, []string{"--" + f.Name, usage})
-		})
-		// Add config options
-		options = append(options,
-			[]string{"--config PATH", "Path to configuration file"},
-			[]string{"--ignore LIST", "Ignore patterns (comma-separated)"},
-		)
-		if len(options) == 0 {
-			fmt.Println("  (none)")
-		} else {
-			lnk.PrintHelpItems(options)
-		}
-		fmt.Println()
-		lnk.PrintHelpSection("Examples:")
-		lnk.PrintHelpItems([][]string{
-			{"lnk remove", ""},
-			{"lnk remove --dry-run", ""},
-		})
-		fmt.Println()
-		lnk.PrintHelpSection("See also:")
-		fmt.Println("  create, prune, orphan")
-	}
-
-	fs.Parse(args)
-
-	config, configSource, err := lnk.LoadConfigWithOptions(globalOptions)
-	if err != nil {
-		lnk.PrintErrorWithHint(err)
-		os.Exit(lnk.ExitError)
-	}
-
-	// Show config source in verbose mode
-	lnk.PrintVerbose("Using configuration from: %s", configSource)
-
-	if err := lnk.RemoveLinks(config, *dryRun, globalYes); err != nil {
-		lnk.PrintErrorWithHint(err)
-		os.Exit(lnk.ExitError)
-	}
-}
-
-func handlePrune(args []string, globalOptions *lnk.ConfigOptions, globalYes bool) {
-	fs := flag.NewFlagSet("prune", flag.ExitOnError)
-	dryRun := fs.Bool("dry-run", false, "Preview changes without making them")
-
-	fs.Usage = func() {
-		fmt.Printf("%s lnk prune [options]\n", lnk.Bold("Usage:"))
-		fmt.Println("\nRemove broken symlinks")
-		fmt.Println()
-		lnk.PrintHelpSection("Options:")
-		// Collect all options including command-specific flags and config options
-		options := [][]string{}
-		fs.VisitAll(func(f *flag.Flag) {
-			usage := f.Usage
-			if f.DefValue != "" && f.DefValue != "false" {
-				usage += fmt.Sprintf(" (default: %s)", f.DefValue)
-			}
-			options = append(options, []string{"--" + f.Name, usage})
-		})
-		// Add config options
-		options = append(options,
-			[]string{"--config PATH", "Path to configuration file"},
-			[]string{"--ignore LIST", "Ignore patterns (comma-separated)"},
-		)
-		if len(options) == 0 {
-			fmt.Println("  (none)")
-		} else {
-			lnk.PrintHelpItems(options)
-		}
-		fmt.Println()
-		lnk.PrintHelpSection("Examples:")
-		lnk.PrintHelpItems([][]string{
-			{"lnk prune", ""},
-			{"lnk prune --dry-run", ""},
-		})
-		fmt.Println()
-		lnk.PrintHelpSection("See also:")
-		fmt.Println("  remove, status")
-	}
-
-	fs.Parse(args)
-
-	config, configSource, err := lnk.LoadConfigWithOptions(globalOptions)
-	if err != nil {
-		lnk.PrintErrorWithHint(err)
-		os.Exit(lnk.ExitError)
-	}
-
-	// Show config source in verbose mode
-	lnk.PrintVerbose("Using configuration from: %s", configSource)
-
-	if err := lnk.PruneLinks(config, *dryRun, globalYes); err != nil {
-		lnk.PrintErrorWithHint(err)
-		os.Exit(lnk.ExitError)
-	}
-}
-
-func handleVersion(args []string) {
-	fs := flag.NewFlagSet("version", flag.ExitOnError)
-	fs.Usage = func() {
-		fmt.Printf("%s lnk version [options]\n", lnk.Bold("Usage:"))
-		fmt.Println("\nShow version information")
-		fmt.Println()
-		lnk.PrintHelpSection("Options:")
-		// Collect all options including command-specific flags
-		options := [][]string{}
-		fs.VisitAll(func(f *flag.Flag) {
-			usage := f.Usage
-			if f.DefValue != "" && f.DefValue != "false" {
-				usage += fmt.Sprintf(" (default: %s)", f.DefValue)
-			}
-			options = append(options, []string{"--" + f.Name, usage})
-		})
-		if len(options) == 0 {
-			fmt.Println("  (none)")
-		} else {
-			lnk.PrintHelpItems(options)
-		}
-		fmt.Println()
-		lnk.PrintHelpSection("Examples:")
-		lnk.PrintHelpItems([][]string{
-			{"lnk version", ""},
-			{"lnk --version", ""},
-		})
-	}
-	fs.Parse(args)
-
-	printVersion()
 }
 
 func printUsage() {
-	fmt.Printf("%s lnk [options] <command> [command-options]\n", lnk.Bold("Usage:"))
+	fmt.Printf("%s lnk [action] [flags] <path(s)>\n", lnk.Bold("Usage:"))
 	fmt.Println()
 	fmt.Println("An opinionated symlink manager for dotfiles and more")
 	fmt.Println()
+	fmt.Println("Paths are positional arguments that come last (POSIX-style).")
+	fmt.Println("For create/remove/status: path is the source directory to link from.")
+	fmt.Println("For adopt/orphan: paths are the files to operate on.")
+	fmt.Println()
 
-	lnk.PrintHelpSection("Commands:")
+	lnk.PrintHelpSection("Action Flags (mutually exclusive):")
 	lnk.PrintHelpItems([][]string{
-		{"adopt", "Adopt file/directory into repository"},
-		{"create", "Create symlinks from repo to target dirs"},
-		{"orphan", "Remove file/directory from repo management"},
-		{"prune", "Remove broken symlinks"},
-		{"remove", "Remove all managed symlinks"},
-		{"status", "Show status of all managed symlinks"},
-		{"version", "Show version information"},
+		{"-C, --create", "Create symlinks (default action)"},
+		{"-R, --remove", "Remove symlinks"},
+		{"-S, --status", "Show status of symlinks"},
+		{"-P, --prune", "Remove broken symlinks"},
+		{"-A, --adopt", "Adopt files into source directory"},
+		{"-O, --orphan", "Remove files from management"},
 	})
 	fmt.Println()
 
-	lnk.PrintHelpSection("Options:")
+	lnk.PrintHelpSection("Directory Flags:")
 	lnk.PrintHelpItems([][]string{
-		{"-h, --help", "Show this help message"},
-		{"    --no-color", "Disable colored output"},
-		{"    --output FORMAT", "Output format: text (default), json"},
-		{"-q, --quiet", "Suppress all non-error output"},
+		{"-s, --source DIR", "Source directory (default: cwd for adopt/orphan)"},
+		{"-t, --target DIR", "Target directory (default: ~)"},
+	})
+	fmt.Println()
+
+	lnk.PrintHelpSection("Other Flags:")
+	lnk.PrintHelpItems([][]string{
+		{"    --ignore PATTERN", "Additional ignore pattern (repeatable)"},
+		{"-n, --dry-run", "Preview changes without making them"},
 		{"-v, --verbose", "Enable verbose output"},
-		{"    --version", "Show version information"},
-		{"-y, --yes", "Assume yes to all prompts"},
+		{"-q, --quiet", "Suppress all non-error output"},
+		{"    --no-color", "Disable colored output"},
+		{"-V, --version", "Show version information"},
+		{"-h, --help", "Show this help message"},
 	})
 	fmt.Println()
 
-	fmt.Printf("Use '%s' for more information about a command\n", lnk.Bold("lnk <command> --help"))
-}
+	lnk.PrintHelpSection("Examples:")
+	lnk.PrintHelpItems([][]string{
+		{"lnk .", "Create links from current directory"},
+		{"lnk -C .", "Explicit create from current directory"},
+		{"lnk -C -t /tmp .", "Create with custom target"},
+		{"lnk -C ~/git/dotfiles", "Create from absolute path"},
+		{"lnk -n .", "Dry-run (preview without changes)"},
+		{"lnk -R .", "Remove links"},
+		{"lnk -S .", "Show status"},
+		{"lnk -P", "Prune broken symlinks from current source"},
+		{"lnk -A ~/.bashrc ~/.vimrc", "Adopt files into current directory"},
+		{"lnk -A -s ~/dotfiles ~/.bashrc", "Adopt with explicit source"},
+		{"lnk -O ~/.bashrc", "Orphan file (remove from management)"},
+		{"lnk --ignore '*.swp' .", "Add ignore pattern"},
+	})
+	fmt.Println()
 
-func printCommandHelp(command string) {
-	// Create empty options for help display
-	emptyOptions := &lnk.ConfigOptions{}
-
-	switch command {
-	case "status":
-		handleStatus([]string{"-h"}, emptyOptions)
-	case "adopt":
-		handleAdopt([]string{"-h"}, emptyOptions)
-	case "orphan":
-		handleOrphan([]string{"-h"}, emptyOptions, false)
-	case "create":
-		handleCreate([]string{"-h"}, emptyOptions)
-	case "remove":
-		handleRemove([]string{"-h"}, emptyOptions, false)
-	case "prune":
-		handlePrune([]string{"-h"}, emptyOptions, false)
-	case "version":
-		handleVersion([]string{"-h"})
-	case "config":
-		printConfigHelp()
-	default:
-		suggestion := suggestCommand(command)
-		if suggestion != "" {
-			lnk.PrintErrorWithHint(lnk.WithHint(
-				fmt.Errorf("unknown command: %s", command),
-				fmt.Sprintf("Did you mean 'lnk help %s'?", suggestion)))
-		} else {
-			lnk.PrintErrorWithHint(lnk.WithHint(
-				fmt.Errorf("unknown command: %s", command),
-				"Run 'lnk --help' to see available commands"))
-		}
-	}
+	lnk.PrintHelpSection("Config Files:")
+	fmt.Println("  .lnkconfig in source directory (repo-specific)")
+	fmt.Println("    Format: CLI flags, one per line")
+	fmt.Println("    Example:")
+	fmt.Println("      --target=~")
+	fmt.Println("      --ignore=local/")
+	fmt.Println()
+	fmt.Println("  .lnkignore in source directory")
+	fmt.Println("    Format: gitignore syntax")
+	fmt.Println("    Example:")
+	fmt.Println("      .git")
+	fmt.Println("      *.swp")
+	fmt.Println("      README.md")
+	fmt.Println()
+	fmt.Println("  CLI flags take precedence over config files")
 }

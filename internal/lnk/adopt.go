@@ -7,6 +7,14 @@ import (
 	"strings"
 )
 
+// AdoptOptions holds options for adopting files into the source directory
+type AdoptOptions struct {
+	SourceDir string   // base directory for dotfiles (e.g., ~/git/dotfiles)
+	TargetDir string   // where files currently are (default: ~)
+	Paths     []string // files to adopt (e.g., ["~/.bashrc", "~/.vimrc"])
+	DryRun    bool     // preview mode
+}
+
 // validateAdoptSource validates the source path and checks if it's already adopted
 func validateAdoptSource(absSource, absSourceDir string) error {
 	// Check if source exists
@@ -39,60 +47,6 @@ func validateAdoptSource(absSource, absSourceDir string) error {
 		}
 	}
 	return nil
-}
-
-// determineRelativePath determines the relative path from home directory
-func determineRelativePath(absSource string) (string, string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	relPath, err := getRelativePathFromHome(absSource, homeDir)
-	if err != nil {
-		return "", "", NewPathErrorWithHint("adopt", absSource,
-			fmt.Errorf("source must be within home directory: %w", err),
-			"lnk can only manage files within your home directory")
-	}
-
-	return relPath, homeDir, nil
-}
-
-// getRelativePathFromHome attempts to get a relative path from the given home directory
-func getRelativePathFromHome(absSource, homeDir string) (string, error) {
-	relPath, err := filepath.Rel(homeDir, absSource)
-	if err != nil {
-		return "", err
-	}
-
-	// Ensure the path doesn't escape the home directory
-	if strings.HasPrefix(relPath, "..") {
-		return "", fmt.Errorf("path is outside home directory")
-	}
-
-	return relPath, nil
-}
-
-// ensureSourceDirExists ensures the source directory exists in the repository
-func ensureSourceDirExists(configRepo, sourceDir string, config *Config) (*LinkMapping, error) {
-	// Validate sourceDir exists in config mappings
-	mapping := config.GetMapping(sourceDir)
-	if mapping == nil {
-		return nil, NewValidationErrorWithHint("source directory", sourceDir,
-			"not found in config mappings",
-			fmt.Sprintf("Add it to .lnk.json first with a mapping like: {\"source\": \"%s\", \"target\": \"~/\"}", sourceDir))
-	}
-
-	// Check if source directory exists in the repository
-	sourceDirPath := filepath.Join(configRepo, sourceDir)
-	if _, err := os.Stat(sourceDirPath); os.IsNotExist(err) {
-		// Create the source directory if it doesn't exist
-		if err := os.MkdirAll(sourceDirPath, 0755); err != nil {
-			return nil, fmt.Errorf("failed to create source directory %s: %w", sourceDirPath, err)
-		}
-	}
-
-	return mapping, nil
 }
 
 // performAdoption performs the actual file move and symlink creation
@@ -295,100 +249,127 @@ func copyAndVerify(absSource, destPath string) error {
 	return nil
 }
 
-// Adopt moves a file or directory into the source directory and creates a symlink back
-func Adopt(source string, config *Config, sourceDir string, dryRun bool) error {
-	// Convert to absolute paths
-	absSource, err := filepath.Abs(source)
-	if err != nil {
-		return fmt.Errorf("failed to resolve source path: %w", err)
-	}
+// Adopt adopts files into a package using the options-based interface
+func Adopt(opts AdoptOptions) error {
 	PrintCommandHeader("Adopting Files")
 
-	// Ensure sourceDir is absolute
-	absSourceDir, err := ExpandPath(sourceDir)
+	// Validate inputs
+	if len(opts.Paths) == 0 {
+		return NewValidationErrorWithHint("paths", "", "at least one file path is required",
+			"Specify which files to adopt, e.g.: lnk -A ~/.bashrc ~/.vimrc")
+	}
+
+	// Expand paths
+	absSourceDir, err := ExpandPath(opts.SourceDir)
 	if err != nil {
 		return fmt.Errorf("failed to expand source directory: %w", err)
 	}
+	PrintVerbose("Source directory: %s", absSourceDir)
 
-	// Validate that sourceDir exists in config mappings
-	var mapping *LinkMapping
-	for i := range config.LinkMappings {
-		expandedSource, err := ExpandPath(config.LinkMappings[i].Source)
+	absTargetDir, err := ExpandPath(opts.TargetDir)
+	if err != nil {
+		return fmt.Errorf("failed to expand target directory: %w", err)
+	}
+	PrintVerbose("Target directory: %s", absTargetDir)
+
+	// Validate source directory exists
+	if _, err := os.Stat(absSourceDir); os.IsNotExist(err) {
+		return NewValidationErrorWithHint("source directory", absSourceDir, "does not exist",
+			fmt.Sprintf("Create it first: mkdir -p %s", absSourceDir))
+	}
+
+	// Process each file path
+	adopted := 0
+	for _, path := range opts.Paths {
+		// Expand path
+		absPath, err := ExpandPath(path)
 		if err != nil {
+			PrintErrorWithHint(WithHint(
+				fmt.Errorf("failed to expand path %s: %w", path, err),
+				"Check that the path is valid"))
 			continue
 		}
-		if expandedSource == absSourceDir {
-			mapping = &config.LinkMappings[i]
-			break
+
+		// Validate the file exists and isn't already adopted
+		if err := validateAdoptSource(absPath, absSourceDir); err != nil {
+			PrintErrorWithHint(err)
+			continue
 		}
-	}
 
-	if mapping == nil {
-		return NewValidationErrorWithHint("source directory", sourceDir,
-			"not found in config mappings",
-			fmt.Sprintf("Add it to .lnk.json first with a mapping like: {\"source\": \"%s\", \"target\": \"~/\"}", sourceDir))
-	}
-
-	// Validate source and check if already adopted
-	if err := validateAdoptSource(absSource, absSourceDir); err != nil {
-		return err
-	}
-
-	// Determine relative path from home directory
-	relPath, _, err := determineRelativePath(absSource)
-	if err != nil {
-		return err
-	}
-
-	// Create source directory if it doesn't exist
-	if _, err := os.Stat(absSourceDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(absSourceDir, 0755); err != nil {
-			return fmt.Errorf("failed to create source directory %s: %w", absSourceDir, err)
+		// Determine relative path from target directory
+		relPath, err := filepath.Rel(absTargetDir, absPath)
+		if err != nil || strings.HasPrefix(relPath, "..") {
+			PrintErrorWithHint(WithHint(
+				fmt.Errorf("path %s must be within target directory %s", path, absTargetDir),
+				"Only files within the target directory can be adopted"))
+			continue
 		}
-	}
 
-	destPath := filepath.Join(absSourceDir, relPath)
+		// Destination path in source directory
+		destPath := filepath.Join(absSourceDir, relPath)
 
-	// Check if source is a directory for proper dry-run output
-	sourceInfo, err := os.Stat(absSource)
-	if err != nil {
-		return fmt.Errorf("failed to check source: %w", err)
-	}
-
-	// Check if destination already exists (only for files, not directories)
-	if !sourceInfo.IsDir() {
-		if _, err := os.Stat(destPath); err == nil {
-			return NewPathErrorWithHint("adopt", destPath,
-				fmt.Errorf("destination already exists in repo"),
-				"Remove the existing file first or choose a different source directory")
+		// Check if source is a directory
+		sourceInfo, err := os.Stat(absPath)
+		if err != nil {
+			PrintErrorWithHint(WithHint(
+				fmt.Errorf("failed to stat %s: %w", path, err),
+				"Check that the file exists"))
+			continue
 		}
-	}
 
-	// Validate symlink creation
-	if err := ValidateSymlinkCreation(absSource, destPath); err != nil {
-		return fmt.Errorf("failed to validate adoption: %w", err)
-	}
+		// Check if destination already exists (for files only)
+		if !sourceInfo.IsDir() {
+			if _, err := os.Stat(destPath); err == nil {
+				PrintErrorWithHint(WithHint(
+					fmt.Errorf("destination %s already exists", ContractPath(destPath)),
+					"Remove the existing file first or choose a different file"))
+				continue
+			}
+		}
 
-	if dryRun {
-		PrintDryRun("Would adopt: %s", ContractPath(absSource))
-		if sourceInfo.IsDir() {
-			PrintDetail("Move directory contents to: %s", ContractPath(destPath))
-			PrintDetail("Create individual symlinks for each file")
+		// Validate symlink creation would work
+		if err := ValidateSymlinkCreation(absPath, destPath); err != nil {
+			PrintErrorWithHint(WithHint(
+				fmt.Errorf("failed to validate adoption: %w", err),
+				"Check file permissions and paths"))
+			continue
+		}
+
+		// Dry-run or perform adoption
+		if opts.DryRun {
+			PrintDryRun("Would adopt: %s", ContractPath(absPath))
+			if sourceInfo.IsDir() {
+				PrintDetail("Move directory contents to: %s", ContractPath(destPath))
+				PrintDetail("Create individual symlinks for each file")
+			} else {
+				PrintDetail("Move to: %s", ContractPath(destPath))
+				PrintDetail("Create symlink: %s -> %s", ContractPath(absPath), ContractPath(destPath))
+			}
 		} else {
-			PrintDetail("Move to: %s", ContractPath(destPath))
-			PrintDetail("Create symlink: %s -> %s", ContractPath(absSource), ContractPath(destPath))
+			// Perform the adoption
+			if err := performAdoption(absPath, destPath); err != nil {
+				PrintErrorWithHint(WithHint(err, "Failed to adopt file"))
+				continue
+			}
+
+			if !sourceInfo.IsDir() {
+				PrintSuccess("Adopted: %s", ContractPath(absPath))
+			}
 		}
-		return nil
+
+		adopted++
 	}
 
-	// Perform the adoption
-	if err := performAdoption(absSource, destPath); err != nil {
-		return err
-	}
-
-	if !sourceInfo.IsDir() {
-		PrintSuccess("Adopted: %s", ContractPath(absSource))
-		PrintNextStep("create", "create symlinks")
+	// Print summary
+	if adopted > 0 {
+		if opts.DryRun {
+			PrintSummary("Would adopt %d file(s)/directory(ies)", adopted)
+		} else {
+			PrintSummary("Successfully adopted %d file(s)/directory(ies)", adopted)
+			PrintNextStep("status", "view adopted files with status command")
+		}
+	} else {
+		PrintInfo("No files were adopted (see errors above)")
 	}
 
 	return nil
