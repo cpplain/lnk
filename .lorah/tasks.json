@@ -67,7 +67,7 @@
   {
     "name": "Rename AdoptWithOptions to Adopt",
     "description": "Rename function in adopt.go and update all call sites",
-    "passes": false
+    "passes": true
   },
   {
     "name": "Rename OrphanWithOptions to Orphan",

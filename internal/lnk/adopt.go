@@ -282,8 +282,8 @@ func copyAndVerify(absSource, destPath string) error {
 	return nil
 }
 
-// AdoptWithOptions adopts files into a package using the new options-based interface
-func AdoptWithOptions(opts AdoptOptions) error {
+// Adopt adopts files into a package using the options-based interface
+func Adopt(opts AdoptOptions) error {
 	PrintCommandHeader("Adopting Files")
 
 	// Validate inputs

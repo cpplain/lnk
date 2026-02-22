@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-// TestAdoptWithOptions tests the new AdoptWithOptions function
-func TestAdoptWithOptions(t *testing.T) {
+// TestAdopt tests the Adopt function
+func TestAdopt(t *testing.T) {
 	tests := []struct {
 		name          string
 		setupFiles    map[string]string // files to create in target dir
@@ -91,7 +91,7 @@ func TestAdoptWithOptions(t *testing.T) {
 				adoptPaths[i] = filepath.Join(targetDir, relPath)
 			}
 
-			// Run AdoptWithOptions
+			// Run Adopt
 			opts := AdoptOptions{
 				SourceDir: sourceDir,
 				TargetDir: targetDir,
@@ -99,7 +99,7 @@ func TestAdoptWithOptions(t *testing.T) {
 				Paths:     adoptPaths,
 				DryRun:    false,
 			}
-			err := AdoptWithOptions(opts)
+			err := Adopt(opts)
 
 			// Check error
 			if tt.expectError {
@@ -156,8 +156,8 @@ func TestAdoptWithOptions(t *testing.T) {
 	}
 }
 
-// TestAdoptWithOptionsDryRun tests dry-run mode
-func TestAdoptWithOptionsDryRun(t *testing.T) {
+// TestAdoptDryRun tests dry-run mode
+func TestAdoptDryRun(t *testing.T) {
 	tempDir := t.TempDir()
 	sourceDir := filepath.Join(tempDir, "dotfiles")
 	targetDir := filepath.Join(tempDir, "target")
@@ -176,7 +176,7 @@ func TestAdoptWithOptionsDryRun(t *testing.T) {
 		DryRun:    true,
 	}
 
-	err := AdoptWithOptions(opts)
+	err := Adopt(opts)
 	if err != nil {
 		t.Fatalf("dry-run failed: %v", err)
 	}
@@ -197,8 +197,8 @@ func TestAdoptWithOptionsDryRun(t *testing.T) {
 	}
 }
 
-// TestAdoptWithOptionsSourceDirNotExist tests error when source dir doesn't exist
-func TestAdoptWithOptionsSourceDirNotExist(t *testing.T) {
+// TestAdoptSourceDirNotExist tests error when source dir doesn't exist
+func TestAdoptSourceDirNotExist(t *testing.T) {
 	tempDir := t.TempDir()
 	targetDir := filepath.Join(tempDir, "target")
 	os.MkdirAll(targetDir, 0755)
@@ -214,7 +214,7 @@ func TestAdoptWithOptionsSourceDirNotExist(t *testing.T) {
 		DryRun:    false,
 	}
 
-	err := AdoptWithOptions(opts)
+	err := Adopt(opts)
 	if err == nil {
 		t.Errorf("expected error for nonexistent source directory")
 	} else if !strings.Contains(err.Error(), "does not exist") {

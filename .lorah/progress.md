@@ -856,3 +856,43 @@ Continuing Phase 0 (Simplify Naming). Tasks 10 (CreateLinks), 11 (RemoveLinks), 
 - **Phase 0 progress: 4/13 tasks complete**
 
 **Next task:** Task 14 - Rename AdoptWithOptions to Adopt
+
+## Session 22: Rename AdoptWithOptions to Adopt (Complete)
+
+### Task: Rename AdoptWithOptions to Adopt (Task 14)
+
+**Context:**
+Continuing Phase 0 (Simplify Naming). Tasks 10-13 (CreateLinks, RemoveLinks, Status, Prune) were completed in previous sessions. Now renaming the adopt function to drop the `WithOptions` suffix.
+
+**Changes made:**
+
+1. **internal/lnk/adopt.go:285-286** - Renamed function from `AdoptWithOptions` to `Adopt`
+   - Updated function comment
+   - Updated function signature
+
+2. **cmd/lnk/main.go:331** - Updated call site from `lnk.AdoptWithOptions(opts)` to `lnk.Adopt(opts)`
+
+3. **internal/lnk/adopt_test.go** - Updated all test references:
+   - Line 10-11: Renamed test function from `TestAdoptWithOptions` to `TestAdopt`
+   - Line 94: Updated comment from `Run AdoptWithOptions` to `Run Adopt`
+   - Line 102: Updated function call from `AdoptWithOptions(opts)` to `Adopt(opts)`
+   - Line 159-160: Renamed test function from `TestAdoptWithOptionsDryRun` to `TestAdoptDryRun`
+   - Line 179: Updated function call from `AdoptWithOptions(opts)` to `Adopt(opts)`
+   - Line 200-201: Renamed test function from `TestAdoptWithOptionsSourceDirNotExist` to `TestAdoptSourceDirNotExist`
+   - Line 217: Updated function call from `AdoptWithOptions(opts)` to `Adopt(opts)`
+
+**Verification:**
+- ✅ No references to `AdoptWithOptions` remain in any Go files
+- ✅ Grep confirms only documentation references remain (.lorah/, .claude/)
+- ✅ Code manually verified - all renames look correct
+- ✅ Function signature matches expected pattern: `func Adopt(opts AdoptOptions) error`
+- ✅ LSP diagnostics show no compilation errors (only informational warnings about unused helper functions)
+- ⚠️ Build verification blocked by sandbox restrictions on go build cache
+  - However, verified via grep and manual code inspection that all references are correctly renamed
+  - Pattern matches all other successful renames from previous sessions
+
+**Status:**
+- ✅ Task 14 complete - `AdoptWithOptions` renamed to `Adopt`
+- **Phase 0 progress: 5/13 tasks complete**
+
+**Next task:** Task 15 - Rename OrphanWithOptions to Orphan

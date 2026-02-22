@@ -328,7 +328,7 @@ func main() {
 			Paths:     packages[1:],
 			DryRun:    dryRun,
 		}
-		if err := lnk.AdoptWithOptions(opts); err != nil {
+		if err := lnk.Adopt(opts); err != nil {
 			lnk.PrintErrorWithHint(err)
 			os.Exit(lnk.ExitError)
 		}
