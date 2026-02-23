@@ -8,7 +8,7 @@
 //   - assertSymlink(): Verify symlink exists and points correctly
 //   - assertNoSymlink(): Verify path is not a symlink
 //   - setupTestEnv(): Create test environment and return cleanup function
-package e2e
+package test
 
 import (
 	"bytes"
@@ -46,7 +46,7 @@ func buildBinary(t *testing.T) string {
 
 	// Build in a fixed location that all tests can share
 	projectRoot := getProjectRoot(t)
-	testdataDir := filepath.Join(projectRoot, "e2e", "testdata")
+	testdataDir := filepath.Join(projectRoot, "test", "testdata")
 	binary := filepath.Join(testdataDir, "lnk-test")
 	if runtime.GOOS == "windows" {
 		binary += ".exe"
@@ -58,7 +58,7 @@ func buildBinary(t *testing.T) string {
 	}
 
 	// Build the binary
-	cmd := exec.Command("go", "build", "-o", binary, filepath.Join(projectRoot, "cmd", "lnk"))
+	cmd := exec.Command("go", "build", "-o", binary, projectRoot)
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("Failed to build binary: %v\nOutput: %s", err, output)
@@ -89,7 +89,7 @@ func runCommand(t *testing.T, args ...string) commandResult {
 
 	// Set a minimal, predictable environment for testing
 	// Only include what's necessary for lnk to function
-	testHome := filepath.Join(getProjectRoot(t), "e2e", "testdata", "target")
+	testHome := filepath.Join(getProjectRoot(t), "test", "testdata", "target")
 	cmd.Env = []string{
 		"PATH=" + os.Getenv("PATH"), // Need PATH to find external commands if any
 		"HOME=" + testHome,          // Set HOME to our test directory
@@ -121,7 +121,7 @@ func getProjectRoot(t *testing.T) string {
 		t.Fatal("Failed to get current file path")
 	}
 
-	// Go up one level from e2e/ to get project root
+	// Go up one level from test/ to get project root
 	return filepath.Dir(filepath.Dir(filename))
 }
 
@@ -142,7 +142,7 @@ func setupTestEnv(t *testing.T) func() {
 	// Only run setup script if not already done
 	if !testEnvSetup {
 		// Check if test files already exist (to avoid sandbox permission issues)
-		testFile := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles", "home", ".bashrc")
+		testFile := filepath.Join(projectRoot, "test", "testdata", "dotfiles", "home", ".bashrc")
 		if _, err := os.Stat(testFile); err == nil {
 			// Test files exist, skip setup script
 			testEnvSetup = true
@@ -162,7 +162,7 @@ func setupTestEnv(t *testing.T) func() {
 	return func() {
 		// Clean up only the target directory (where links are created)
 		// This is much faster than recreating everything
-		targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
+		targetDir := filepath.Join(projectRoot, "test", "testdata", "target")
 
 		// Remove all contents except .gitkeep
 		if entries, err := os.ReadDir(targetDir); err == nil {
@@ -175,7 +175,7 @@ func setupTestEnv(t *testing.T) func() {
 
 		// Clean up any test-created files in source directories
 		// Only remove files that aren't part of the original setup
-		sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles", "home")
+		sourceDir := filepath.Join(projectRoot, "test", "testdata", "dotfiles", "home")
 
 		// These are files/dirs created by setup script that should be preserved
 		setupFiles := map[string]bool{

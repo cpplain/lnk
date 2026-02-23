@@ -25,24 +25,14 @@ func Orphan(opts OrphanOptions) error {
 			"Specify which files to orphan, e.g.: lnk -O ~/.bashrc")
 	}
 
-	// Expand paths
-	absSourceDir, err := ExpandPath(opts.SourceDir)
+	// Expand and validate paths
+	paths, err := ResolvePaths(opts.SourceDir, opts.TargetDir)
 	if err != nil {
-		return fmt.Errorf("failed to expand source directory: %w", err)
+		return err
 	}
+	absSourceDir, absTargetDir := paths.SourceDir, paths.TargetDir
 	PrintVerbose("Source directory: %s", absSourceDir)
-
-	absTargetDir, err := ExpandPath(opts.TargetDir)
-	if err != nil {
-		return fmt.Errorf("failed to expand target directory: %w", err)
-	}
 	PrintVerbose("Target directory: %s", absTargetDir)
-
-	// Validate source directory exists
-	if _, err := os.Stat(absSourceDir); os.IsNotExist(err) {
-		return NewValidationErrorWithHint("source directory", absSourceDir, "does not exist",
-			fmt.Sprintf("Check the source directory: %s", absSourceDir))
-	}
 
 	// Collect managed links to orphan
 	var managedLinks []ManagedLink
@@ -211,31 +201,22 @@ func orphanManagedLink(link ManagedLink) error {
 	}
 
 	// Remove the symlink first
-	if err := os.Remove(link.Path); err != nil {
+	if err := RemoveSymlink(link.Path); err != nil {
 		return fmt.Errorf("failed to remove symlink: %w", err)
 	}
 
-	// Copy content from repo to original location
-	if err := copyPath(link.Target, link.Path); err != nil {
-		// Clean up any partial copy before restoring symlink
-		os.RemoveAll(link.Path)
+	// Move content from repo to original location
+	if err := MoveFile(link.Target, link.Path); err != nil {
 		// Try to restore symlink on error
 		if rollbackErr := os.Symlink(link.Target, link.Path); rollbackErr != nil {
-			return fmt.Errorf("failed to copy from repository: %v (rollback failed, symlink lost: %v)", err, rollbackErr)
+			return fmt.Errorf("failed to move from repository: %v (rollback failed, symlink lost: %v)", err, rollbackErr)
 		}
-		return fmt.Errorf("failed to copy from repository: %w", err)
+		return fmt.Errorf("failed to move from repository: %w", err)
 	}
 
 	// Set appropriate permissions
 	if err := os.Chmod(link.Path, targetInfo.Mode()); err != nil {
 		PrintWarning("Failed to set permissions: %v", err)
-	}
-
-	// Remove from repository
-	if err := os.Remove(link.Target); err != nil {
-		PrintWarning("Failed to remove from repository: %v", err)
-		PrintWarning("You may need to manually remove: %s", ContractPath(link.Target))
-		return fmt.Errorf("failed to remove file from repository")
 	}
 
 	PrintSuccess("Orphaned: %s", ContractPath(link.Path))

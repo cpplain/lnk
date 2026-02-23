@@ -70,15 +70,12 @@ func performAdoption(absSource, destPath string) error {
 	}
 
 	// Move file to repo
-	if err := os.Rename(absSource, destPath); err != nil {
-		// If rename fails (e.g., cross-device), fall back to copy and remove
-		if err := copyAndVerify(absSource, destPath); err != nil {
-			return err
-		}
+	if err := MoveFile(absSource, destPath); err != nil {
+		return err
 	}
 
 	// Create symlink back
-	if err := os.Symlink(destPath, absSource); err != nil {
+	if err := CreateSymlink(destPath, absSource); err != nil {
 		// Rollback: move file back
 		if rollbackErr := os.Rename(destPath, absSource); rollbackErr != nil {
 			return fmt.Errorf("failed to create symlink: %v (rollback also failed: %v)", err, rollbackErr)
@@ -156,11 +153,8 @@ func performDirectoryAdoption(absSource, destPath string) error {
 			}
 
 			// Move file to repo
-			if err := os.Rename(sourcePath, destItemPath); err != nil {
-				// If rename fails (e.g., cross-device), fall back to copy and remove
-				if err := copyAndVerify(sourcePath, destItemPath); err != nil {
-					return fmt.Errorf("failed to move file %s: %w", relPath, err)
-				}
+			if err := MoveFile(sourcePath, destItemPath); err != nil {
+				return fmt.Errorf("failed to move file %s: %w", relPath, err)
 			}
 
 			// Create parent directory in original location if needed
@@ -174,7 +168,7 @@ func performDirectoryAdoption(absSource, destPath string) error {
 			}
 
 			// Create symlink back
-			if err := os.Symlink(destItemPath, sourcePath); err != nil {
+			if err := CreateSymlink(destItemPath, sourcePath); err != nil {
 				// Rollback: move file back
 				if rollbackErr := os.Rename(destItemPath, sourcePath); rollbackErr != nil {
 					return fmt.Errorf("failed to create symlink: %v (rollback also failed: %v)", err, rollbackErr)
@@ -206,46 +200,6 @@ func performDirectoryAdoption(absSource, destPath string) error {
 }
 
 // copyAndVerify copies a file and verifies the copy succeeded
-func copyAndVerify(absSource, destPath string) error {
-	// First, try to copy the file
-	if copyErr := copyPath(absSource, destPath); copyErr != nil {
-		return fmt.Errorf("failed to copy to repository: %w", copyErr)
-	}
-
-	// Verify the copy succeeded by comparing file info
-	srcInfo, err := os.Stat(absSource)
-	if err != nil {
-		// Source disappeared? Clean up and fail
-		os.RemoveAll(destPath)
-		return fmt.Errorf("failed to copy: source file disappeared during operation: %w", err)
-	}
-	dstInfo, err := os.Stat(destPath)
-	if err != nil {
-		// Copy didn't complete properly
-		os.RemoveAll(destPath)
-		return fmt.Errorf("failed to copy: destination file not created properly: %w", err)
-	}
-
-	// For files, verify size matches
-	if !srcInfo.IsDir() && srcInfo.Size() != dstInfo.Size() {
-		os.RemoveAll(destPath)
-		return fmt.Errorf("failed to verify copy: size mismatch (src: %d, dst: %d)", srcInfo.Size(), dstInfo.Size())
-	}
-
-	// Now try to remove the original
-	if err := os.RemoveAll(absSource); err != nil {
-		// Removal failed - we now have the file in both places
-		// Try to clean up the copy
-		if cleanupErr := os.RemoveAll(destPath); cleanupErr != nil {
-			// Both the original removal and cleanup failed
-			return fmt.Errorf("failed to complete adoption: file exists in both locations. Failed to remove original (%v) and failed to clean up copy (%v). Manual intervention required", err, cleanupErr)
-		}
-		return fmt.Errorf("failed to remove original after copy: %w", err)
-	}
-
-	return nil
-}
-
 // Adopt adopts files into a package using the options-based interface
 func Adopt(opts AdoptOptions) error {
 	PrintCommandHeader("Adopting Files")
@@ -256,24 +210,14 @@ func Adopt(opts AdoptOptions) error {
 			"Specify which files to adopt, e.g.: lnk -A ~/.bashrc ~/.vimrc")
 	}
 
-	// Expand paths
-	absSourceDir, err := ExpandPath(opts.SourceDir)
+	// Expand and validate paths
+	paths, err := ResolvePaths(opts.SourceDir, opts.TargetDir)
 	if err != nil {
-		return fmt.Errorf("failed to expand source directory: %w", err)
+		return err
 	}
+	absSourceDir, absTargetDir := paths.SourceDir, paths.TargetDir
 	PrintVerbose("Source directory: %s", absSourceDir)
-
-	absTargetDir, err := ExpandPath(opts.TargetDir)
-	if err != nil {
-		return fmt.Errorf("failed to expand target directory: %w", err)
-	}
 	PrintVerbose("Target directory: %s", absTargetDir)
-
-	// Validate source directory exists
-	if _, err := os.Stat(absSourceDir); os.IsNotExist(err) {
-		return NewValidationErrorWithHint("source directory", absSourceDir, "does not exist",
-			fmt.Sprintf("Create it first: mkdir -p %s", absSourceDir))
-	}
 
 	// Process each file path
 	adopted := 0

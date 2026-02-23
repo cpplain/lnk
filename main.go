@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cpplain/lnk/internal/lnk"
+	"github.com/cpplain/lnk/lnk"
 )
 
 // Version variables set via ldflags during build

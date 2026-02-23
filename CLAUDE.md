@@ -14,8 +14,8 @@ make build                  # Build binary to bin/lnk with version from git tags
 
 # Testing
 make test                   # Run all tests (unit + e2e)
-make test-unit              # Run unit tests only (internal/lnk)
-make test-e2e               # Run e2e tests only (e2e/)
+make test-unit              # Run unit tests only (lnk/)
+make test-e2e               # Run e2e tests only (test/)
 make test-coverage          # Generate coverage report (coverage.html)
 
 # Code Quality
@@ -28,21 +28,21 @@ make check                  # Run fmt, test, and lint in sequence
 
 ### Core Components
 
-- **cmd/lnk/main.go**: CLI entry point with POSIX-style flag parsing. Action flags (-C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan) determine the operation. For C/R/S operations, the positional argument specifies the source directory. For A/O operations, positional arguments specify files to manage.
+- **main.go**: CLI entry point with POSIX-style flag parsing. Action flags (-C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan) determine the operation. For C/R/S operations, the positional argument specifies the source directory. For A/O operations, positional arguments specify files to manage.
 
-- **internal/lnk/config.go**: Configuration system with `.lnkconfig` file support. Config files can specify target directory and ignore patterns using stow-style format (one flag per line). CLI flags override config file values. Config file search locations:
+- **lnk/config.go**: Configuration system with `.lnkconfig` file support. Config files can specify target directory and ignore patterns using stow-style format (one flag per line). CLI flags override config file values. Config file search locations:
   1. `.lnkconfig` in source directory
   2. `.lnkconfig` in home directory (~/.lnkconfig)
   3. Built-in defaults if no config found
 
-- **internal/lnk/linker.go**: Symlink operations with 3-phase execution:
+- **lnk/create.go, lnk/remove.go**: Symlink operations with 3-phase execution:
   1. Collect planned links (recursive file traversal)
   2. Validate all targets
   3. Execute or show dry-run
 
-- **internal/lnk/adopt.go**: Moves files from target to source directory and creates symlinks
+- **lnk/adopt.go**: Moves files from target to source directory and creates symlinks
 
-- **internal/lnk/orphan.go**: Removes symlinks and restores actual files to target locations
+- **lnk/orphan.go**: Removes symlinks and restores actual files to target locations
 
 ### Key Design Patterns
 
@@ -108,9 +108,9 @@ type OrphanOptions struct {
 
 ### Testing Structure
 
-- **Unit tests**: `internal/lnk/*_test.go` - use `testutil_test.go` helpers for temp dirs
-- **E2E tests**: `e2e/e2e_test.go` - full workflow testing
-- Test data: Use `e2e/helpers_test.go` for creating test repositories
+- **Unit tests**: `lnk/*_test.go` - use `testutil_test.go` helpers for temp dirs
+- **E2E tests**: `test/e2e_test.go` - full workflow testing
+- Test data: Use `test/helpers_test.go` for creating test repositories
 
 ## Development Guidelines
 
@@ -148,10 +148,10 @@ From [cpplain/cli-design](https://github.com/cpplain/cli-design):
 ### Adding a New Operation
 
 1. Add new action flag to `main.go` (e.g., `-X/--new-operation`)
-2. Create options struct in `internal/lnk/` following the pattern (e.g., `NewOperationOptions`)
-3. Implement operation function in `internal/lnk/` (e.g., `func NewOperation(opts NewOperationOptions) error`)
+2. Create options struct in `lnk/` following the pattern (e.g., `NewOperationOptions`)
+3. Implement operation function in `lnk/` (e.g., `func NewOperation(opts NewOperationOptions) error`)
 4. Add case in `main.go` to handle the new flag and construct options
-5. Add tests in `internal/lnk/xxx_test.go`
+5. Add tests in `lnk/xxx_test.go`
 6. Add e2e test if appropriate
 
 ### Modifying Configuration
@@ -163,8 +163,8 @@ From [cpplain/cli-design](https://github.com/cpplain/cli-design):
 ### Running Single Test
 
 ```bash
-go test -v ./internal/lnk -run TestFunctionName
-go test -v ./e2e -run TestE2EName
+go test -v ./lnk -run TestFunctionName
+go test -v ./test -run TestE2EName
 ```
 
 ## Technical Notes

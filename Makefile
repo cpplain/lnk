@@ -25,7 +25,7 @@ build:
 	@# Generate dev+timestamp for local builds (releases override via ldflags)
 	@VERSION=$$(date -u '+dev+%Y%m%d%H%M%S'); \
 	echo "Building lnk $$VERSION..."; \
-	go build -ldflags "-X 'main.version=$$VERSION'" -o bin/lnk cmd/lnk/main.go
+	go build -ldflags "-X 'main.version=$$VERSION'" -o bin/lnk .
 
 # Clean build artifacts
 clean:
@@ -34,7 +34,7 @@ clean:
 
 # Clean test artifacts
 clean-test:
-	rm -rf e2e/testdata/
+	rm -rf test/testdata/
 	@echo "Test data cleaned. Run 'scripts/setup-testdata.sh' to recreate."
 
 # Run tests
@@ -43,11 +43,11 @@ test:
 
 # Run unit tests only
 test-unit:
-	go test -v ./internal/...
+	go test -v ./lnk/...
 
 # Run E2E tests only
 test-e2e:
-	go test -v ./e2e/...
+	go test -v ./test/...
 
 # Run tests with coverage
 test-coverage:

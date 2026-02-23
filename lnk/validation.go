@@ -111,3 +111,44 @@ func ValidateSymlinkCreation(source, target string) error {
 	// Check for overlapping paths
 	return ValidateNoOverlappingPaths(source, target)
 }
+
+// ResolvedPaths contains expanded and validated paths for operations
+type ResolvedPaths struct {
+	SourceDir string
+	TargetDir string
+}
+
+// ResolvePaths expands and validates source and target directories.
+// Returns error if source directory doesn't exist or isn't a directory.
+func ResolvePaths(sourceDir, targetDir string) (*ResolvedPaths, error) {
+	// Expand source path
+	absSource, err := ExpandPath(sourceDir)
+	if err != nil {
+		return nil, fmt.Errorf("expanding source directory %s: %w", sourceDir, err)
+	}
+
+	// Expand target path
+	absTarget, err := ExpandPath(targetDir)
+	if err != nil {
+		return nil, fmt.Errorf("expanding target directory %s: %w", targetDir, err)
+	}
+
+	// Validate source directory exists and is a directory
+	if info, err := os.Stat(absSource); err != nil {
+		if os.IsNotExist(err) {
+			return nil, NewValidationErrorWithHint("source directory", absSource,
+				"directory does not exist",
+				"Ensure the source directory exists or specify a different path")
+		}
+		return nil, fmt.Errorf("failed to check source directory: %w", err)
+	} else if !info.IsDir() {
+		return nil, NewValidationErrorWithHint("source directory", absSource,
+			"path is not a directory",
+			"The source path must be a directory")
+	}
+
+	return &ResolvedPaths{
+		SourceDir: absSource,
+		TargetDir: absTarget,
+	}, nil
+}

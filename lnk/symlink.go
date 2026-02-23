@@ -1,6 +1,7 @@
 package lnk
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -95,4 +96,59 @@ func FindManagedLinks(startPath string, sources []string) ([]ManagedLink, error)
 	}
 
 	return links, err
+}
+
+// LinkExistsError indicates a symlink already exists with the correct target
+type LinkExistsError struct {
+	target string
+}
+
+func (e LinkExistsError) Error() string {
+	return fmt.Sprintf("symlink already exists: %s", e.target)
+}
+
+// CreateSymlink creates a single symlink, handling existing files/links
+func CreateSymlink(source, target string) error {
+	// Check if target exists
+	if info, err := os.Lstat(target); err == nil {
+		// If it's already a symlink pointing to our source, nothing to do
+		if info.Mode()&os.ModeSymlink != 0 {
+			if existingTarget, err := os.Readlink(target); err == nil && existingTarget == source {
+				return LinkExistsError{target: target}
+			}
+			// Remove existing symlink pointing elsewhere
+			if err := os.Remove(target); err != nil {
+				return NewLinkErrorWithHint("remove existing link", source, target, err,
+					"Check file permissions and ensure you have write access to the target directory")
+			}
+		} else {
+			// Target exists and is not a symlink
+			return NewLinkErrorWithHint("create symlink", source, target,
+				fmt.Errorf("file already exists and is not a symlink"),
+				fmt.Sprintf("Use 'lnk adopt %s <source-dir>' to adopt this file first", target))
+		}
+	}
+
+	// Create new symlink
+	if err := os.Symlink(source, target); err != nil {
+		return NewLinkErrorWithHint("create symlink", source, target, err,
+			"Check that the parent directory exists and you have write permissions")
+	}
+
+	PrintSuccess("Created: %s", ContractPath(target))
+	return nil
+}
+
+// RemoveSymlink removes a symlink at the given path.
+// Returns error if path is not a symlink or removal fails.
+func RemoveSymlink(path string) error {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return NewPathError("remove symlink", path, err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		return NewPathErrorWithHint("remove symlink", path, fmt.Errorf("not a symlink"),
+			"Only symlinks can be removed with this operation")
+	}
+	return os.Remove(path)
 }

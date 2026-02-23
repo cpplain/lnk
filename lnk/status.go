@@ -2,34 +2,17 @@ package lnk
 
 import (
 	"fmt"
-	"os"
 	"sort"
 )
 
 // Status displays the status of managed symlinks for the source directory
 func Status(opts LinkOptions) error {
-	// Expand source path
-	sourceDir, err := ExpandPath(opts.SourceDir)
+	// Expand and validate paths
+	paths, err := ResolvePaths(opts.SourceDir, opts.TargetDir)
 	if err != nil {
-		return fmt.Errorf("expanding source directory: %w", err)
+		return err
 	}
-
-	// Check if source directory exists
-	if info, err := os.Stat(sourceDir); err != nil {
-		if os.IsNotExist(err) {
-			return NewPathError("source directory", sourceDir, err)
-		}
-		return fmt.Errorf("failed to check source directory: %w", err)
-	} else if !info.IsDir() {
-		return NewValidationErrorWithHint("source", sourceDir, "is not a directory",
-			"Source must be a directory")
-	}
-
-	// Expand target path
-	targetDir, err := ExpandPath(opts.TargetDir)
-	if err != nil {
-		return fmt.Errorf("expanding target directory: %w", err)
-	}
+	sourceDir, targetDir := paths.SourceDir, paths.TargetDir
 
 	PrintCommandHeader("Symlink Status")
 	PrintVerbose("Source directory: %s", sourceDir)

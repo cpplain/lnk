@@ -1,4 +1,4 @@
-package e2e
+package test
 
 import (
 	"os"
@@ -12,8 +12,8 @@ func TestCompleteWorkflow(t *testing.T) {
 	defer cleanup()
 
 	projectRoot := getProjectRoot(t)
-	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
-	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
+	sourceDir := filepath.Join(projectRoot, "test", "testdata", "dotfiles")
+	targetDir := filepath.Join(projectRoot, "test", "testdata", "target")
 
 	// Step 1: Initial status - should have no links
 	t.Run("initial status", func(t *testing.T) {
@@ -98,8 +98,8 @@ func TestFlatRepositoryWorkflow(t *testing.T) {
 
 	projectRoot := getProjectRoot(t)
 	// Use private/home directory as source (has .ssh/ which works in sandbox)
-	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles", "private", "home")
-	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
+	sourceDir := filepath.Join(projectRoot, "test", "testdata", "dotfiles", "private", "home")
+	targetDir := filepath.Join(projectRoot, "test", "testdata", "target")
 
 	// Step 1: Create links from source directory
 	t.Run("create from source directory", func(t *testing.T) {
@@ -136,8 +136,8 @@ func TestEdgeCases(t *testing.T) {
 	defer cleanup()
 
 	projectRoot := getProjectRoot(t)
-	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
-	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
+	sourceDir := filepath.Join(projectRoot, "test", "testdata", "dotfiles")
+	targetDir := filepath.Join(projectRoot, "test", "testdata", "target")
 
 	tests := []struct {
 		name     string
@@ -233,8 +233,8 @@ func TestPermissionHandling(t *testing.T) {
 	defer cleanup()
 
 	projectRoot := getProjectRoot(t)
-	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
-	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
+	sourceDir := filepath.Join(projectRoot, "test", "testdata", "dotfiles")
+	targetDir := filepath.Join(projectRoot, "test", "testdata", "target")
 
 	t.Run("create in read-only directory", func(t *testing.T) {
 		// Create a read-only subdirectory
@@ -273,8 +273,8 @@ func TestIgnorePatterns(t *testing.T) {
 	defer cleanup()
 
 	projectRoot := getProjectRoot(t)
-	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
-	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
+	sourceDir := filepath.Join(projectRoot, "test", "testdata", "dotfiles")
+	targetDir := filepath.Join(projectRoot, "test", "testdata", "target")
 
 	t.Run("ignore pattern via CLI flag", func(t *testing.T) {
 		// Use home source directory and ignore readonly

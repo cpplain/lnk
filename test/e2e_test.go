@@ -1,4 +1,4 @@
-// Package e2e contains end-to-end tests that verify lnk's CLI behavior by
+// Package test contains end-to-end tests that verify lnk's CLI behavior by
 // building and executing the actual binary. These tests complement unit tests
 // by ensuring the command-line interface works correctly from a user's perspective.
 //
@@ -6,7 +6,7 @@
 //   - e2e_test.go: Core command tests (version, help, status, create, remove, etc.)
 //   - workflows_test.go: Multi-command workflow tests and edge cases
 //   - helpers_test.go: Test utilities for building binary and running commands
-package e2e
+package test
 
 import (
 	"encoding/json"
@@ -139,8 +139,8 @@ func TestStatus(t *testing.T) {
 	defer cleanup()
 
 	projectRoot := getProjectRoot(t)
-	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
-	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
+	sourceDir := filepath.Join(projectRoot, "test", "testdata", "dotfiles")
+	targetDir := filepath.Join(projectRoot, "test", "testdata", "target")
 
 	tests := []struct {
 		name     string
@@ -216,8 +216,8 @@ func TestCreate(t *testing.T) {
 	defer cleanup()
 
 	projectRoot := getProjectRoot(t)
-	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
-	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
+	sourceDir := filepath.Join(projectRoot, "test", "testdata", "dotfiles")
+	targetDir := filepath.Join(projectRoot, "test", "testdata", "target")
 
 	tests := []struct {
 		name     string
@@ -301,8 +301,8 @@ func TestRemove(t *testing.T) {
 	defer cleanup()
 
 	projectRoot := getProjectRoot(t)
-	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
-	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
+	sourceDir := filepath.Join(projectRoot, "test", "testdata", "dotfiles")
+	targetDir := filepath.Join(projectRoot, "test", "testdata", "target")
 
 	// First create some links
 	homeSourceDir := filepath.Join(sourceDir, "home")
@@ -359,8 +359,8 @@ func TestAdopt(t *testing.T) {
 	defer cleanup()
 
 	projectRoot := getProjectRoot(t)
-	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
-	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
+	sourceDir := filepath.Join(projectRoot, "test", "testdata", "dotfiles")
+	targetDir := filepath.Join(projectRoot, "test", "testdata", "target")
 
 	tests := []struct {
 		name     string
@@ -470,8 +470,8 @@ func TestOrphan(t *testing.T) {
 	defer cleanup()
 
 	projectRoot := getProjectRoot(t)
-	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
-	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
+	sourceDir := filepath.Join(projectRoot, "test", "testdata", "dotfiles")
+	targetDir := filepath.Join(projectRoot, "test", "testdata", "target")
 
 	// Create links from home source directory (has readonly/test)
 	homeSourceDir := filepath.Join(sourceDir, "home")
@@ -544,8 +544,8 @@ func TestPrune(t *testing.T) {
 	defer cleanup()
 
 	projectRoot := getProjectRoot(t)
-	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
-	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
+	sourceDir := filepath.Join(projectRoot, "test", "testdata", "dotfiles")
+	targetDir := filepath.Join(projectRoot, "test", "testdata", "target")
 
 	// Create a broken symlink that points to a file within the configured source directory
 	homeSourceDir := filepath.Join(sourceDir, "home")
@@ -609,8 +609,8 @@ func TestGlobalFlags(t *testing.T) {
 	defer cleanup()
 
 	projectRoot := getProjectRoot(t)
-	sourceDir := filepath.Join(projectRoot, "e2e", "testdata", "dotfiles")
-	targetDir := filepath.Join(projectRoot, "e2e", "testdata", "target")
+	sourceDir := filepath.Join(projectRoot, "test", "testdata", "dotfiles")
+	targetDir := filepath.Join(projectRoot, "test", "testdata", "target")
 
 	tests := []struct {
 		name        string

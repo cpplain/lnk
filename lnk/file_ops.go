@@ -119,3 +119,46 @@ func copyDir(src, dst string) error {
 
 	return nil
 }
+
+// MoveFile moves a file from src to dst, using os.Rename when possible
+// and falling back to copy+delete for cross-device moves.
+// Returns error if the move fails.
+func MoveFile(src, dst string) error {
+	// Try rename first (fast path for same filesystem)
+	if err := os.Rename(src, dst); err == nil {
+		return nil
+	}
+
+	// Fall back to copy and remove for cross-device
+	return copyAndRemove(src, dst)
+}
+
+// copyAndRemove copies a file and removes the original
+func copyAndRemove(src, dst string) error {
+	if err := copyPath(src, dst); err != nil {
+		return fmt.Errorf("failed to copy: %w", err)
+	}
+
+	// Verify the copy
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		os.RemoveAll(dst)
+		return fmt.Errorf("source disappeared during copy: %w", err)
+	}
+	dstInfo, err := os.Stat(dst)
+	if err != nil {
+		return fmt.Errorf("destination not created: %w", err)
+	}
+	if !srcInfo.IsDir() && srcInfo.Size() != dstInfo.Size() {
+		os.RemoveAll(dst)
+		return fmt.Errorf("size mismatch after copy")
+	}
+
+	// Remove the original
+	if err := os.RemoveAll(src); err != nil {
+		os.RemoveAll(dst)
+		return fmt.Errorf("failed to remove original: %w", err)
+	}
+
+	return nil
+}
