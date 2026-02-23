@@ -7,29 +7,6 @@ import (
 	"testing"
 )
 
-// CaptureStdin temporarily replaces stdin with the provided input
-func CaptureStdin(t *testing.T, input string) func() {
-	t.Helper()
-
-	oldStdin := os.Stdin
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	os.Stdin = r
-
-	go func() {
-		defer w.Close()
-		io.WriteString(w, input)
-	}()
-
-	return func() {
-		os.Stdin = oldStdin
-		r.Close()
-	}
-}
-
 // CaptureOutput captures stdout during function execution
 func CaptureOutput(t *testing.T, fn func()) string {
 	t.Helper()

@@ -9,8 +9,7 @@ const (
 
 // File operation timeouts (in seconds)
 const (
-	GitCommandTimeout   = 5
-	GitOperationTimeout = 10
+	GitCommandTimeout = 5
 )
 
 // Configuration file names

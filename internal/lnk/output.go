@@ -34,7 +34,6 @@ package lnk
 import (
 	"fmt"
 	"os"
-	"text/tabwriter"
 )
 
 // PrintHeader prints a bold header for command output
@@ -157,16 +156,6 @@ func PrintVerbose(format string, args ...interface{}) {
 // PrintHelpSection prints a section header for help text
 func PrintHelpSection(title string) {
 	fmt.Println(Bold(title))
-}
-
-// PrintHelpItem prints an aligned help item using tabwriter
-// This ensures consistent spacing across all help sections
-func PrintHelpItem(name, description string) {
-	// Using a single shared tabwriter would be more efficient,
-	// but for simplicity we create one per call
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintf(w, "  %s\t%s\n", name, description)
-	w.Flush()
 }
 
 // PrintHelpItems prints multiple aligned help items at once
