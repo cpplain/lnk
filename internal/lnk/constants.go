@@ -7,11 +7,6 @@ const (
 	TrashDir   = ".Trash"
 )
 
-// File operation timeouts (in seconds)
-const (
-	GitCommandTimeout = 5
-)
-
 // Configuration file names
 const (
 	ConfigFileName = ".lnkconfig" // Configuration file

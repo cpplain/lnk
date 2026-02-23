@@ -120,13 +120,19 @@ func loadConfigFile(sourceDir string) (*FileConfig, string, error) {
 		return nil, "", fmt.Errorf("failed to get home directory: %w", err)
 	}
 
+	// Determine XDG config directory (inline)
+	xdgConfigDir := os.Getenv("XDG_CONFIG_HOME")
+	if xdgConfigDir == "" {
+		xdgConfigDir = filepath.Join(homeDir, ".config")
+	}
+
 	// Define search paths in precedence order
 	configPaths := []struct {
 		path   string
 		source string
 	}{
 		{filepath.Join(absSourceDir, ConfigFileName), "source directory"},
-		{filepath.Join(getXDGConfigDir(), "config"), "XDG config directory"},
+		{filepath.Join(xdgConfigDir, "lnk", "config"), "XDG config directory"},
 		{filepath.Join(homeDir, ".config", "lnk", "config"), "user config directory"},
 		{filepath.Join(homeDir, ConfigFileName), "home directory"},
 	}
@@ -227,21 +233,6 @@ func LoadConfig(sourceDir, cliTarget string, cliIgnorePatterns []string) (*Confi
 		TargetDir:      targetDir,
 		IgnorePatterns: ignorePatterns,
 	}, nil
-}
-
-// getXDGConfigDir returns the XDG config directory for lnk
-func getXDGConfigDir() string {
-	// Check XDG_CONFIG_HOME first
-	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" {
-		return filepath.Join(xdgConfigHome, "lnk")
-	}
-
-	// Fall back to ~/.config/lnk
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return ""
-	}
-	return filepath.Join(homeDir, ".config", "lnk")
 }
 
 // getBuiltInIgnorePatterns returns the built-in default ignore patterns

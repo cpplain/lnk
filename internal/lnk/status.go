@@ -58,7 +58,7 @@ func Status(opts LinkOptions) error {
 	}
 
 	// Find all symlinks for the source directory
-	managedLinks, err := findManagedLinksForSource(targetDir, sourceDir)
+	managedLinks, err := FindManagedLinks(targetDir, []string{sourceDir})
 	if err != nil {
 		return fmt.Errorf("failed to find managed links: %w", err)
 	}

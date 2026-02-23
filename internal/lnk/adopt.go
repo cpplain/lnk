@@ -62,12 +62,7 @@ func performAdoption(absSource, destPath string) error {
 		return performDirectoryAdoption(absSource, destPath)
 	}
 
-	// For files, use the original logic
-	return performFileAdoption(absSource, destPath)
-}
-
-// performFileAdoption handles adoption of a single file
-func performFileAdoption(absSource, destPath string) error {
+	// For files, perform adoption inline
 	// Create parent directory
 	destDir := filepath.Dir(destPath)
 	if err := os.MkdirAll(destDir, 0755); err != nil {

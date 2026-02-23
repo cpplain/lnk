@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // PlannedLink represents a source file and its target symlink location
@@ -126,80 +125,6 @@ func CreateLinks(opts LinkOptions) error {
 	return executePlannedLinks(plannedLinks)
 }
 
-// findManagedLinksForSource finds all symlinks in targetDir that point to the source directory
-func findManagedLinksForSource(targetDir, sourceDir string) ([]ManagedLink, error) {
-	var links []ManagedLink
-	var walkErrors []error
-
-	err := filepath.Walk(targetDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			PrintVerbose("Error walking path %s: %v", path, err)
-			walkErrors = append(walkErrors, err)
-			return nil
-		}
-
-		// Skip directories
-		if info.IsDir() {
-			name := filepath.Base(path)
-			// Skip specific system directories
-			if name == LibraryDir || name == TrashDir {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-
-		// Check if it's a symlink
-		if info.Mode()&os.ModeSymlink == 0 {
-			return nil
-		}
-
-		// Read symlink target
-		target, err := os.Readlink(path)
-		if err != nil {
-			PrintVerbose("Failed to read symlink %s: %v", path, err)
-			return nil
-		}
-
-		// Get absolute target path
-		absTarget := target
-		if !filepath.IsAbs(target) {
-			absTarget = filepath.Join(filepath.Dir(path), target)
-		}
-		cleanTarget, err := filepath.Abs(absTarget)
-		if err != nil {
-			PrintVerbose("Failed to get absolute path for target %s: %v", target, err)
-			return nil
-		}
-
-		// Check if target points to our source directory
-		relPath, err := filepath.Rel(sourceDir, cleanTarget)
-		if err != nil || strings.HasPrefix(relPath, "..") || relPath == "." {
-			return nil
-		}
-
-		link := ManagedLink{
-			Path:   path,
-			Target: target,
-			Source: sourceDir,
-		}
-
-		// Check if link is broken
-		if _, err := os.Stat(cleanTarget); err != nil {
-			link.IsBroken = true
-		}
-
-		links = append(links, link)
-		return nil
-	})
-
-	// Warn if there were errors during walk
-	if len(walkErrors) > 0 {
-		PrintVerbose("Encountered %d errors during filesystem walk - results may be incomplete", len(walkErrors))
-	}
-
-	return links, err
-}
-
 // RemoveLinks removes symlinks managed by the source directory
 func RemoveLinks(opts LinkOptions) error {
 	PrintCommandHeader("Removing Symlinks")
@@ -229,7 +154,7 @@ func RemoveLinks(opts LinkOptions) error {
 
 	// Find all managed links for the source directory
 	PrintVerbose("Searching for managed links in %s", targetDir)
-	links, err := findManagedLinksForSource(targetDir, sourceDir)
+	links, err := FindManagedLinks(targetDir, []string{sourceDir})
 	if err != nil {
 		return fmt.Errorf("failed to find managed links: %w", err)
 	}
@@ -306,7 +231,7 @@ func Prune(opts LinkOptions) error {
 
 	// Find all managed links for the source directory
 	PrintVerbose("Searching for managed links in %s", targetDir)
-	links, err := findManagedLinksForSource(targetDir, sourceDir)
+	links, err := FindManagedLinks(targetDir, []string{sourceDir})
 	if err != nil {
 		return fmt.Errorf("failed to find managed links: %w", err)
 	}

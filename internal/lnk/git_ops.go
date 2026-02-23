@@ -13,7 +13,7 @@ import (
 // removeFromRepository removes a file from the repository (both git tracking and filesystem)
 func removeFromRepository(path string) error {
 	// Try git rm first - it will handle both git tracking and filesystem removal
-	ctx, cancel := context.WithTimeout(context.Background(), GitCommandTimeout*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "git", "rm", "-f", "--", path)
