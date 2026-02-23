@@ -48,8 +48,14 @@ func ValidateNoCircularSymlink(source, target string) error {
 	}
 
 	// Also check if source is within target directory (would create a loop)
-	absSource, _ := filepath.Abs(source)
-	absTarget, _ := filepath.Abs(target)
+	absSource, err := filepath.Abs(source)
+	if err != nil {
+		return fmt.Errorf("failed to resolve source path: %w", err)
+	}
+	absTarget, err := filepath.Abs(target)
+	if err != nil {
+		return fmt.Errorf("failed to resolve target path: %w", err)
+	}
 
 	if strings.HasPrefix(absSource, absTarget+string(filepath.Separator)) {
 		return NewValidationErrorWithHint("symlink", absSource,
