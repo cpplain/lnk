@@ -17,6 +17,7 @@ type ProgressIndicator struct {
 	mu         sync.Mutex
 	active     bool
 	spinner    int
+	done       chan struct{}
 }
 
 var spinnerChars = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
@@ -38,9 +39,11 @@ func (p *ProgressIndicator) Start() {
 
 	p.mu.Lock()
 	p.active = true
+	p.done = make(chan struct{})
 	p.mu.Unlock()
 
 	go func() {
+		defer close(p.done)
 		for {
 			p.mu.Lock()
 			if !p.active {
@@ -66,7 +69,13 @@ func (p *ProgressIndicator) Stop() {
 
 	p.mu.Lock()
 	p.active = false
+	done := p.done
 	p.mu.Unlock()
+
+	// Wait for goroutine to exit
+	if done != nil {
+		<-done
+	}
 
 	// Clear the line
 	fmt.Printf("\r%s\r", strings.Repeat(" ", 80))

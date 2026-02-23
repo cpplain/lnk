@@ -129,10 +129,12 @@ func CreateLinks(opts LinkOptions) error {
 // findManagedLinksForSource finds all symlinks in targetDir that point to the source directory
 func findManagedLinksForSource(targetDir, sourceDir string) ([]ManagedLink, error) {
 	var links []ManagedLink
+	var walkErrors []error
 
 	err := filepath.Walk(targetDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			PrintVerbose("Error walking path %s: %v", path, err)
+			walkErrors = append(walkErrors, err)
 			return nil
 		}
 
@@ -189,6 +191,11 @@ func findManagedLinksForSource(targetDir, sourceDir string) ([]ManagedLink, erro
 		links = append(links, link)
 		return nil
 	})
+
+	// Warn if there were errors during walk
+	if len(walkErrors) > 0 {
+		PrintVerbose("Encountered %d errors during filesystem walk - results may be incomplete", len(walkErrors))
+	}
 
 	return links, err
 }

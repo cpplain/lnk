@@ -18,10 +18,12 @@ type ManagedLink struct {
 // sources should be absolute paths (use ExpandPath first if needed).
 func FindManagedLinks(startPath string, sources []string) ([]ManagedLink, error) {
 	var links []ManagedLink
+	var walkErrors []error
 
 	err := filepath.Walk(startPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			PrintVerbose("Error walking path %s: %v", path, err)
+			walkErrors = append(walkErrors, err)
 			return nil
 		}
 
@@ -86,6 +88,11 @@ func FindManagedLinks(startPath string, sources []string) ([]ManagedLink, error)
 		links = append(links, link)
 		return nil
 	})
+
+	// Warn if there were errors during walk
+	if len(walkErrors) > 0 {
+		PrintVerbose("Encountered %d errors during filesystem walk - results may be incomplete", len(walkErrors))
+	}
 
 	return links, err
 }
