@@ -85,13 +85,6 @@ func Yellow(s string) string {
 	return fmt.Sprintf("%s%s%s", ColorYellow, s, ColorReset)
 }
 
-func Blue(s string) string {
-	if !ShouldEnableColor() {
-		return s
-	}
-	return fmt.Sprintf("%s%s%s", ColorBlue, s, ColorReset)
-}
-
 func Cyan(s string) string {
 	if !ShouldEnableColor() {
 		return s

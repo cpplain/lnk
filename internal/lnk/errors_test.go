@@ -195,48 +195,6 @@ func TestErrorHelpers(t *testing.T) {
 			t.Errorf("Err = %v, want %v", pe.Err, err)
 		}
 	})
-
-	t.Run("NewLinkError", func(t *testing.T) {
-		err := errors.New("test error")
-		linkErr := NewLinkError("link-op", "/src", "/dst", err)
-
-		le, ok := linkErr.(*LinkError)
-		if !ok {
-			t.Fatal("NewLinkError should return *LinkError")
-		}
-
-		if le.Op != "link-op" {
-			t.Errorf("Op = %q, want %q", le.Op, "link-op")
-		}
-		if le.Source != "/src" {
-			t.Errorf("Source = %q, want %q", le.Source, "/src")
-		}
-		if le.Target != "/dst" {
-			t.Errorf("Target = %q, want %q", le.Target, "/dst")
-		}
-		if le.Err != err {
-			t.Errorf("Err = %v, want %v", le.Err, err)
-		}
-	})
-
-	t.Run("NewValidationError", func(t *testing.T) {
-		valErr := NewValidationError("field", "value", "message")
-
-		ve, ok := valErr.(*ValidationError)
-		if !ok {
-			t.Fatal("NewValidationError should return *ValidationError")
-		}
-
-		if ve.Field != "field" {
-			t.Errorf("Field = %q, want %q", ve.Field, "field")
-		}
-		if ve.Value != "value" {
-			t.Errorf("Value = %q, want %q", ve.Value, "value")
-		}
-		if ve.Message != "message" {
-			t.Errorf("Message = %q, want %q", ve.Message, "message")
-		}
-	})
 }
 
 func TestStandardErrors(t *testing.T) {
@@ -245,8 +203,6 @@ func TestStandardErrors(t *testing.T) {
 		err      error
 		expected string
 	}{
-		{ErrConfigNotFound, "configuration file not found"},
-		{ErrInvalidConfig, "invalid configuration"},
 		{ErrNotSymlink, "not a symlink"},
 		{ErrAlreadyAdopted, "file already adopted"},
 	}
@@ -271,7 +227,7 @@ func TestErrorWrapping(t *testing.T) {
 
 	// Test with custom error
 	customErr := errors.New("custom")
-	linkErr := NewLinkError("link", "/a", "/b", customErr)
+	linkErr := &LinkError{Op: "link", Source: "/a", Target: "/b", Err: customErr}
 
 	if !errors.Is(linkErr, customErr) {
 		t.Error("errors.Is should find wrapped custom error")

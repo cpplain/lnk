@@ -60,9 +60,6 @@ func TestColorOutput(t *testing.T) {
 				if Yellow(testString) != testString {
 					t.Errorf("Yellow() should return plain text when NO_COLOR is set")
 				}
-				if Blue(testString) != testString {
-					t.Errorf("Blue() should return plain text when NO_COLOR is set")
-				}
 				if Cyan(testString) != testString {
 					t.Errorf("Cyan() should return plain text when NO_COLOR is set")
 				}
