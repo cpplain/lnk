@@ -169,8 +169,8 @@ func TestEdgeCases(t *testing.T) {
 				}
 			},
 			args:     []string{"-C", "-t", targetDir, filepath.Join(sourceDir, "home")},
-			wantExit: 0,
-			contains: []string{"Failed to link", ".regularfile"},
+			wantExit: 1, // Error exit code when some links fail
+			contains: []string{"Failed to create 1 symlink(s)"},
 		},
 		{
 			name: "orphan non-symlink",
@@ -197,8 +197,8 @@ func TestEdgeCases(t *testing.T) {
 			},
 			args: []string{"-A", "-s", filepath.Join(sourceDir, "private", "home"), "-t", targetDir,
 				filepath.Join(targetDir, ".ssh", "config")},
-			wantExit: 0, // Graceful error handling
-			contains: []string{"already adopted"},
+			wantExit: 1, // Error exit code when adoption fails
+			contains: []string{"failed to adopt 1 file(s)"},
 		},
 	}
 
@@ -260,11 +260,10 @@ func TestPermissionHandling(t *testing.T) {
 		}
 
 		result := runCommand(t, "-C", "-t", targetDir, homeSourceDir)
-		// Should handle permission error gracefully
-		assertExitCode(t, result, 0) // Other links should still be created
-		// Check both stdout and stderr for permission error
-		combined := result.Stdout + result.Stderr
-		assertContains(t, combined, "permission denied")
+		// Should return error when some links fail
+		assertExitCode(t, result, 1) // Error exit code due to permission failure
+		// Check stderr for permission error
+		assertContains(t, result.Stderr, "failed to create 1 symlink(s)")
 	})
 }
 

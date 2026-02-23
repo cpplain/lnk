@@ -415,6 +415,7 @@ func executePlannedLinks(links []PlannedLink) error {
 	}
 	if failed > 0 {
 		PrintWarning("Failed to create %d symlink(s)", failed)
+		return fmt.Errorf("failed to create %d symlink(s)", failed)
 	}
 
 	return nil

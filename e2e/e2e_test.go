@@ -400,8 +400,8 @@ func TestAdopt(t *testing.T) {
 			name: "adopt non-existent file",
 			args: []string{"-A", "-s", filepath.Join(sourceDir, "home"), "-t", targetDir,
 				filepath.Join(targetDir, ".doesnotexist")},
-			wantExit: 0, // Continues processing (graceful error handling)
-			contains: []string{"No files were adopted"},
+			wantExit: 1, // Error exit code when adoption fails
+			contains: []string{"failed to adopt 1 file(s)"},
 		},
 		{
 			name: "adopt dry-run",

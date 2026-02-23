@@ -96,6 +96,7 @@ func copyDir(src, dst string) error {
 
 	entries, err := os.ReadDir(src)
 	if err != nil {
+		os.RemoveAll(dst) // Clean up on early failure
 		return err
 	}
 
@@ -105,10 +106,12 @@ func copyDir(src, dst string) error {
 
 		if entry.IsDir() {
 			if err := copyDir(srcPath, dstPath); err != nil {
+				os.RemoveAll(dst) // Clean up partial copy
 				return err
 			}
 		} else {
 			if err := copyFile(srcPath, dstPath); err != nil {
+				os.RemoveAll(dst) // Clean up partial copy
 				return err
 			}
 		}

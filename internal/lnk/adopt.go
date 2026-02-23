@@ -282,6 +282,7 @@ func Adopt(opts AdoptOptions) error {
 
 	// Process each file path
 	adopted := 0
+	var adoptErrors int
 	for _, path := range opts.Paths {
 		// Expand path
 		absPath, err := ExpandPath(path)
@@ -289,12 +290,14 @@ func Adopt(opts AdoptOptions) error {
 			PrintErrorWithHint(WithHint(
 				fmt.Errorf("failed to expand path %s: %w", path, err),
 				"Check that the path is valid"))
+			adoptErrors++
 			continue
 		}
 
 		// Validate the file exists and isn't already adopted
 		if err := validateAdoptSource(absPath, absSourceDir); err != nil {
 			PrintErrorWithHint(err)
+			adoptErrors++
 			continue
 		}
 
@@ -304,6 +307,7 @@ func Adopt(opts AdoptOptions) error {
 			PrintErrorWithHint(WithHint(
 				fmt.Errorf("path %s must be within target directory %s", path, absTargetDir),
 				"Only files within the target directory can be adopted"))
+			adoptErrors++
 			continue
 		}
 
@@ -316,6 +320,7 @@ func Adopt(opts AdoptOptions) error {
 			PrintErrorWithHint(WithHint(
 				fmt.Errorf("failed to stat %s: %w", path, err),
 				"Check that the file exists"))
+			adoptErrors++
 			continue
 		}
 
@@ -325,6 +330,7 @@ func Adopt(opts AdoptOptions) error {
 				PrintErrorWithHint(WithHint(
 					fmt.Errorf("destination %s already exists", ContractPath(destPath)),
 					"Remove the existing file first or choose a different file"))
+				adoptErrors++
 				continue
 			}
 		}
@@ -334,6 +340,7 @@ func Adopt(opts AdoptOptions) error {
 			PrintErrorWithHint(WithHint(
 				fmt.Errorf("failed to validate adoption: %w", err),
 				"Check file permissions and paths"))
+			adoptErrors++
 			continue
 		}
 
@@ -351,6 +358,7 @@ func Adopt(opts AdoptOptions) error {
 			// Perform the adoption
 			if err := performAdoption(absPath, destPath); err != nil {
 				PrintErrorWithHint(WithHint(err, "Failed to adopt file"))
+				adoptErrors++
 				continue
 			}
 
@@ -374,5 +382,8 @@ func Adopt(opts AdoptOptions) error {
 		PrintInfo("No files were adopted (see errors above)")
 	}
 
+	if adoptErrors > 0 {
+		return fmt.Errorf("failed to adopt %d file(s)", adoptErrors)
+	}
 	return nil
 }
