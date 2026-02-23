@@ -108,11 +108,6 @@ func ValidateSymlinkCreation(source, target string) error {
 	if err := ValidateNoCircularSymlink(source, target); err != nil {
 		return err
 	}
-
 	// Check for overlapping paths
-	if err := ValidateNoOverlappingPaths(source, target); err != nil {
-		return err
-	}
-
-	return nil
+	return ValidateNoOverlappingPaths(source, target)
 }

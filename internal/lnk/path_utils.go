@@ -20,11 +20,8 @@ func ContractPath(path string) string {
 
 	// Check if path starts with home directory
 	if strings.HasPrefix(path, homeDir) {
-		// Replace home directory with ~
-		contracted := "~" + strings.TrimPrefix(path, homeDir)
-		// Clean up any double slashes
-		contracted = filepath.Clean(contracted)
-		return contracted
+		// Replace home directory with ~ and clean up any double slashes
+		return filepath.Clean("~" + strings.TrimPrefix(path, homeDir))
 	}
 
 	return path

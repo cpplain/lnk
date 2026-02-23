@@ -43,11 +43,6 @@ func parseFlagValue(arg string, args []string, index int) (flag string, value st
 	return arg, "", false, 0
 }
 
-// printVersion prints the version information
-func printVersion() {
-	fmt.Printf("lnk %s\n", version)
-}
-
 func main() {
 	// Parse flags
 	var action actionFlag = actionCreate // default action
@@ -197,7 +192,7 @@ func main() {
 
 	// Handle --version
 	if showVersion {
-		printVersion()
+		fmt.Printf("lnk %s\n", version)
 		return
 	}
 

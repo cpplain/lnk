@@ -140,20 +140,9 @@ func (e *ValidationError) GetHint() string {
 
 // GetErrorHint extracts a hint from an error if it implements HintableError
 func GetErrorHint(err error) string {
-	if err == nil {
-		return ""
-	}
-
-	// Check if the error itself has a hint
-	if h, ok := err.(HintableError); ok {
-		return h.GetHint()
-	}
-
-	// Check if the error wraps an error with a hint
 	var hintableErr HintableError
 	if errors.As(err, &hintableErr) {
 		return hintableErr.GetHint()
 	}
-
 	return ""
 }

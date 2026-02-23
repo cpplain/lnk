@@ -129,7 +129,6 @@ func Orphan(opts OrphanOptions) error {
 		}
 
 		// Check if link is broken
-		isBroken := false
 		if _, err := os.Stat(absTarget); os.IsNotExist(err) {
 			PrintErrorWithHint(WithHint(
 				fmt.Errorf("symlink target does not exist: %s", ContractPath(absTarget)),
@@ -141,7 +140,7 @@ func Orphan(opts OrphanOptions) error {
 		managedLinks = append(managedLinks, ManagedLink{
 			Path:     absPath,
 			Target:   absTarget,
-			IsBroken: isBroken,
+			IsBroken: false,
 			Source:   absSourceDir,
 		})
 	}

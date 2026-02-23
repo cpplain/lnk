@@ -36,14 +36,6 @@ import (
 	"os"
 )
 
-// PrintHeader prints a bold header for command output
-func PrintHeader(text string) {
-	if IsQuiet() {
-		return
-	}
-	fmt.Println(Bold(text))
-}
-
 // PrintSkip prints a skip message with a neutral icon
 func PrintSkip(format string, args ...interface{}) {
 	if IsQuiet() {
@@ -184,7 +176,9 @@ func PrintHelpItems(items [][]string) {
 // PrintCommandHeader prints a command header with standard spacing
 // This ensures all commands have consistent header formatting
 func PrintCommandHeader(text string) {
-	PrintHeader(text)
+	if !IsQuiet() {
+		fmt.Println(Bold(text))
+	}
 	fmt.Println() // Standard newline after header
 }
 
