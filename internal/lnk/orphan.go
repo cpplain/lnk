@@ -232,7 +232,7 @@ func orphanManagedLink(link ManagedLink) error {
 	}
 
 	// Remove from repository
-	if err := removeFromRepository(link.Target); err != nil {
+	if err := os.Remove(link.Target); err != nil {
 		PrintWarning("Failed to remove from repository: %v", err)
 		PrintWarning("You may need to manually remove: %s", ContractPath(link.Target))
 		return fmt.Errorf("failed to remove file from repository")
