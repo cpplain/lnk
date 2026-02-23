@@ -264,6 +264,7 @@ func RemoveLinks(opts LinkOptions) error {
 	}
 	if failed > 0 {
 		PrintWarning("Failed to remove %d symlink(s)", failed)
+		return fmt.Errorf("failed to remove %d symlink(s)", failed)
 	}
 
 	return nil
@@ -348,6 +349,7 @@ func Prune(opts LinkOptions) error {
 	}
 	if failed > 0 {
 		PrintWarning("Failed to prune %d symlink(s)", failed)
+		return fmt.Errorf("failed to prune %d symlink(s)", failed)
 	}
 
 	return nil

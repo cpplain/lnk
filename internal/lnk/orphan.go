@@ -219,7 +219,9 @@ func orphanManagedLink(link ManagedLink) error {
 	// Copy content from repo to original location
 	if err := copyPath(link.Target, link.Path); err != nil {
 		// Try to restore symlink on error
-		os.Symlink(link.Target, link.Path)
+		if rollbackErr := os.Symlink(link.Target, link.Path); rollbackErr != nil {
+			return fmt.Errorf("failed to copy from repository: %v (rollback failed, symlink lost: %v)", err, rollbackErr)
+		}
 		return fmt.Errorf("failed to copy from repository: %w", err)
 	}
 

@@ -263,11 +263,14 @@ func getBuiltInIgnorePatterns() []string {
 
 // ExpandPath expands ~ to the user's home directory
 func ExpandPath(path string) (string, error) {
-	if strings.HasPrefix(path, "~/") {
+	if path == "~" || strings.HasPrefix(path, "~/") {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return "", NewPathErrorWithHint("get home directory", path, err,
 				"Check that the HOME environment variable is set correctly")
+		}
+		if path == "~" {
+			return homeDir, nil
 		}
 		return filepath.Join(homeDir, path[2:]), nil
 	}

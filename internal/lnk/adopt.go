@@ -172,7 +172,9 @@ func performDirectoryAdoption(absSource, destPath string) error {
 			sourceDir := filepath.Dir(sourcePath)
 			if err := os.MkdirAll(sourceDir, 0755); err != nil {
 				// Rollback: move file back
-				os.Rename(destItemPath, sourcePath)
+				if rollbackErr := os.Rename(destItemPath, sourcePath); rollbackErr != nil {
+					return fmt.Errorf("failed to create parent directory: %v (rollback failed, file at %s: %v)", err, destItemPath, rollbackErr)
+				}
 				return fmt.Errorf("failed to create parent directory for symlink: %w", err)
 			}
 
