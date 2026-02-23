@@ -41,21 +41,21 @@ Path can be a relative or absolute directory. For create/remove/status operation
 
 ### Action Flags (mutually exclusive)
 
-| Flag            | Description                      |
-| --------------- | -------------------------------- |
-| `-C, --create`  | Create symlinks (default action) |
-| `-R, --remove`  | Remove symlinks                  |
-| `-S, --status`  | Show status of symlinks          |
-| `-P, --prune`   | Remove broken symlinks           |
-| `-A, --adopt`   | Adopt files into source          |
-| `-O, --orphan`  | Remove files from management     |
+| Flag           | Description                      |
+| -------------- | -------------------------------- |
+| `-C, --create` | Create symlinks (default action) |
+| `-R, --remove` | Remove symlinks                  |
+| `-S, --status` | Show status of symlinks          |
+| `-P, --prune`  | Remove broken symlinks           |
+| `-A, --adopt`  | Adopt files into source          |
+| `-O, --orphan` | Remove files from management     |
 
 ### Directory Flags
 
-| Flag               | Description                                           |
-| ------------------ | ----------------------------------------------------- |
-| `-s, --source DIR` | Source directory (for adopt/orphan, default: cwd)     |
-| `-t, --target DIR` | Target directory (default: `~`)                       |
+| Flag               | Description                                       |
+| ------------------ | ------------------------------------------------- |
+| `-s, --source DIR` | Source directory (for adopt/orphan, default: cwd) |
+| `-t, --target DIR` | Target directory (default: `~`)                   |
 
 ### Other Flags
 

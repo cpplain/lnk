@@ -279,13 +279,3 @@ func assertNoSymlink(t *testing.T, path string) {
 		t.Errorf("Expected %s to not be a symlink, but it is", path)
 	}
 }
-
-// getConfigPath returns the path to the test config file
-func getConfigPath(t *testing.T) string {
-	return filepath.Join(getProjectRoot(t), "e2e", "testdata", "config.json")
-}
-
-// getInvalidConfigPath returns the path to the invalid test config file
-func getInvalidConfigPath(t *testing.T) string {
-	return filepath.Join(getProjectRoot(t), "e2e", "testdata", "invalid.json")
-}

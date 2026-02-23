@@ -246,7 +246,6 @@ func getBuiltInIgnorePatterns() []string {
 		"README*",
 		"LICENSE*",
 		"CHANGELOG*",
-		".lnk.json",
 		".lnkconfig",
 		".lnkignore",
 	}
