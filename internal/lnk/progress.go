@@ -33,7 +33,7 @@ func NewProgressIndicator(message string) *ProgressIndicator {
 
 // Start starts the progress indicator with an indeterminate spinner
 func (p *ProgressIndicator) Start() {
-	if IsQuiet() || IsJSONFormat() || !isTerminal() {
+	if IsQuiet() || !isTerminal() {
 		return
 	}
 
@@ -63,7 +63,7 @@ func (p *ProgressIndicator) Start() {
 
 // Stop stops the progress indicator and clears the line
 func (p *ProgressIndicator) Stop() {
-	if IsQuiet() || IsJSONFormat() || !isTerminal() {
+	if IsQuiet() || !isTerminal() {
 		return
 	}
 
@@ -90,7 +90,7 @@ func (p *ProgressIndicator) SetTotal(total int) {
 
 // Update updates the progress with current count
 func (p *ProgressIndicator) Update(current int) {
-	if IsQuiet() || IsJSONFormat() || !isTerminal() {
+	if IsQuiet() || !isTerminal() {
 		return
 	}
 
@@ -125,7 +125,7 @@ func (p *ProgressIndicator) Update(current int) {
 // ShowProgress runs a function with a progress indicator
 func ShowProgress(message string, fn func() error) error {
 	// Skip progress in quiet mode, JSON mode, or non-terminal
-	if IsQuiet() || IsJSONFormat() || !isTerminal() {
+	if IsQuiet() || !isTerminal() {
 		return fn()
 	}
 

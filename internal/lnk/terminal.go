@@ -19,7 +19,7 @@ func isTerminal() bool {
 }
 
 // ShouldSimplifyOutput returns true if output should be simplified for piping.
-// This is true when stdout is not a terminal and JSON format is not requested.
+// This is true when stdout is not a terminal.
 func ShouldSimplifyOutput() bool {
-	return !isTerminal() && !IsJSONFormat()
+	return !isTerminal()
 }

@@ -61,7 +61,6 @@ make check                  # Run fmt, test, and lint in sequence
 **Output System**: Centralized in `output.go` with support for:
 
 - Text format (default, colorized)
-- JSON format (`--output json`)
 - Verbosity levels: quiet, normal, verbose
 
 **Terminal Detection**: `terminal.go` detects TTY for conditional formatting (colors, progress bars)
@@ -143,7 +142,6 @@ From [cpplain/cli-design](https://github.com/cpplain/cli-design):
 - Use `PrintErrorWithHint()` for user-facing errors with actionable hints
 - Expand paths with `ExpandPath()` to handle `~/` notation
 - Validate paths early using `validation.go` functions
-- Always support JSON output mode (`--output json`) for scripting
 
 ## Common Tasks
 

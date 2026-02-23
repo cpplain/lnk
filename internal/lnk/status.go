@@ -1,29 +1,10 @@
 package lnk
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
 )
-
-// LinkInfo represents information about a symlink
-type LinkInfo struct {
-	Link     string `json:"link"`
-	Target   string `json:"target"`
-	IsBroken bool   `json:"is_broken"`
-	Source   string `json:"source"` // Source mapping name (e.g., "home", "work")
-}
-
-// StatusOutput represents the complete status output for JSON formatting
-type StatusOutput struct {
-	Links   []LinkInfo `json:"links"`
-	Summary struct {
-		Total  int `json:"total"`
-		Active int `json:"active"`
-		Broken int `json:"broken"`
-	} `json:"summary"`
-}
 
 // Status displays the status of managed symlinks for the source directory
 func Status(opts LinkOptions) error {
@@ -50,12 +31,9 @@ func Status(opts LinkOptions) error {
 		return fmt.Errorf("expanding target directory: %w", err)
 	}
 
-	// Only print header in human format
-	if !IsJSONFormat() {
-		PrintCommandHeader("Symlink Status")
-		PrintVerbose("Source directory: %s", sourceDir)
-		PrintVerbose("Target directory: %s", targetDir)
-	}
+	PrintCommandHeader("Symlink Status")
+	PrintVerbose("Source directory: %s", sourceDir)
+	PrintVerbose("Target directory: %s", targetDir)
 
 	// Find all symlinks for the source directory
 	managedLinks, err := FindManagedLinks(targetDir, []string{sourceDir})
@@ -63,33 +41,16 @@ func Status(opts LinkOptions) error {
 		return fmt.Errorf("failed to find managed links: %w", err)
 	}
 
-	// Convert to LinkInfo
-	var links []LinkInfo
-	for _, ml := range managedLinks {
-		link := LinkInfo{
-			Link:     ml.Path,
-			Target:   ml.Target,
-			IsBroken: ml.IsBroken,
-			Source:   ml.Source,
-		}
-		links = append(links, link)
-	}
-
 	// Sort by link path
-	sort.Slice(links, func(i, j int) bool {
-		return links[i].Link < links[j].Link
+	sort.Slice(managedLinks, func(i, j int) bool {
+		return managedLinks[i].Path < managedLinks[j].Path
 	})
 
-	// If JSON format is requested, output JSON and return
-	if IsJSONFormat() {
-		return outputStatusJSON(links)
-	}
-
 	// Display links
-	if len(links) > 0 {
+	if len(managedLinks) > 0 {
 		// Separate active and broken links
-		var activeLinks, brokenLinks []LinkInfo
-		for _, link := range links {
+		var activeLinks, brokenLinks []ManagedLink
+		for _, link := range managedLinks {
 			if link.IsBroken {
 				brokenLinks = append(brokenLinks, link)
 			} else {
@@ -102,9 +63,9 @@ func Status(opts LinkOptions) error {
 			for _, link := range activeLinks {
 				if ShouldSimplifyOutput() {
 					// For piped output, use simple format
-					fmt.Printf("active %s\n", ContractPath(link.Link))
+					fmt.Printf("active %s\n", ContractPath(link.Path))
 				} else {
-					PrintSuccess("Active: %s", ContractPath(link.Link))
+					PrintSuccess("Active: %s", ContractPath(link.Path))
 				}
 			}
 		}
@@ -117,9 +78,9 @@ func Status(opts LinkOptions) error {
 			for _, link := range brokenLinks {
 				if ShouldSimplifyOutput() {
 					// For piped output, use simple format
-					fmt.Printf("broken %s\n", ContractPath(link.Link))
+					fmt.Printf("broken %s\n", ContractPath(link.Path))
 				} else {
-					PrintError("Broken: %s", ContractPath(link.Link))
+					PrintError("Broken: %s", ContractPath(link.Path))
 				}
 			}
 		}
@@ -128,7 +89,7 @@ func Status(opts LinkOptions) error {
 		if !ShouldSimplifyOutput() {
 			fmt.Println()
 			PrintInfo("Total: %s (%s active, %s broken)",
-				Bold(fmt.Sprintf("%d links", len(links))),
+				Bold(fmt.Sprintf("%d links", len(managedLinks))),
 				Green(fmt.Sprintf("%d", len(activeLinks))),
 				Red(fmt.Sprintf("%d", len(brokenLinks))))
 		}
@@ -136,36 +97,5 @@ func Status(opts LinkOptions) error {
 		PrintEmptyResult("active links")
 	}
 
-	return nil
-}
-
-// outputStatusJSON outputs the status in JSON format
-func outputStatusJSON(links []LinkInfo) error {
-	// Ensure links is not nil for proper JSON output
-	if links == nil {
-		links = []LinkInfo{}
-	}
-
-	output := StatusOutput{
-		Links: links,
-	}
-
-	// Calculate summary
-	for _, link := range links {
-		output.Summary.Total++
-		if link.IsBroken {
-			output.Summary.Broken++
-		} else {
-			output.Summary.Active++
-		}
-	}
-
-	// Marshal to JSON with pretty printing
-	data, err := json.MarshalIndent(output, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal status to JSON: %w", err)
-	}
-
-	fmt.Println(string(data))
 	return nil
 }
