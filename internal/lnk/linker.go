@@ -25,6 +25,9 @@ type LinkOptions struct {
 func collectPlannedLinksWithPatterns(sourcePath, targetPath string, ignorePatterns []string) ([]PlannedLink, error) {
 	var links []PlannedLink
 
+	// Create pattern matcher once before walk for efficiency
+	pm := NewPatternMatcher(ignorePatterns)
+
 	err := filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -42,7 +45,7 @@ func collectPlannedLinksWithPatterns(sourcePath, targetPath string, ignorePatter
 		}
 
 		// Check if this file should be ignored
-		if MatchesPattern(relPath, ignorePatterns) {
+		if pm.Matches(relPath) {
 			return nil
 		}
 

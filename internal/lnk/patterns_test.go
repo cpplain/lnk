@@ -230,9 +230,10 @@ func TestMatchesPattern(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := MatchesPattern(tt.path, tt.patterns)
+			pm := NewPatternMatcher(tt.patterns)
+			got := pm.Matches(tt.path)
 			if got != tt.want {
-				t.Errorf("MatchesPattern(%q, %v) = %v, want %v", tt.path, tt.patterns, got, tt.want)
+				t.Errorf("pm.Matches(%q) with patterns %v = %v, want %v", tt.path, tt.patterns, got, tt.want)
 			}
 		})
 	}
@@ -374,10 +375,13 @@ func BenchmarkMatchesPattern(b *testing.B) {
 		"path/to/deep/file.txt",
 	}
 
+	// Create pattern matcher once for efficiency
+	pm := NewPatternMatcher(patterns)
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, path := range paths {
-			MatchesPattern(path, patterns)
+			pm.Matches(path)
 		}
 	}
 }

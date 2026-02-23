@@ -34,13 +34,6 @@ func NewPatternMatcher(patterns []string) *PatternMatcher {
 	return pm
 }
 
-// MatchesPattern checks if a path matches any of the patterns
-// Returns true if the path should be ignored
-func MatchesPattern(path string, patterns []string) bool {
-	pm := NewPatternMatcher(patterns)
-	return pm.Matches(path)
-}
-
 // Matches checks if a path matches any of the patterns
 func (pm *PatternMatcher) Matches(path string) bool {
 	// Normalize the path
