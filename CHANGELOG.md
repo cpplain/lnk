@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Comprehensive end-to-end testing suite
-- Zero-configuration defaults with flexible config discovery (`~/.config/lnk/config.json`, `~/.lnk.json`)
+- Zero-configuration defaults with flexible config discovery (`.lnkconfig` in source dir, `~/.config/lnk/config`, `~/.lnkconfig`)
 - Global flags: `--verbose`, `--quiet`, `--yes`, `--no-color`, `--output`
 - Command suggestions for typos, progress indicators, confirmation prompts
 - JSON output and specific exit codes for scripting

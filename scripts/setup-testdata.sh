@@ -52,48 +52,17 @@ Host *.test.local
   UserKnownHostsFile /dev/null
 EOF
 
-# Create test config with absolute paths
-echo "Creating test configuration..."
-cat >"$PROJECT_ROOT/e2e/testdata/config.json" <<EOF
-{
-  "link_mappings": [
-    {
-      "source": "$PROJECT_ROOT/e2e/testdata/dotfiles/home",
-      "target": "$PROJECT_ROOT/e2e/testdata/target"
-    },
-    {
-      "source": "$PROJECT_ROOT/e2e/testdata/dotfiles/private/home",
-      "target": "$PROJECT_ROOT/e2e/testdata/target"
-    }
-  ],
-  "ignore_patterns": [".git", "*.swp", ".DS_Store"]
-}
-EOF
-
 # Create .gitkeep
 touch "$PROJECT_ROOT/e2e/testdata/target/.gitkeep"
-
-# Create an invalid config for error testing
-cat >"$PROJECT_ROOT/e2e/testdata/invalid.json" <<EOF
-{
-  "link_mappings": [
-    {
-      "source": "relative/path",
-      "target": "~/invalid"
-    }
-  ]
-}
-EOF
 
 echo -e "${GREEN}✓ Test data setup complete!${NC}"
 echo
 echo "Test environment created at: $PROJECT_ROOT/e2e/testdata/"
-echo "Configuration file: $PROJECT_ROOT/e2e/testdata/config.json"
 echo
 echo "You can now test lnk commands safely:"
-echo "  lnk --config e2e/testdata/config.json status"
-echo "  lnk --config e2e/testdata/config.json create"
-echo "  lnk --config e2e/testdata/config.json remove"
+echo "  cd e2e/testdata/dotfiles/home && lnk --target $PROJECT_ROOT/e2e/testdata/target status"
+echo "  cd e2e/testdata/dotfiles/home && lnk --target $PROJECT_ROOT/e2e/testdata/target create"
+echo "  cd e2e/testdata/dotfiles/home && lnk --target $PROJECT_ROOT/e2e/testdata/target remove"
 echo
 echo "To reset: rm -rf e2e/testdata/target/* && ./scripts/setup-testdata.sh"
 
