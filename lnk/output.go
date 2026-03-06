@@ -145,34 +145,6 @@ func PrintVerbose(format string, args ...interface{}) {
 	fmt.Printf("[VERBOSE] %s\n", message)
 }
 
-// PrintHelpSection prints a section header for help text
-func PrintHelpSection(title string) {
-	fmt.Println(Bold(title))
-}
-
-// PrintHelpItems prints multiple aligned help items at once
-// This is more efficient than calling PrintHelpItem multiple times
-func PrintHelpItems(items [][]string) {
-	if len(items) == 0 {
-		return
-	}
-
-	// Find the longest item in the first column for proper padding
-	maxLen := 0
-	for _, item := range items {
-		if len(item) >= 1 && len(item[0]) > maxLen {
-			maxLen = len(item[0])
-		}
-	}
-
-	// Print with consistent spacing (no extra padding)
-	for _, item := range items {
-		if len(item) >= 2 {
-			fmt.Printf("  %-*s  %s\n", maxLen, item[0], item[1])
-		}
-	}
-}
-
 // PrintCommandHeader prints a command header with standard spacing
 // This ensures all commands have consistent header formatting
 func PrintCommandHeader(text string) {

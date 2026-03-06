@@ -322,75 +322,63 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Printf("%s lnk [action] [flags] <path(s)>\n", lnk.Bold("Usage:"))
-	fmt.Println()
-	fmt.Println("An opinionated symlink manager for dotfiles and more")
-	fmt.Println()
-	fmt.Println("Paths are positional arguments that come last (POSIX-style).")
-	fmt.Println("For create/remove/status: path is the source directory to link from.")
-	fmt.Println("For adopt/orphan: paths are the files to operate on.")
-	fmt.Println()
+	fmt.Print(`Usage: lnk [action] [flags] <path(s)>
 
-	lnk.PrintHelpSection("Action Flags (mutually exclusive):")
-	lnk.PrintHelpItems([][]string{
-		{"-C, --create", "Create symlinks (default action)"},
-		{"-R, --remove", "Remove symlinks"},
-		{"-S, --status", "Show status of symlinks"},
-		{"-P, --prune", "Remove broken symlinks"},
-		{"-A, --adopt", "Adopt files into source directory"},
-		{"-O, --orphan", "Remove files from management"},
-	})
-	fmt.Println()
+An opinionated symlink manager for dotfiles and more
 
-	lnk.PrintHelpSection("Directory Flags:")
-	lnk.PrintHelpItems([][]string{
-		{"-s, --source DIR", "Source directory (default: cwd for adopt/orphan)"},
-		{"-t, --target DIR", "Target directory (default: ~)"},
-	})
-	fmt.Println()
+Paths are positional arguments that come last (POSIX-style).
+For create/remove/status: path is the source directory to link from.
+For adopt/orphan: paths are the files to operate on.
 
-	lnk.PrintHelpSection("Other Flags:")
-	lnk.PrintHelpItems([][]string{
-		{"    --ignore PATTERN", "Additional ignore pattern (repeatable)"},
-		{"-n, --dry-run", "Preview changes without making them"},
-		{"-v, --verbose", "Enable verbose output"},
-		{"-q, --quiet", "Suppress all non-error output"},
-		{"    --no-color", "Disable colored output"},
-		{"-V, --version", "Show version information"},
-		{"-h, --help", "Show this help message"},
-	})
-	fmt.Println()
+Action Flags (mutually exclusive):
+  -C, --create          Create symlinks (default action)
+  -R, --remove          Remove symlinks
+  -S, --status          Show status of symlinks
+  -P, --prune           Remove broken symlinks
+  -A, --adopt           Adopt files into source directory
+  -O, --orphan          Remove files from management
 
-	lnk.PrintHelpSection("Examples:")
-	lnk.PrintHelpItems([][]string{
-		{"lnk .", "Create links from current directory"},
-		{"lnk -C .", "Explicit create from current directory"},
-		{"lnk -C -t /tmp .", "Create with custom target"},
-		{"lnk -C ~/git/dotfiles", "Create from absolute path"},
-		{"lnk -n .", "Dry-run (preview without changes)"},
-		{"lnk -R .", "Remove links"},
-		{"lnk -S .", "Show status"},
-		{"lnk -P", "Prune broken symlinks from current source"},
-		{"lnk -A ~/.bashrc ~/.vimrc", "Adopt files into current directory"},
-		{"lnk -A -s ~/dotfiles ~/.bashrc", "Adopt with explicit source"},
-		{"lnk -O ~/.bashrc", "Orphan file (remove from management)"},
-		{"lnk --ignore '*.swp' .", "Add ignore pattern"},
-	})
-	fmt.Println()
+Directory Flags:
+  -s, --source DIR      Source directory (default: cwd for adopt/orphan)
+  -t, --target DIR      Target directory (default: ~)
 
-	lnk.PrintHelpSection("Config Files:")
-	fmt.Println("  .lnkconfig in source directory (repo-specific)")
-	fmt.Println("    Format: CLI flags, one per line")
-	fmt.Println("    Example:")
-	fmt.Println("      --target=~")
-	fmt.Println("      --ignore=local/")
-	fmt.Println()
-	fmt.Println("  .lnkignore in source directory")
-	fmt.Println("    Format: gitignore syntax")
-	fmt.Println("    Example:")
-	fmt.Println("      .git")
-	fmt.Println("      *.swp")
-	fmt.Println("      README.md")
-	fmt.Println()
-	fmt.Println("  CLI flags take precedence over config files")
+Other Flags:
+      --ignore PATTERN  Additional ignore pattern (repeatable)
+  -n, --dry-run         Preview changes without making them
+  -v, --verbose         Enable verbose output
+  -q, --quiet           Suppress all non-error output
+      --no-color        Disable colored output
+  -V, --version         Show version information
+  -h, --help            Show this help message
+
+Examples:
+  lnk .                          Create links from current directory
+  lnk -C .                       Explicit create from current directory
+  lnk -C -t /tmp .               Create with custom target
+  lnk -C ~/git/dotfiles          Create from absolute path
+  lnk -n .                       Dry-run (preview without changes)
+  lnk -R .                       Remove links
+  lnk -S .                       Show status
+  lnk -P                         Prune broken symlinks from current source
+  lnk -A ~/.bashrc ~/.vimrc      Adopt files into current directory
+  lnk -A -s ~/dotfiles ~/.bashrc Adopt with explicit source
+  lnk -O ~/.bashrc               Orphan file (remove from management)
+  lnk --ignore '*.swp' .         Add ignore pattern
+
+Config Files:
+  .lnkconfig in source directory (repo-specific)
+    Format: CLI flags, one per line
+    Example:
+      --target=~
+      --ignore=local/
+
+  .lnkignore in source directory
+    Format: gitignore syntax
+    Example:
+      .git
+      *.swp
+      README.md
+
+  CLI flags take precedence over config files
+`)
 }
