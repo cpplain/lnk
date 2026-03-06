@@ -43,6 +43,18 @@ func parseFlagValue(arg string, args []string, index int) (flag string, value st
 	return arg, "", false, 0
 }
 
+// setAction validates that only one action flag is set and assigns the new action
+func setAction(actionSet *bool, newAction actionFlag, action *actionFlag) {
+	if *actionSet {
+		lnk.PrintErrorWithHint(lnk.WithHint(
+			fmt.Errorf("cannot use multiple action flags"),
+			"Use only one of: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan"))
+		os.Exit(lnk.ExitUsage)
+	}
+	*action = newAction
+	*actionSet = true
+}
+
 func main() {
 	// Parse flags
 	var action actionFlag = actionCreate // default action
@@ -80,59 +92,17 @@ func main() {
 		switch flag {
 		// Action flags (mutually exclusive)
 		case "-C", "--create":
-			if actionSet {
-				lnk.PrintErrorWithHint(lnk.WithHint(
-					fmt.Errorf("cannot use multiple action flags"),
-					"Use only one of: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan"))
-				os.Exit(lnk.ExitUsage)
-			}
-			action = actionCreate
-			actionSet = true
+			setAction(&actionSet, actionCreate, &action)
 		case "-R", "--remove":
-			if actionSet {
-				lnk.PrintErrorWithHint(lnk.WithHint(
-					fmt.Errorf("cannot use multiple action flags"),
-					"Use only one of: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan"))
-				os.Exit(lnk.ExitUsage)
-			}
-			action = actionRemove
-			actionSet = true
+			setAction(&actionSet, actionRemove, &action)
 		case "-S", "--status":
-			if actionSet {
-				lnk.PrintErrorWithHint(lnk.WithHint(
-					fmt.Errorf("cannot use multiple action flags"),
-					"Use only one of: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan"))
-				os.Exit(lnk.ExitUsage)
-			}
-			action = actionStatus
-			actionSet = true
+			setAction(&actionSet, actionStatus, &action)
 		case "-P", "--prune":
-			if actionSet {
-				lnk.PrintErrorWithHint(lnk.WithHint(
-					fmt.Errorf("cannot use multiple action flags"),
-					"Use only one of: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan"))
-				os.Exit(lnk.ExitUsage)
-			}
-			action = actionPrune
-			actionSet = true
+			setAction(&actionSet, actionPrune, &action)
 		case "-A", "--adopt":
-			if actionSet {
-				lnk.PrintErrorWithHint(lnk.WithHint(
-					fmt.Errorf("cannot use multiple action flags"),
-					"Use only one of: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan"))
-				os.Exit(lnk.ExitUsage)
-			}
-			action = actionAdopt
-			actionSet = true
+			setAction(&actionSet, actionAdopt, &action)
 		case "-O", "--orphan":
-			if actionSet {
-				lnk.PrintErrorWithHint(lnk.WithHint(
-					fmt.Errorf("cannot use multiple action flags"),
-					"Use only one of: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan"))
-				os.Exit(lnk.ExitUsage)
-			}
-			action = actionOrphan
-			actionSet = true
+			setAction(&actionSet, actionOrphan, &action)
 
 		// Directory flags
 		case "-s", "--source":
