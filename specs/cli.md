@@ -1,0 +1,283 @@
+# CLI Specification
+
+---
+
+## 1. Overview
+
+### Purpose
+
+`lnk` is an opinionated symlink manager for dotfiles. The CLI uses a subcommand-based
+interface: a named command selects the operation, and global flags configure behavior
+shared across all commands.
+
+### Goals
+
+- **Subcommand-based**: `lnk <command> [flags] [args]` mirrors conventions of tools like `git`
+- **Shared flags**: all flags are accepted by all commands; irrelevant flags are silently ignored
+- **Helpful on error**: unknown commands suggest the closest match; missing args explain correct usage
+- **Composable**: machine-readable output when piped; human-friendly output to terminals
+
+### Non-Goals
+
+- Interactive TUI mode
+- Shell completion (future consideration)
+- Plugin or extension system
+
+---
+
+## 2. Interface
+
+### Usage
+
+```
+lnk <command> [flags] [args]
+```
+
+The recommended form places flags after the command name. Flags are also accepted
+before the command name for convenience (e.g., `lnk --dry-run create .` works),
+but `lnk <command> [flags] [args]` is the canonical style. The `--` separator stops
+flag parsing; everything after it is treated as positional arguments.
+
+### Commands
+
+| Command  | Args           | Description                           |
+| -------- | -------------- | ------------------------------------- |
+| `create` | `[source-dir]` | Create symlinks from source to target |
+| `remove` | `[source-dir]` | Remove managed symlinks               |
+| `status` | `[source-dir]` | Show status of managed symlinks       |
+| `prune`  | `[source-dir]` | Remove broken symlinks                |
+| `adopt`  | `<file...>`    | Adopt files into source directory     |
+| `orphan` | `<file...>`    | Remove files from management          |
+
+For `create`, `remove`, `status`, `prune`: the optional positional argument sets the
+source directory. If both `--source` and a positional argument are provided, the
+positional argument takes precedence.
+
+For `adopt` and `orphan`: one or more file paths are required positional arguments.
+
+### Global Flags
+
+All flags are accepted by all commands.
+
+| Flag               | Short | Default   | Description                            |
+| ------------------ | ----- | --------- | -------------------------------------- |
+| `--source DIR`     | `-s`  | `.` (cwd) | Source directory                       |
+| `--target DIR`     | `-t`  | `~`       | Target directory                       |
+| `--ignore PATTERN` |       |           | Additional ignore pattern (repeatable) |
+| `--dry-run`        | `-n`  | false     | Preview changes without making them    |
+| `--verbose`        | `-v`  | false     | Enable verbose output                  |
+| `--quiet`          | `-q`  | false     | Suppress all non-error output          |
+| `--no-color`       |       | false     | Disable colored output                 |
+| `--version`        | `-V`  |           | Print version and exit                 |
+| `--help`           | `-h`  |           | Show help and exit                     |
+
+Notes:
+
+- `--ignore` is repeatable; each use appends a pattern. Only has effect on `create`.
+- `--dry-run` is accepted by `status` but has no effect (status never modifies anything).
+- `--quiet` and `--verbose` are mutually exclusive; using both is a usage error.
+
+---
+
+## 3. Behavior
+
+### Startup Sequence
+
+1. Parse all flags and the command name from `os.Args[1:]`
+2. Apply `--no-color` before any output is produced
+3. Handle `--version`: print `lnk <version>` and exit 0
+4. Handle `--help` (or bare `lnk` with no command): print usage and exit 0
+5. Validate flag constraints (`--quiet` + `--verbose` conflict)
+6. Set verbosity level
+7. Load configuration (see [config.md](config.md))
+8. Dispatch to the command handler
+
+### Command Dispatch
+
+After parsing, the first non-flag argument is the command name. If no command is
+given (and `--version`/`--help` were not used), print usage and exit 2.
+
+```
+args = [flag...] command [flag...] [positional...]
+```
+
+### Unknown Command Handling
+
+When an unrecognized command is given, suggest the closest match using Levenshtein
+distance:
+
+```
+lnk statsu
+error: unknown command: "statsu"
+  Try: Did you mean "status"?
+```
+
+Suggestion algorithm:
+
+1. Compute Levenshtein distance between input and each valid command name
+2. Select the command with the smallest distance
+3. Only suggest if `distance <= len(input)/2 + 1`
+4. If no suggestion qualifies, show only the error with a pointer to `--help`
+
+Valid command names for suggestion: `create`, `remove`, `status`, `prune`, `adopt`, `orphan`.
+
+```go
+func suggestCommand(input string) string {
+    commands := []string{"create", "remove", "status", "prune", "adopt", "orphan"}
+    threshold := len(input)/2 + 1
+    best, bestDist := "", threshold+1
+    for _, cmd := range commands {
+        if d := levenshteinDistance(input, cmd); d < bestDist {
+            best, bestDist = cmd, d
+        }
+    }
+    return best // empty string means no suggestion
+}
+```
+
+### Per-Command Help
+
+`lnk <command> --help` prints help scoped to that command and exits 0:
+
+```
+lnk create --help
+
+Usage: lnk create [flags] [source-dir]
+
+Create symlinks from source directory to target directory.
+
+Arguments:
+  source-dir    Source directory to link from (default: value of --source or .)
+
+Flags:
+  (all global flags apply)
+
+Examples:
+  lnk create .
+  lnk create ~/git/dotfiles
+  lnk create -t /tmp .
+  lnk create -n .
+```
+
+### Version Output
+
+```
+lnk <version>
+```
+
+Version is injected at build time via `-ldflags`. In development builds, version is
+`dev`.
+
+### Usage Output (bare `lnk` or `lnk --help`)
+
+```
+Usage: lnk <command> [flags] [args]
+
+An opinionated symlink manager for dotfiles and more
+
+Commands:
+  create [source-dir]    Create symlinks from source to target
+  remove [source-dir]    Remove managed symlinks
+  status [source-dir]    Show status of managed symlinks
+  prune  [source-dir]    Remove broken symlinks
+  adopt  <file...>       Adopt files into source directory
+  orphan <file...>       Remove files from management
+
+Flags:
+  -s, --source DIR      Source directory (default: .)
+  -t, --target DIR      Target directory (default: ~)
+      --ignore PATTERN  Additional ignore pattern, repeatable
+  -n, --dry-run         Preview changes without making them
+  -v, --verbose         Enable verbose output
+  -q, --quiet           Suppress all non-error output
+      --no-color        Disable colored output
+  -V, --version         Show version information
+  -h, --help            Show this help message
+
+Examples:
+  lnk create .                        Create links from current directory
+  lnk create ~/git/dotfiles           Create from absolute path
+  lnk create -t /tmp .                Create with custom target
+  lnk create -n .                     Dry-run preview
+  lnk remove .                        Remove links
+  lnk status .                        Show status
+  lnk prune                           Prune broken symlinks
+  lnk prune ~/git/dotfiles            Prune from specific source
+  lnk adopt ~/.bashrc ~/.vimrc        Adopt files into current directory
+  lnk adopt -s ~/dotfiles ~/.bashrc   Adopt with explicit source
+  lnk orphan ~/.bashrc                Remove file from management
+  lnk create --ignore '*.swp' .       Add ignore pattern
+
+Config Files:
+  .lnkconfig in source directory (repo-specific)
+    Format: CLI flags, one per line
+    Example:
+      --target=~
+      --ignore=local/
+
+  .lnkignore in source directory
+    Format: gitignore syntax
+
+  CLI flags take precedence over config files
+```
+
+---
+
+## 4. Flag Parsing Rules
+
+- Short flags: single dash + single letter (`-n`, `-v`, `-s`)
+- Long flags: double dash + name (`--dry-run`, `--verbose`, `--source`)
+- Value flags accept `--flag=value` or `--flag value` forms
+- Boolean flags do not accept values (`--dry-run` not `--dry-run=true`)
+- `--` terminates flag parsing; all subsequent tokens are positional arguments
+- Unknown flags produce a usage error (exit 2) with a hint to run `lnk --help`
+- Flags requiring a value but given none produce a usage error
+
+---
+
+## 5. Exit Codes
+
+| Code | Meaning                                                |
+| ---- | ------------------------------------------------------ |
+| 0    | Success                                                |
+| 1    | Runtime error (operation failed)                       |
+| 2    | Usage error (bad flags, missing args, unknown command) |
+
+---
+
+## 6. Examples
+
+```sh
+# Basic operations
+lnk create .                        # Create links from cwd
+lnk create ~/git/dotfiles           # Create from explicit path
+lnk remove .                        # Remove links from cwd
+lnk status .                        # Show status
+lnk prune                           # Prune broken links (uses --source or .)
+lnk prune ~/git/dotfiles            # Prune from explicit source
+
+# File management
+lnk adopt ~/.bashrc ~/.vimrc        # Adopt files into cwd
+lnk adopt -s ~/dotfiles ~/.bashrc   # Adopt with explicit source dir
+lnk orphan ~/.bashrc                # Orphan file
+
+# Flags
+lnk create -n .                     # Dry-run preview
+lnk create -v .                     # Verbose output
+lnk create -q .                     # Quiet (errors only)
+lnk create --no-color .             # No colored output
+lnk create --ignore '*.swp' .       # Extra ignore pattern
+
+# Help
+lnk --help                          # Full help
+lnk create --help                   # Command-specific help
+lnk --version                       # Print version
+```
+
+---
+
+## 7. Related Specifications
+
+- [config.md](config.md) — Configuration loading and precedence
+- [error-handling.md](error-handling.md) — Error types and exit codes
+- [output.md](output.md) — Output formatting and verbosity
