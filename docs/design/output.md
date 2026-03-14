@@ -169,9 +169,9 @@ generic cases. Commands that need more specific phrasing (e.g., `"No files to li
 found."`, `"No broken symlinks found."`) should call `PrintInfo` directly with a
 custom message.
 
-#### PrintNextStep(command, description string)
+#### PrintNextStep(command, sourceDir, description string)
 
-Prints `"Next: Run 'lnk <command>' to <description>"` via `PrintInfo`.
+Prints `"Next: Run 'lnk <command> <sourceDir>' to <description>"` via `PrintInfo`.
 
 #### PrintDryRunSummary()
 
@@ -191,7 +191,7 @@ Every command follows this output structure:
 
 3. PrintSummary(...)                    ← blank line + success icon + count
 
-4. PrintNextStep(...) [optional]        ← "Next: Run 'lnk status' to ..."
+4. PrintNextStep(...) [optional]        ← "Next: Run 'lnk status <source-dir>' to ..."
 ```
 
 Empty result:

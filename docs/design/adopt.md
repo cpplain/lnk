@@ -89,12 +89,16 @@ If no files are collected after expansion (e.g., empty directory), print
 
 ### Dry-Run Mode
 
-For each collected file, print:
+Print a count header, then per-file detail:
 
 ```
+[DRY RUN] Would adopt 2 file(s):
 [DRY RUN] Would adopt: ~/.bashrc
   Move to: ~/git/dotfiles/.bashrc
   Create symlink: ~/.bashrc -> ~/git/dotfiles/.bashrc
+[DRY RUN] Would adopt: ~/.vimrc
+  Move to: ~/git/dotfiles/.vimrc
+  Create symlink: ~/.vimrc -> ~/git/dotfiles/.vimrc
 ```
 
 End with `PrintDryRunSummary()`.
@@ -184,7 +188,7 @@ Adopting Files
 ✓ Adopted: ~/.vimrc
 
 ✓ Adopted 2 file(s) successfully
-Next: Run 'lnk status' to view adopted files
+Next: Run 'lnk status <source-dir>' to view adopted files
 ```
 
 ---

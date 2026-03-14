@@ -93,11 +93,9 @@ and return nil.
 Orphaning Files
 
 [DRY RUN] Would orphan 2 symlink(s):
-
 [DRY RUN] Would orphan: ~/.bashrc
   Remove symlink: ~/.bashrc
   Move from: ~/git/dotfiles/.bashrc
-
 [DRY RUN] Would orphan: ~/.vimrc
   Remove symlink: ~/.vimrc
   Move from: ~/git/dotfiles/.vimrc
@@ -186,7 +184,7 @@ Orphaning Files
 ✓ Orphaned: ~/.vimrc
 
 ✓ Orphaned 2 file(s) successfully
-Next: Run 'lnk status' to view remaining managed files
+Next: Run 'lnk status <source-dir>' to view remaining managed files
 ```
 
 ---

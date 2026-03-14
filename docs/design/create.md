@@ -195,7 +195,7 @@ Creating Symlinks
 ✓ Created: ~/.config/git/config
 
 ✓ Created 3 symlink(s) successfully
-Next: Run 'lnk status' to verify links
+Next: Run 'lnk status <source-dir>' to verify links
 ```
 
 Empty source:

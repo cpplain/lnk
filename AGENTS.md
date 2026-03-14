@@ -28,7 +28,7 @@ make check                  # Run fmt, test, and lint in sequence
 
 ### Core Components
 
-- **main.go**: CLI entry point with POSIX-style flag parsing. Action flags (-C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan) determine the operation. For C/R/S operations, the positional argument specifies the source directory. For A/O operations, positional arguments specify files to manage.
+- **main.go**: CLI entry point with subcommand-based interface (`lnk [flags] <command> [args]`). Commands: `create`, `remove`, `status`, `prune`, `adopt`, `orphan`. For create/remove/status/prune: optional positional argument sets the source directory (defaults to `--source` or `.`). For adopt/orphan: one or more file paths are required positional arguments. Uses stdlib `flag` package with `extractCommand()` to support flags before or after the command name.
 
 - **lnk/config.go**: Configuration system with `.lnkconfig` file support. Config files can specify target directory and ignore patterns using stow-style format (one flag per line). CLI flags override config file values. Config file search locations:
   1. `.lnkconfig` in source directory
@@ -147,12 +147,13 @@ From [cpplain/cli-design](https://github.com/cpplain/cli-design):
 
 ### Adding a New Operation
 
-1. Add new action flag to `main.go` (e.g., `-X/--new-operation`)
+1. Add new subcommand case to the `switch` in `main.go` and write a `handleX()` function
 2. Create options struct in `lnk/` following the pattern (e.g., `NewOperationOptions`)
 3. Implement operation function in `lnk/` (e.g., `func NewOperation(opts NewOperationOptions) error`)
-4. Add case in `main.go` to handle the new flag and construct options
-5. Add tests in `lnk/xxx_test.go`
-6. Add e2e test if appropriate
+4. Add the command name to `suggestCommand()` valid commands list in `main.go`
+5. Add `printCommandHelp()` case for the new command in `main.go`
+6. Add tests in `lnk/xxx_test.go`
+7. Add e2e test if appropriate
 
 ### Modifying Configuration
 
