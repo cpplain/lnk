@@ -7,7 +7,7 @@ Design documentation for `lnk`, an opinionated symlink manager for dotfiles.
 | Spec                                   | Description                                                                 |
 | -------------------------------------- | --------------------------------------------------------------------------- |
 | [cli.md](cli.md)                       | Command-line interface: subcommands, flags, help, version, typo suggestions |
-| [config.md](config.md)                 | Configuration system: `.lnkconfig`, `.lnkignore`, precedence rules          |
+| [config.md](config.md)                 | Configuration system: `.lnkignore`, ignore patterns, built-in defaults      |
 | [create.md](create.md)                 | `create` command: symlink creation with 3-phase execution                   |
 | [remove.md](remove.md)                 | `remove` command: removing managed symlinks                                 |
 | [status.md](status.md)                 | `status` command: displaying managed symlink status                         |

@@ -211,16 +211,9 @@ Examples:
   lnk create --ignore '*.swp' .       Add ignore pattern
 
 Config Files:
-  .lnkconfig in source directory (repo-specific)
-    Format: CLI flags, one per line
-    Example:
-      --target=~
-      --ignore=local/
-
   .lnkignore in source directory
     Format: gitignore syntax
-
-  Positional arguments take precedence over config file values
+    Patterns are combined with built-in defaults and --ignore flags
 ```
 
 ---
