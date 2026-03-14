@@ -130,6 +130,11 @@ If any step (2 or 3) fails:
 
 After all orphans succeed:
 
+- Call `CleanEmptyDirs` with the parent directories of all orphaned files' source
+  locations (`link.Target`) and `sourceDir` as the boundary. This walks upward
+  from each parent in the repository, removing empty directories until reaching
+  `sourceDir` (which is never removed). Each removed directory is logged via
+  `PrintVerbose`. The target side is unaffected — the file has been restored there.
 - Print summary `"Orphaned N file(s) successfully"` and next-step hint
 
 ---

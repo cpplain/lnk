@@ -90,6 +90,10 @@ For each broken link:
 
 After all links are processed:
 
+- Call `CleanEmptyDirs` with the parent directories of all successfully pruned
+  symlinks and `targetDir` as the boundary. This walks upward from each parent,
+  removing empty directories until reaching `targetDir` (which is never removed).
+  Each removed directory is logged via `PrintVerbose`.
 - If `pruned > 0`: print summary `"Pruned N broken symlink(s) successfully"`
 - If `failed > 0`: print warning `"Failed to prune N symlink(s)"` and return error
 

@@ -20,7 +20,6 @@ the specified source) are removed; other files are untouched.
 ### Non-Goals
 
 - Removing the source files themselves
-- Recursively removing empty directories left behind
 - Removing symlinks from sources other than the specified one
 
 ---
@@ -88,6 +87,10 @@ For each managed link:
 
 After all links are processed:
 
+- Call `CleanEmptyDirs` with the parent directories of all successfully removed
+  symlinks and `targetDir` as the boundary. This walks upward from each parent,
+  removing empty directories until reaching `targetDir` (which is never removed).
+  Each removed directory is logged via `PrintVerbose`.
 - If `removed > 0`: print summary `"Removed N symlink(s) successfully"`
 - If `failed > 0`: print warning `"Failed to remove N symlink(s)"` and return error
 

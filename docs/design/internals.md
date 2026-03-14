@@ -124,12 +124,51 @@ Moves a file from `src` to `dst`.
 
 ---
 
-## 7. Related Specifications
+## 7. CleanEmptyDirs
+
+```go
+func CleanEmptyDirs(dirs []string, boundaryDir string) int
+```
+
+Removes empty parent directories left behind after symlink removal or file moves.
+
+### Behavior
+
+1. For each directory path in `dirs`:
+   - Start at `current = dir`
+   - Loop while `current != boundaryDir`:
+     - Read directory entries via `os.ReadDir(current)`: if non-empty or error, break
+     - Call `os.Remove(current)` — only succeeds on empty directories (safe by design)
+     - On success: log via `PrintVerbose("Removed empty directory: %s", ContractPath(current))`
+       and increment the removed counter
+     - On failure: log via `PrintVerbose` and break
+     - Advance: `current = filepath.Dir(current)`
+2. Return the total count of removed directories
+
+`boundaryDir` is never removed. If a parent directory was already cleaned by
+an earlier entry in `dirs`, `os.ReadDir` will fail and the loop breaks gracefully
+— no deduplication needed.
+
+### Usage
+
+```go
+// remove / prune: clean target-side empty dirs
+CleanEmptyDirs(parentDirsOfRemovedLinks, targetDir)
+
+// orphan: clean source-side empty dirs
+CleanEmptyDirs(parentDirsOfOrphanedTargets, sourceDir)
+```
+
+Used by: `remove`, `prune`, `orphan`.
+
+---
+
+## 8. Related Specifications
 
 - [create.md](create.md) — Uses `CreateSymlink`
-- [remove.md](remove.md) — Uses `FindManagedLinks`, `RemoveSymlink`
+- [remove.md](remove.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `CleanEmptyDirs`
 - [status.md](status.md) — Uses `FindManagedLinks`
-- [prune.md](prune.md) — Uses `FindManagedLinks`, `RemoveSymlink`
+- [prune.md](prune.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `CleanEmptyDirs`
 - [adopt.md](adopt.md) — Uses `MoveFile`
-- [orphan.md](orphan.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `MoveFile`
+- [orphan.md](orphan.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `MoveFile`, `CleanEmptyDirs`
 - [error-handling.md](error-handling.md) — Error types returned by these functions
