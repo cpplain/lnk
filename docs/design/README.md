@@ -21,7 +21,7 @@ Design documentation for `lnk`, an opinionated symlink manager for dotfiles.
 ## Glossary
 
 These terms are used consistently across all specs. Source and target follow the
-same convention as `ln TARGET LINK_NAME` — source is where the real file lives,
+same convention as `ln -s source target` — source is where the real file lives,
 target is where the symlink appears.
 
 | Term                 | Definition                                                                          |
