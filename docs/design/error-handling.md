@@ -237,7 +237,7 @@ Examples:
 
 ```
 "Check that the file path is correct and the file exists"
-"Use 'lnk adopt <file> <source-dir>' to adopt this file first"
+"Use 'lnk adopt <source-dir> <file>' to adopt this file first"
 "Run 'lnk status' to see managed files"
 "Ensure source and target paths are different"
 ```

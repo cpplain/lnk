@@ -12,7 +12,7 @@ shared across all commands.
 
 ### Goals
 
-- **Subcommand-based**: `lnk <command> [flags] [args]` mirrors conventions of tools like `git`
+- **Subcommand-based**: `lnk <command> [flags] <source-dir> [target...]` mirrors conventions of tools like `ln`
 - **Shared flags**: all flags are accepted by all commands; irrelevant flags are silently ignored
 - **Helpful on error**: unknown commands suggest the closest match; missing args explain correct usage
 - **Composable**: machine-readable output when piped; human-friendly output to terminals
@@ -30,46 +30,49 @@ shared across all commands.
 ### Usage
 
 ```
-lnk <command> [flags] [args]
+lnk <command> [flags] <source-dir> [target...]
 ```
 
 The recommended form places flags after the command name. Flags are also accepted
 before the command name for convenience (e.g., `lnk --dry-run create .` works),
-but `lnk <command> [flags] [args]` is the canonical style. The `--` separator stops
-flag parsing; everything after it is treated as positional arguments.
+but `lnk <command> [flags] <source-dir> [target...]` is the canonical style. The
+`--` separator stops flag parsing; everything after it is treated as positional
+arguments.
 
 ### Commands
 
-| Command  | Args           | Description                           |
-| -------- | -------------- | ------------------------------------- |
-| `create` | `[source-dir]` | Create symlinks from source to target |
-| `remove` | `[source-dir]` | Remove managed symlinks               |
-| `status` | `[source-dir]` | Show status of managed symlinks       |
-| `prune`  | `[source-dir]` | Remove broken symlinks                |
-| `adopt`  | `<file...>`    | Adopt files into source directory     |
-| `orphan` | `<file...>`    | Remove files from management          |
+| Command  | Args                          | Description                           |
+| -------- | ----------------------------- | ------------------------------------- |
+| `create` | `<source-dir> [target-dir]`   | Create symlinks from source to target |
+| `remove` | `<source-dir> [target-dir]`   | Remove managed symlinks               |
+| `status` | `<source-dir> [target-dir]`   | Show status of managed symlinks       |
+| `prune`  | `<source-dir> [target-dir]`   | Remove broken symlinks                |
+| `adopt`  | `<source-dir> <file...>`      | Adopt files into source directory     |
+| `orphan` | `<source-dir> <file...>`      | Remove files from management          |
 
-For `create`, `remove`, `status`, `prune`: the optional positional argument sets the
-source directory. If both `--source` and a positional argument are provided, the
-positional argument takes precedence.
+For all commands, `source-dir` is the first required positional argument (the dotfiles
+repository directory).
 
-For `adopt` and `orphan`: one or more file paths are required positional arguments.
+For `create`, `remove`, `status`, `prune`: an optional second positional argument sets
+the target directory (default: `~`). Extra positional arguments beyond the second are a
+usage error (exit 2).
+
+For `adopt` and `orphan`: one or more file paths are required as the second and
+subsequent positional arguments.
 
 ### Global Flags
 
 All flags are accepted by all commands.
 
-| Flag               | Short | Default   | Description                            |
-| ------------------ | ----- | --------- | -------------------------------------- |
-| `--source DIR`     | `-s`  | `.` (cwd) | Source directory                       |
-| `--target DIR`     | `-t`  | `~`       | Target directory                       |
-| `--ignore PATTERN` |       |           | Additional ignore pattern (repeatable) |
-| `--dry-run`        | `-n`  | false     | Preview changes without making them    |
-| `--verbose`        | `-v`  | false     | Enable verbose output                  |
-| `--quiet`          | `-q`  | false     | Suppress all non-error output          |
-| `--no-color`       |       | false     | Disable colored output                 |
-| `--version`        | `-V`  |           | Print version and exit                 |
-| `--help`           | `-h`  |           | Show help and exit                     |
+| Flag               | Short | Default | Description                            |
+| ------------------ | ----- | ------- | -------------------------------------- |
+| `--ignore PATTERN` |       |         | Additional ignore pattern (repeatable) |
+| `--dry-run`        | `-n`  | false   | Preview changes without making them    |
+| `--verbose`        | `-v`  | false   | Enable verbose output                  |
+| `--quiet`          | `-q`  | false   | Suppress all non-error output          |
+| `--no-color`       |       | false   | Disable colored output                 |
+| `--version`        | `-V`  |         | Print version and exit                 |
+| `--help`           | `-h`  |         | Show help and exit                     |
 
 Notes:
 
@@ -142,12 +145,13 @@ func suggestCommand(input string) string {
 ```
 lnk create --help
 
-Usage: lnk create [flags] [source-dir]
+Usage: lnk create [flags] <source-dir> [target-dir]
 
 Create symlinks from source directory to target directory.
 
 Arguments:
-  source-dir    Source directory to link from (default: value of --source or .)
+  source-dir    Source directory to link from (required)
+  target-dir    Target directory where symlinks are created (default: ~)
 
 Flags:
   (all global flags apply)
@@ -155,7 +159,7 @@ Flags:
 Examples:
   lnk create .
   lnk create ~/git/dotfiles
-  lnk create -t /tmp .
+  lnk create . /tmp
   lnk create -n .
 ```
 
@@ -171,21 +175,19 @@ Version is injected at build time via `-ldflags`. In development builds, version
 ### Usage Output (bare `lnk` or `lnk --help`)
 
 ```
-Usage: lnk <command> [flags] [args]
+Usage: lnk <command> [flags] <source-dir> [target...]
 
 An opinionated symlink manager for dotfiles and more
 
 Commands:
-  create [source-dir]    Create symlinks from source to target
-  remove [source-dir]    Remove managed symlinks
-  status [source-dir]    Show status of managed symlinks
-  prune  [source-dir]    Remove broken symlinks
-  adopt  <file...>       Adopt files into source directory
-  orphan <file...>       Remove files from management
+  create <source-dir> [target-dir]   Create symlinks from source to target
+  remove <source-dir> [target-dir]   Remove managed symlinks
+  status <source-dir> [target-dir]   Show status of managed symlinks
+  prune  <source-dir> [target-dir]   Remove broken symlinks
+  adopt  <source-dir> <file...>      Adopt files into source directory
+  orphan <source-dir> <file...>      Remove files from management
 
 Flags:
-  -s, --source DIR      Source directory (default: .)
-  -t, --target DIR      Target directory (default: ~)
       --ignore PATTERN  Additional ignore pattern, repeatable
   -n, --dry-run         Preview changes without making them
   -v, --verbose         Enable verbose output
@@ -197,15 +199,15 @@ Flags:
 Examples:
   lnk create .                        Create links from current directory
   lnk create ~/git/dotfiles           Create from absolute path
-  lnk create -t /tmp .                Create with custom target
+  lnk create . /tmp                   Create with custom target
   lnk create -n .                     Dry-run preview
   lnk remove .                        Remove links
   lnk status .                        Show status
-  lnk prune                           Prune broken symlinks
+  lnk prune .                         Prune broken symlinks
   lnk prune ~/git/dotfiles            Prune from specific source
-  lnk adopt ~/.bashrc ~/.vimrc        Adopt files into current directory
-  lnk adopt -s ~/dotfiles ~/.bashrc   Adopt with explicit source
-  lnk orphan ~/.bashrc                Remove file from management
+  lnk adopt . ~/.bashrc ~/.vimrc      Adopt files into current directory
+  lnk adopt ~/dotfiles ~/.bashrc      Adopt with explicit source
+  lnk orphan . ~/.bashrc              Remove file from management
   lnk create --ignore '*.swp' .       Add ignore pattern
 
 Config Files:
@@ -218,15 +220,15 @@ Config Files:
   .lnkignore in source directory
     Format: gitignore syntax
 
-  CLI flags take precedence over config files
+  Positional arguments take precedence over config file values
 ```
 
 ---
 
 ## 4. Flag Parsing Rules
 
-- Short flags: single dash + single letter (`-n`, `-v`, `-s`)
-- Long flags: double dash + name (`--dry-run`, `--verbose`, `--source`)
+- Short flags: single dash + single letter (`-n`, `-v`, `-q`)
+- Long flags: double dash + name (`--dry-run`, `--verbose`, `--ignore`)
 - Value flags accept `--flag=value` or `--flag value` forms
 - Boolean flags do not accept values (`--dry-run` not `--dry-run=true`)
 - `--` terminates flag parsing; all subsequent tokens are positional arguments
@@ -253,13 +255,13 @@ lnk create .                        # Create links from cwd
 lnk create ~/git/dotfiles           # Create from explicit path
 lnk remove .                        # Remove links from cwd
 lnk status .                        # Show status
-lnk prune                           # Prune broken links (uses --source or .)
+lnk prune .                         # Prune broken links from cwd
 lnk prune ~/git/dotfiles            # Prune from explicit source
 
 # File management
-lnk adopt ~/.bashrc ~/.vimrc        # Adopt files into cwd
-lnk adopt -s ~/dotfiles ~/.bashrc   # Adopt with explicit source dir
-lnk orphan ~/.bashrc                # Orphan file
+lnk adopt . ~/.bashrc ~/.vimrc      # Adopt files into cwd
+lnk adopt ~/dotfiles ~/.bashrc      # Adopt with explicit source dir
+lnk orphan . ~/.bashrc              # Orphan file
 
 # Flags
 lnk create -n .                     # Dry-run preview

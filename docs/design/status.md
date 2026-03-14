@@ -31,11 +31,12 @@ broken (link target does not exist).
 ### CLI
 
 ```
-lnk status [flags] [source-dir]
+lnk status [flags] <source-dir> [target-dir]
 ```
 
-`source-dir` is an optional positional argument that overrides `--source`.
-`--dry-run` is accepted but has no effect (status is always read-only).
+`source-dir` is the source directory to check (required). `target-dir` is the
+directory to search for symlinks (optional, default: `~`). `--dry-run` is accepted
+but has no effect (status is always read-only).
 
 ### Go Function
 

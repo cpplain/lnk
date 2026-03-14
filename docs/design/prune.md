@@ -15,7 +15,7 @@ file no longer exists (e.g., after files were deleted from the source repository
 - **Targeted cleanup**: only remove symlinks that are both managed and broken
 - **Non-destructive**: never remove active symlinks or regular files
 - **Dry-run support**: preview broken links before removing them
-- **Safe default**: source directory argument is optional; defaults to `--source` or `.`
+- **Explicit source**: source directory argument is required
 
 ### Non-Goals
 
@@ -30,12 +30,11 @@ file no longer exists (e.g., after files were deleted from the source repository
 ### CLI
 
 ```
-lnk prune [flags] [source-dir]
+lnk prune [flags] <source-dir> [target-dir]
 ```
 
-`source-dir` is an optional positional argument that overrides `--source`. Unlike
-`create`, `remove`, and `status`, `prune` does not require a positional argument —
-it defaults to the value of `--source` (or `.` if `--source` is not set).
+`source-dir` is the source directory whose broken links to prune (required).
+`target-dir` is the directory to search for symlinks (optional, default: `~`).
 
 ### Go Function
 
@@ -117,8 +116,8 @@ step returning an error.
 ## 6. Examples
 
 ```sh
-# Prune broken links from current directory (uses --source or .)
-lnk prune
+# Prune broken links from current directory
+lnk prune .
 
 # Prune from a specific source
 lnk prune ~/git/dotfiles
@@ -127,7 +126,7 @@ lnk prune ~/git/dotfiles
 lnk prune -n ~/git/dotfiles
 
 # Verbose output
-lnk prune -v
+lnk prune -v ~/git/dotfiles
 ```
 
 ---

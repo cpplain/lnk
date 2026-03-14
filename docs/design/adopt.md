@@ -32,10 +32,11 @@ creates a symlink in the original location pointing to the new repository copy.
 ### CLI
 
 ```
-lnk adopt [flags] <file...>
+lnk adopt [flags] <source-dir> <file...>
 ```
 
-One or more file paths are required. Each path may be absolute or use `~`.
+`source-dir` is the repository directory to move files into (required). One or more
+file paths are required after the source directory. Each path may be absolute or use `~`.
 
 ### Go Function
 
@@ -156,19 +157,19 @@ A file is considered already adopted if:
 
 ```sh
 # Adopt a single file
-lnk adopt ~/.bashrc
+lnk adopt . ~/.bashrc
 
 # Adopt multiple files
-lnk adopt ~/.bashrc ~/.vimrc ~/.gitconfig
+lnk adopt . ~/.bashrc ~/.vimrc ~/.gitconfig
 
 # Adopt with explicit source directory
-lnk adopt -s ~/git/dotfiles ~/.bashrc
+lnk adopt ~/git/dotfiles ~/.bashrc
 
 # Adopt a directory (adopts each file individually)
-lnk adopt ~/.config/nvim
+lnk adopt . ~/.config/nvim
 
 # Dry-run to preview what would happen
-lnk adopt -n ~/.bashrc ~/.vimrc
+lnk adopt -n . ~/.bashrc ~/.vimrc
 ```
 
 ---

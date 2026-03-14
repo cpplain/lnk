@@ -31,10 +31,11 @@ Directories themselves are never symlinked — only individual files are.
 ### CLI
 
 ```
-lnk create [flags] [source-dir]
+lnk create [flags] <source-dir> [target-dir]
 ```
 
-`source-dir` is an optional positional argument that overrides `--source`.
+`source-dir` is the source directory to link from (required). `target-dir` is the
+target directory where symlinks are created (optional, default: `~`).
 
 ### Go Function
 
@@ -153,7 +154,7 @@ See [config.md](config.md) for the full list of active patterns and their source
 | Does not exist                     | Create symlink                                                                                                                                                   |
 | Symlink pointing to correct source | Skip silently (`LinkExistsError`)                                                                                                                                |
 | Symlink pointing elsewhere         | Remove and recreate                                                                                                                                              |
-| Regular file or directory          | Warning printed; link skipped; run continues. Error returned at end if failure count > 0. Hint: `"Use 'lnk adopt <file> <source-dir>' to adopt this file first"` |
+| Regular file or directory          | Warning printed; link skipped; run continues. Error returned at end if failure count > 0. Hint: `"Use 'lnk adopt <source-dir> <file>' to adopt this file first"` |
 
 Collisions with regular files do not abort the entire run; all other links are still
 attempted. The command exits non-zero if any collisions occurred.
@@ -173,7 +174,7 @@ lnk create ~/git/dotfiles
 lnk create -n ~/git/dotfiles
 
 # Custom target directory
-lnk create -t /tmp ~/git/dotfiles
+lnk create ~/git/dotfiles /tmp
 
 # Add an extra ignore pattern
 lnk create --ignore 'local/' ~/git/dotfiles

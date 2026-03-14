@@ -30,10 +30,11 @@ the specified source) are removed; other files are untouched.
 ### CLI
 
 ```
-lnk remove [flags] [source-dir]
+lnk remove [flags] <source-dir> [target-dir]
 ```
 
-`source-dir` is an optional positional argument that overrides `--source`.
+`source-dir` is the source directory whose managed links to remove (required).
+`target-dir` is the directory to search for symlinks (optional, default: `~`).
 
 ### Go Function
 

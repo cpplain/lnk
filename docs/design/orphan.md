@@ -32,10 +32,11 @@ back to the target location, and restores the original file permissions.
 ### CLI
 
 ```
-lnk orphan [flags] <file...>
+lnk orphan [flags] <source-dir> <file...>
 ```
 
-One or more file or directory paths are required.
+`source-dir` is the repository directory that manages the files (required). One or
+more file or directory paths are required after the source directory.
 
 ### Go Function
 
@@ -82,7 +83,7 @@ found in <path>"` with hint to run `lnk status`. Add all found links to the coll
 
 If any validation step returns an error, return it immediately — no filesystem changes are made.
 
-After processing all paths: if collection is empty, print `"No managed symlinks to orphan"`
+After processing all paths: if collection is empty, print `"No managed symlinks to orphan."`
 and return nil.
 
 ### Dry-Run Mode
@@ -158,19 +159,19 @@ This is identical to the detection used by `FindManagedLinks`.
 
 ```sh
 # Orphan a single file
-lnk orphan ~/.bashrc
+lnk orphan . ~/.bashrc
 
 # Orphan multiple files
-lnk orphan ~/.bashrc ~/.vimrc
+lnk orphan . ~/.bashrc ~/.vimrc
 
 # Orphan with explicit source directory
-lnk orphan -s ~/git/dotfiles ~/.bashrc
+lnk orphan ~/git/dotfiles ~/.bashrc
 
 # Orphan all managed files in a directory
-lnk orphan ~/.config/nvim
+lnk orphan . ~/.config/nvim
 
 # Dry-run to preview
-lnk orphan -n ~/.bashrc
+lnk orphan -n . ~/.bashrc
 ```
 
 ---

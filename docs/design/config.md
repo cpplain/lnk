@@ -7,12 +7,12 @@
 ### Purpose
 
 The `lnk` configuration system merges settings from multiple sources — built-in
-defaults, config files, and CLI flags — into a single resolved `Config` that all
+defaults, config files, and CLI arguments — into a single resolved `Config` that all
 operations use.
 
 ### Goals
 
-- **Layered precedence**: CLI flags always win; built-in defaults always lose
+- **Layered precedence**: CLI arguments always win; built-in defaults always lose
 - **Two config file formats**: flag-style `.lnkconfig` and gitignore-style `.lnkignore`
 - **XDG-aware discovery**: finds config files in standard locations
 - **Additive ignore patterns**: all sources contribute; CLI can negate with `!`
@@ -32,11 +32,11 @@ operations use.
 
 Higher source wins:
 
-| Priority    | Source                        | Example                      |
-| ----------- | ----------------------------- | ---------------------------- |
-| 1 (highest) | CLI `--target` flag           | `lnk create --target /tmp .` |
-| 2           | `.lnkconfig` `--target` value | `--target=~` in config file  |
-| 3 (lowest)  | Built-in default              | `~` (user home directory)    |
+| Priority    | Source                        | Example                          |
+| ----------- | ----------------------------- | -------------------------------- |
+| 1 (highest) | CLI positional argument       | `lnk create ~/git/dotfiles /tmp` |
+| 2           | `.lnkconfig` `--target` value | `--target=~` in config file      |
+| 3 (lowest)  | Built-in default              | `~` (user home directory)        |
 
 ### Precedence for Ignore Patterns
 
@@ -157,7 +157,7 @@ type FileConfig struct {
 
 // Config is the final merged configuration used by all operations
 type Config struct {
-    SourceDir      string   // source directory (from CLI positional arg or --source)
+    SourceDir      string   // source directory (from CLI positional arg)
     TargetDir      string   // resolved target directory
     IgnorePatterns []string // combined ignore patterns from all sources
 }
@@ -246,8 +246,8 @@ lnk create ~/git/dotfiles
 ### CLI overrides config file target
 
 ```sh
-lnk create --target /tmp ~/git/dotfiles
-# Uses: target=/tmp (CLI wins), built-in + local/ ignores
+lnk create ~/git/dotfiles /tmp
+# Uses: target=/tmp (CLI positional wins), built-in + local/ ignores
 ```
 
 ### Negating a built-in pattern
