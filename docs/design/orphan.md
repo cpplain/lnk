@@ -84,7 +84,7 @@ found in <path>"` with hint to run `lnk status`. Add all found links to the coll
 
 If any validation step returns an error, return it immediately — no filesystem changes are made.
 
-After processing all paths: if collection is empty, print `"No managed symlinks to orphan."`
+After processing all paths: if collection is empty, print `"No managed symlinks found."`
 and return nil.
 
 ### Dry-Run Mode

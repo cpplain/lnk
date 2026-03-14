@@ -120,7 +120,7 @@ If no managed links are found:
 ```
 Symlink Status
 
-No active links found.
+No managed links found.
 ```
 
 ---

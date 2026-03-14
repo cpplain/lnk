@@ -69,7 +69,9 @@ For each path in `opts.Paths`:
 2. **Stat** with `os.Lstat`:
    - If path does not exist: return error with hint to check the path
 3. **If directory** (not itself a symlink): walk it and collect each file within;
-   apply steps 4–8 to each collected file
+   apply steps 4–8 to each collected file. If no files are found after walking,
+   return error `"no files to adopt in <path>"` with hint to check that the
+   directory contains regular files
 4. **Validate** via `validateAdoptSource(absPath, absSourceDir)`:
    - If path is a symlink already pointing into `sourceDir`: return error
      `"file already adopted"` with hint to run `lnk status`
@@ -83,9 +85,6 @@ For each path in `opts.Paths`:
    circular references and overlapping paths
 
 If any validation fails, return the error immediately. No filesystem changes are made.
-
-If no files are collected after expansion (e.g., empty directory), print
-`"No files to adopt found."` and return nil.
 
 ### Dry-Run Mode
 
@@ -107,16 +106,20 @@ End with `PrintDryRunSummary()`.
 
 For each planned adoption in order:
 
-1. Create parent directory of `destPath` (`os.MkdirAll`, mode `0755`)
-2. Move file from `absPath` to `destPath` via `MoveFile`
-3. Create symlink: `absPath` → `destPath`
-4. On success: print `"Adopted: <absPath>"`
+1. **Verify source still exists** (`os.Lstat(absPath)`): if gone, return error with hint
+2. Create parent directory of `destPath` (`os.MkdirAll`, mode `0755`)
+3. Move file from `absPath` to `destPath` via `MoveFile`
+4. Create symlink: `absPath` → `destPath`
+5. On success: print `"Adopted: <absPath>"`
 
 If any step fails:
 
 - Roll back all completed adoptions in reverse order:
   - Remove the symlink (if created)
   - Move `destPath` back to `absPath` via `MoveFile`
+- Call `CleanEmptyDirs` on parent directories of rolled-back destinations, bounded
+  by `sourceDir`, to remove any empty directories created by `MkdirAll` during the
+  failed execution
 - Return error describing the failure
 
 After all adoptions succeed:
@@ -195,13 +198,15 @@ Next: Run 'lnk status <source-dir>' to view adopted files
 
 ## 9. Error Cases
 
-| Scenario                    | Error Message                                                   |
-| --------------------------- | --------------------------------------------------------------- |
-| File does not exist         | `adopt <path>: no such file or directory` + hint to check path  |
-| File already adopted        | `adopt <path>: file already adopted` + hint to run `lnk status` |
-| Path outside home directory | `path <path> must be within home directory` + hint              |
-| Destination already exists  | `destination <dest> already exists` + hint to remove first      |
-| Permission denied           | OS error wrapped in `PathError` with permission hint            |
+| Scenario                    | Error Message                                                                     |
+| --------------------------- | --------------------------------------------------------------------------------- |
+| File does not exist         | `adopt <path>: no such file or directory` + hint to check path                    |
+| File already adopted        | `adopt <path>: file already adopted` + hint to run `lnk status`                   |
+| Path outside home directory | `path <path> must be within home directory` + hint                                |
+| Destination already exists  | `destination <dest> already exists` + hint to remove first                        |
+| Empty directory argument    | `no files to adopt in <path>` + hint to check directory contains regular files    |
+| Source vanishes at execute  | error with hint to check path; all completed adoptions rolled back + dirs cleaned |
+| Permission denied           | OS error wrapped in `PathError` with permission hint                              |
 
 ---
 

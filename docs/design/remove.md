@@ -91,7 +91,7 @@ After all links are processed:
   symlinks and `targetDir` as the boundary. This walks upward from each parent,
   removing empty directories until reaching `targetDir` (which is never removed).
   Each removed directory is logged via `PrintVerbose`.
-- If `removed > 0`: print summary `"Removed N symlink(s) successfully"`
+- If `removed > 0`: print summary `"Removed N symlink(s) successfully"` and next-step hint
 - If `failed > 0`: print warning `"Failed to remove N symlink(s)"` and return error
 
 ---
@@ -146,6 +146,7 @@ Removing Symlinks
 ✓ Removed: ~/.vimrc
 
 ✓ Removed 2 symlink(s) successfully
+Next: Run 'lnk status <source-dir>' to verify removal
 ```
 
 Nothing to remove:
