@@ -29,11 +29,11 @@ the specified source) are removed; other files are untouched.
 ### CLI
 
 ```
-lnk remove [flags] <source-dir> [target-dir]
+lnk remove [flags] <source-dir>
 ```
 
 `source-dir` is the source directory whose managed links to remove (required).
-`target-dir` is the directory to search for symlinks (optional, default: `~`).
+The target directory is always `~`.
 
 ### Go Function
 
@@ -44,7 +44,7 @@ func RemoveLinks(opts LinkOptions) error
 ```go
 type LinkOptions struct {
     SourceDir      string   // source directory whose managed links to remove
-    TargetDir      string   // where to look for symlinks (default: ~)
+    TargetDir      string   // where to look for symlinks (always ~ from CLI; configurable in tests)
     IgnorePatterns []string // not used by remove; accepted for interface consistency
     DryRun         bool     // preview mode
 }

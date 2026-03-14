@@ -31,11 +31,11 @@ Directories themselves are never symlinked — only individual files are.
 ### CLI
 
 ```
-lnk create [flags] <source-dir> [target-dir]
+lnk create [flags] <source-dir>
 ```
 
-`source-dir` is the source directory to link from (required). `target-dir` is the
-target directory where symlinks are created (optional, default: `~`).
+`source-dir` is the source directory to link from (required). The target directory
+is always `~`.
 
 ### Go Function
 
@@ -46,7 +46,7 @@ func CreateLinks(opts LinkOptions) error
 ```go
 type LinkOptions struct {
     SourceDir      string   // source directory to link from
-    TargetDir      string   // where to create links (default: ~)
+    TargetDir      string   // where to create links (always ~ from CLI; configurable in tests)
     IgnorePatterns []string // combined ignore patterns from all sources
     DryRun         bool     // preview mode: show changes without making them
 }
@@ -172,9 +172,6 @@ lnk create ~/git/dotfiles
 
 # Dry-run to preview what would happen
 lnk create -n ~/git/dotfiles
-
-# Custom target directory
-lnk create ~/git/dotfiles /tmp
 
 # Add an extra ignore pattern
 lnk create --ignore 'local/' ~/git/dotfiles

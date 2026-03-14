@@ -27,7 +27,7 @@ target is where the symlink appears.
 | Term                 | Definition                                                                          |
 | -------------------- | ----------------------------------------------------------------------------------- |
 | **source directory** | The dotfiles repository (e.g. `~/git/dotfiles`). This is where the real files live. |
-| **target directory** | Where symlinks are created (default: `~`). This is where files appear to live.      |
+| **target directory** | Where symlinks are created (always `~`). This is where files appear to live.        |
 | **managed symlink**  | A symlink whose resolved target is within the source directory.                     |
 | **active symlink**   | A managed symlink whose target file exists.                                         |
 | **broken symlink**   | A managed symlink whose target file no longer exists.                               |

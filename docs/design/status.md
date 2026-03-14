@@ -31,12 +31,11 @@ broken (link target does not exist).
 ### CLI
 
 ```
-lnk status [flags] <source-dir> [target-dir]
+lnk status [flags] <source-dir>
 ```
 
-`source-dir` is the source directory to check (required). `target-dir` is the
-directory to search for symlinks (optional, default: `~`). `--dry-run` is accepted
-but has no effect (status is always read-only).
+`source-dir` is the source directory to check (required). The target directory is
+always `~`. `--dry-run` is accepted but has no effect (status is always read-only).
 
 ### Go Function
 
@@ -47,7 +46,7 @@ func Status(opts LinkOptions) error
 ```go
 type LinkOptions struct {
     SourceDir      string   // source directory to check
-    TargetDir      string   // where to search for symlinks (default: ~)
+    TargetDir      string   // where to search for symlinks (always ~ from CLI; configurable in tests)
     IgnorePatterns []string // not used by status
     DryRun         bool     // accepted but ignored
 }
@@ -166,9 +165,6 @@ lnk status ~/git/dotfiles
 
 # Verbose: show source and target dirs before listing
 lnk status -v ~/git/dotfiles
-
-# Quiet: only show errors (useful in scripts — exits non-zero if errors occur)
-lnk status -q ~/git/dotfiles
 
 # Pipe to grep to find broken links
 lnk status ~/git/dotfiles | grep ^broken

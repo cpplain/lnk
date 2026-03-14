@@ -49,6 +49,7 @@ func Orphan(opts OrphanOptions) error
 ```go
 type OrphanOptions struct {
     SourceDir string   // repository directory (managed link source)
+    TargetDir string   // home directory where symlinks live (always ~ from CLI; configurable in tests)
     Paths     []string // one or more symlink paths to orphan
     DryRun    bool     // preview mode
 }
@@ -69,9 +70,9 @@ For each path in `opts.Paths`:
 2. **Stat** with `os.Lstat`:
    - If not found: return `PathError` (op: `"orphan"`, path, err: `os.ErrNotExist`) with
      hint to check the path
-3. **Validate home directory**: compute `filepath.Rel(homeDir, absPath)` — if the path
-   is not within `~`, return `ValidationError` with hint that only paths within the home
-   directory can be orphaned
+3. **Validate target directory**: compute `filepath.Rel(opts.TargetDir, absPath)` — if the path
+   is not within `TargetDir`, return `ValidationError` with hint that only paths within the
+   target directory can be orphaned
 4. **If directory** (not itself a symlink): call `FindManagedLinks(absPath, []string{absSourceDir})`
    to find all managed symlinks within. If none found: return error `"no managed symlinks
 found in <path>"` with hint to run `lnk status`. Add all found links to the collection.
@@ -88,8 +89,11 @@ found in <path>"` with hint to run `lnk status`. Add all found links to the coll
 
 If any validation step returns an error, return it immediately — no filesystem changes are made.
 
-After processing all paths: if collection is empty, print `"No managed symlinks found."`
-and return nil.
+After processing all paths, **deduplicate** by `Path` — if the same symlink was collected
+more than once (e.g., via both a directory argument and an explicit symlink argument), keep
+only the first occurrence.
+
+If collection is empty after deduplication, print `"No managed symlinks found."` and return nil.
 
 ### Dry-Run Mode
 
@@ -159,6 +163,7 @@ This is identical to the detection used by `FindManagedLinks`.
 - `SourceDir` is expanded with `ExpandPath` before use
 - `SourceDir` must exist and be a directory
 - Each `Path` is expanded with `ExpandPath` before processing
+- Each path must reside within `TargetDir` (always `~` from CLI); paths outside produce an error
 - Displayed paths use `ContractPath`
 
 ---
@@ -205,7 +210,7 @@ All Phase 1 errors abort the entire operation before any filesystem changes are 
 | Scenario                         | Phase | Error Type        | Error                                                             |
 | -------------------------------- | ----- | ----------------- | ----------------------------------------------------------------- |
 | Path does not exist              | 1     | `PathError`       | `orphan <path>: no such file or directory` + check path hint      |
-| Path outside home directory      | 1     | `ValidationError` | `path <path> must be within home directory` + hint                |
+| Path outside target directory    | 1     | `ValidationError` | `path <path> must be within target directory` + hint              |
 | Path is a regular file           | 1     | `PathError`       | `orphan <path>: not a symlink` + hint to use `rm`                 |
 | Symlink not managed by source    | 1     | `LinkError`       | `orphan <path>: not managed by source` + hint to use `rm`         |
 | Broken symlink                   | 1     | `PathError`       | `orphan <path>: symlink target does not exist` + hint to use `rm` |

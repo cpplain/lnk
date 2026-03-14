@@ -30,11 +30,11 @@ file no longer exists (e.g., after files were deleted from the source repository
 ### CLI
 
 ```
-lnk prune [flags] <source-dir> [target-dir]
+lnk prune [flags] <source-dir>
 ```
 
 `source-dir` is the source directory whose broken links to prune (required).
-`target-dir` is the directory to search for symlinks (optional, default: `~`).
+The target directory is always `~`.
 
 ### Go Function
 
@@ -45,7 +45,7 @@ func Prune(opts LinkOptions) error
 ```go
 type LinkOptions struct {
     SourceDir      string   // source directory whose broken links to prune
-    TargetDir      string   // where to search for symlinks (default: ~)
+    TargetDir      string   // where to search for symlinks (always ~ from CLI; configurable in tests)
     IgnorePatterns []string // not used by prune
     DryRun         bool     // preview mode
 }

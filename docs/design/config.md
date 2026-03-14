@@ -28,10 +28,9 @@ defaults, an optional `.lnkignore` file, and CLI arguments — into a single res
 
 ### Target Directory
 
-For `create`, `remove`, `status`, and `prune`, the target directory is an optional
-second positional argument (default: `~`). The `adopt` and `orphan` commands do not
-use a target directory parameter; paths provided to these commands must be within the
-user's home directory (`~`).
+The target directory is always `~` (the user's home directory) for all commands.
+It is not configurable via CLI argument. `TargetDir` is retained in the Go-level
+options structs for testability.
 
 ### Ignore Patterns
 
@@ -98,7 +97,7 @@ CHANGELOG*
 // Config is the final merged configuration used by all operations
 type Config struct {
     SourceDir      string   // source directory (from CLI positional arg)
-    TargetDir      string   // target directory (from CLI positional arg or default ~)
+    TargetDir      string   // target directory (always ~ from CLI; configurable in tests)
     IgnorePatterns []string // combined ignore patterns from all sources
 }
 ```
@@ -108,7 +107,7 @@ type Config struct {
 ## 6. LoadConfig Algorithm
 
 ```go
-func LoadConfig(sourceDir, targetDir string, cliIgnorePatterns []string) (*Config, error)
+func LoadConfig(sourceDir string, cliIgnorePatterns []string) (*Config, error)
 ```
 
 1. Call `LoadIgnoreFile(sourceDir)` to parse `<sourceDir>/.lnkignore` (if it exists)
@@ -118,7 +117,8 @@ func LoadConfig(sourceDir, targetDir string, cliIgnorePatterns []string) (*Confi
             + ignoreFilePatterns
             + cliIgnorePatterns
    ```
-3. Return `Config{SourceDir: sourceDir, TargetDir: targetDir, IgnorePatterns: patterns}`
+3. Expand `~` to the user's home directory via `ExpandPath("~")`
+4. Return `Config{SourceDir: sourceDir, TargetDir: homeDir, IgnorePatterns: patterns}`
 
 ---
 
@@ -173,13 +173,6 @@ local/
 ```sh
 lnk create ~/git/dotfiles
 # Uses: target=~, built-in + local/ + *.secret ignores
-```
-
-### Custom target via positional arg
-
-```sh
-lnk create ~/git/dotfiles /tmp
-# Uses: target=/tmp, built-in ignores only
 ```
 
 ### Negating a built-in pattern

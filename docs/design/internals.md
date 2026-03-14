@@ -118,7 +118,9 @@ Moves a file from `src` to `dst`.
 
 1. Attempts `os.Rename(src, dst)` — fast path, works on the same filesystem
 2. If rename fails (e.g., cross-device): falls back to copy-then-delete:
+   - Reads `src` file mode via `os.Lstat`
    - Copies file contents from `src` to `dst`
+   - Applies the original file mode to `dst` via `os.Chmod`
    - Verifies the copy by comparing file sizes
    - Removes `src` only after a successful, verified copy
 

@@ -14,7 +14,7 @@ and color settings.
 
 - **Consistency**: all commands use the same print functions; visual language is uniform
 - **Terminal-aware**: icons and colors when connected to a terminal; plain prefixes when piped
-- **Verbosity-aware**: quiet mode suppresses informational output; verbose mode adds debug info
+- **Verbosity-aware**: verbose mode adds debug info beyond standard informational output
 - **Stderr for errors and warnings**: informational output to stdout; errors to stderr
 
 ### Non-Goals
@@ -27,15 +27,12 @@ and color settings.
 
 ## 2. Verbosity Levels
 
-Three levels, controlled by `SetVerbosity(level VerbosityLevel)`:
+Two levels, controlled by `SetVerbosity(level VerbosityLevel)`:
 
 | Level | Constant           | Flag               | Description                       |
 | ----- | ------------------ | ------------------ | --------------------------------- |
-| 0     | `VerbosityQuiet`   | `-q` / `--quiet`   | Only errors and warnings          |
-| 1     | `VerbosityNormal`  | (default)          | Standard informational output     |
-| 2     | `VerbosityVerbose` | `-v` / `--verbose` | Standard output plus debug detail |
-
-`--quiet` and `--verbose` are mutually exclusive; using both is a usage error.
+| 0     | `VerbosityNormal`  | (default)          | Standard informational output     |
+| 1     | `VerbosityVerbose` | `-v` / `--verbose` | Standard output plus debug detail |
 
 Global state: `verbosity` defaults to `VerbosityNormal`. Set once at startup by
 `main` before any operations run.
@@ -106,34 +103,31 @@ When color is disabled, all functions return the input string unchanged.
 
 Each function has two output modes:
 
-| Function             | Terminal                                | Piped                                |
-| -------------------- | --------------------------------------- | ------------------------------------ |
-| `PrintSuccess`       | `✓ <message>` (green icon)              | `success <message>`                  |
-| `PrintError`         | `✗ Error: <message>` (red icon, stderr) | `error: <message>` (stderr)          |
-| `PrintWarning`       | `! <message>` (yellow icon, stderr)     | `warning: <message>` (stderr)        |
-| `PrintSkip`          | `○ <message>` (yellow icon)             | `skip <message>`                     |
-| `PrintDryRun`        | `[DRY RUN] <message>` (yellow prefix)   | `dry-run: <message>`                 |
-| `PrintInfo`          | `<message>` (no prefix)                 | `<message>` (no prefix)              |
-| `PrintDetail`        | `  <message>` (2-space indent)          | `  <message>` (2-space indent)       |
-| `PrintVerbose`       | `[VERBOSE] <message>`                   | `[VERBOSE] <message>`                |
-| `PrintCommandHeader` | bold `<text>` + blank line              | blank line only (no header in quiet) |
+| Function             | Terminal                                | Piped                          |
+| -------------------- | --------------------------------------- | ------------------------------ |
+| `PrintSuccess`       | `✓ <message>` (green icon)              | `success <message>`            |
+| `PrintError`         | `✗ Error: <message>` (red icon, stderr) | `error: <message>` (stderr)    |
+| `PrintWarning`       | `! <message>` (yellow icon, stderr)     | `warning: <message>` (stderr)  |
+| `PrintSkip`          | `○ <message>` (yellow icon)             | `skip <message>`               |
+| `PrintDryRun`        | `[DRY RUN] <message>` (yellow prefix)   | `dry-run: <message>`           |
+| `PrintInfo`          | `<message>` (no prefix)                 | `<message>` (no prefix)        |
+| `PrintDetail`        | `  <message>` (2-space indent)          | `  <message>` (2-space indent) |
+| `PrintVerbose`       | `[VERBOSE] <message>`                   | `[VERBOSE] <message>`          |
+| `PrintCommandHeader` | bold `<text>` + blank line              | blank line only                |
 
 ### Verbosity Gating
 
-| Function             | Quiet                                     | Normal     | Verbose |
-| -------------------- | ----------------------------------------- | ---------- | ------- |
-| `PrintSuccess`       | suppressed                                | shown      | shown   |
-| `PrintInfo`          | suppressed                                | shown      | shown   |
-| `PrintDetail`        | suppressed                                | shown      | shown   |
-| `PrintSkip`          | suppressed                                | shown      | shown   |
-| `PrintDryRun`        | suppressed                                | shown      | shown   |
-| `PrintVerbose`       | suppressed                                | suppressed | shown   |
-| `PrintError`         | shown                                     | shown      | shown   |
-| `PrintWarning`       | shown                                     | shown      | shown   |
-| `PrintCommandHeader` | text suppressed, blank line still printed | shown      | shown   |
-
-Note: `PrintCommandHeader` always emits a trailing blank line even in quiet mode to
-maintain consistent spacing before operation output.
+| Function             | Normal     | Verbose |
+| -------------------- | ---------- | ------- |
+| `PrintSuccess`       | shown      | shown   |
+| `PrintInfo`          | shown      | shown   |
+| `PrintDetail`        | shown      | shown   |
+| `PrintSkip`          | shown      | shown   |
+| `PrintDryRun`        | shown      | shown   |
+| `PrintVerbose`       | suppressed | shown   |
+| `PrintError`         | shown      | shown   |
+| `PrintWarning`       | shown      | shown   |
+| `PrintCommandHeader` | shown      | shown   |
 
 ### Specialized Functions
 
@@ -150,7 +144,7 @@ Always writes to stderr. Not gated by verbosity (errors are always shown).
 
 ```go
 func PrintCommandHeader(text string) {
-    if !IsQuiet() && !ShouldSimplifyOutput() {
+    if !ShouldSimplifyOutput() {
         fmt.Println(Bold(text))
     }
     fmt.Println() // blank line always printed
@@ -228,5 +222,5 @@ messages corrupting the stream.
 
 ## 8. Related Specifications
 
-- [cli.md](cli.md) — Verbosity flag definitions (`--quiet`, `--verbose`, `--no-color`)
+- [cli.md](cli.md) — Verbosity flag definitions (`--verbose`, `--no-color`)
 - [error-handling.md](error-handling.md) — `PrintErrorWithHint` and error display

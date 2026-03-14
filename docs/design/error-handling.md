@@ -211,7 +211,7 @@ hint: Ensure the source directory exists or specify a different path
 
 - **Exit 0**: command completed successfully (including "nothing to do" cases)
 - **Exit 1**: operation was attempted but failed (e.g., permission denied, symlink creation failed)
-- **Exit 2**: command was invoked incorrectly (e.g., unknown flag, `--quiet` + `--verbose`, missing required file argument, unknown command)
+- **Exit 2**: command was invoked incorrectly (e.g., unknown flag, missing required argument, unknown command)
 
 ---
 
@@ -261,7 +261,7 @@ Examples:
 | --------------------------------------------- | ----------------- | ----------------------------------------------------- |
 | Path does not exist                           | `PathError`       | `NewPathErrorWithHint(op, path, err, hint)`           |
 | Already adopted (is a symlink into sourceDir) | `LinkError`       | `NewLinkErrorWithHint` with `ErrAlreadyAdopted`       |
-| Path outside home directory                   | `ValidationError` | `NewValidationErrorWithHint(field, value, msg, hint)` |
+| Path outside target directory                 | `ValidationError` | `NewValidationErrorWithHint(field, value, msg, hint)` |
 | Destination already exists                    | `PathError`       | `NewPathErrorWithHint(op, destPath, err, hint)`       |
 | Permission denied                             | `PathError`       | `NewPathErrorWithHint(op, path, err, hint)`           |
 
@@ -270,7 +270,7 @@ Examples:
 | Scenario                      | Error Type        | Constructor                                           |
 | ----------------------------- | ----------------- | ----------------------------------------------------- |
 | Path does not exist           | `PathError`       | `NewPathErrorWithHint(op, path, err, hint)`           |
-| Path outside home directory   | `ValidationError` | `NewValidationErrorWithHint(field, value, msg, hint)` |
+| Path outside target directory | `ValidationError` | `NewValidationErrorWithHint(field, value, msg, hint)` |
 | Path is not a symlink         | `PathError`       | `NewPathErrorWithHint` with `ErrNotSymlink`           |
 | Symlink not managed by source | `LinkError`       | `NewLinkErrorWithHint(op, source, target, err, hint)` |
 | Broken symlink                | `PathError`       | `NewPathErrorWithHint(op, path, err, hint)`           |
