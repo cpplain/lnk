@@ -75,8 +75,8 @@ local/
 
 ## 4. Built-in Ignore Patterns
 
-These patterns are always active and cannot be removed (they appear first in the
-pattern list, so they can be negated by a later `!pattern` if needed):
+These patterns are always present at the start of the pattern list. Later `!pattern`
+entries (from `.lnkignore` or `--ignore`) can negate them if needed:
 
 ```
 .git

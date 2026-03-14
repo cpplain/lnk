@@ -150,7 +150,7 @@ Always writes to stderr. Not gated by verbosity (errors are always shown).
 
 ```go
 func PrintCommandHeader(text string) {
-    if !IsQuiet() {
+    if !IsQuiet() && !ShouldSimplifyOutput() {
         fmt.Println(Bold(text))
     }
     fmt.Println() // blank line always printed

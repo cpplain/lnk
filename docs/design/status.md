@@ -125,7 +125,20 @@ No managed links found.
 
 ---
 
-## 4. Path Behavior
+## 4. Exit Code
+
+`status` exits 0 whenever it successfully reports, even when broken links are found.
+Broken links are informational — not a runtime error. Exit 1 only on actual failures
+(e.g., the target directory cannot be read). Users who want to act on broken links
+programmatically can use piped output:
+
+```sh
+lnk status . | grep ^broken
+```
+
+---
+
+## 5. Path Behavior
 
 - `SourceDir` and `TargetDir` are expanded with `ExpandPath` before use
 - `SourceDir` must exist and be a directory; validation error otherwise
@@ -134,7 +147,7 @@ No managed links found.
 
 ---
 
-## 5. Broken Link Detection
+## 6. Broken Link Detection
 
 A link is broken when `os.Stat(resolvedTarget)` returns `os.IsNotExist`. This follows
 symlinks (unlike `os.Lstat`), so a broken link is one whose ultimate target does not
@@ -142,7 +155,7 @@ exist.
 
 ---
 
-## 6. Examples
+## 7. Examples
 
 ```sh
 # Status of current directory
@@ -163,7 +176,7 @@ lnk status ~/git/dotfiles | grep ^broken
 
 ---
 
-## 7. Output
+## 8. Output
 
 ```
 Symlink Status
@@ -190,7 +203,7 @@ Total: 3 links (2 active, 1 broken)
 
 ---
 
-## 8. Related Specifications
+## 9. Related Specifications
 
 - [create.md](create.md) — Creating the links shown by status
 - [remove.md](remove.md) — Removing active links

@@ -81,7 +81,7 @@ Creates a symlink at `target` pointing to `source`.
    - If it is a regular file or directory: return `LinkError` with hint to use
      `lnk adopt` first
 2. Creates the symlink via `os.Symlink(source, target)`
-3. On success: prints `"Created: <ContractPath(target)>"`
+3. On success: returns nil (the caller is responsible for printing output)
 
 ### Errors
 
@@ -159,16 +159,117 @@ CleanEmptyDirs(parentDirsOfRemovedLinks, targetDir)
 CleanEmptyDirs(parentDirsOfOrphanedTargets, sourceDir)
 ```
 
-Used by: `remove`, `prune`, `orphan`.
+Used by: `remove`, `prune`, `adopt` (rollback only), `orphan`.
 
 ---
 
-## 8. Related Specifications
+## 8. ValidateSymlinkCreation
 
-- [create.md](create.md) — Uses `CreateSymlink`
+```go
+func ValidateSymlinkCreation(source, target string) error
+```
+
+Validates that creating a symlink at `target` pointing to `source` would not produce
+an invalid or dangerous filesystem state.
+
+### Behavior
+
+1. Returns `ValidationError` if `source == target`
+2. Returns `ValidationError` if `source` is inside `target` (circular reference)
+3. Returns `ValidationError` if `target` is inside `source` (overlapping paths)
+
+All paths are resolved to absolute paths before comparison.
+
+### Usage
+
+Used by: `create` (Phase 2 validation), `adopt` (Phase 1 validation).
+
+---
+
+## 9. PatternMatcher
+
+```go
+type PatternMatcher struct { ... }
+
+func NewPatternMatcher(patterns []string) *PatternMatcher
+func (m *PatternMatcher) Matches(relPath string) bool
+```
+
+Matches relative paths against a list of gitignore-style ignore patterns.
+
+### Behavior
+
+- Patterns are applied in order; later patterns can negate earlier ones with `!pattern`
+- `*.swp` — matches any `.swp` file anywhere in the tree
+- `local/` — matches a directory named `local` and all files within it
+- `dir/file` — matches only at that specific relative path
+- `**` — matches across directory boundaries
+- `!pattern` — negates a previously matched pattern; the path is included if the last matching pattern is a negation
+
+`Matches` returns `true` if the path should be ignored (excluded from linking).
+
+### Usage
+
+Used by: `create` (Phase 1 collection).
+
+---
+
+## 10. validateAdoptSource
+
+```go
+func validateAdoptSource(absPath, absSourceDir string) error
+```
+
+Checks whether a path is already adopted (i.e., a symlink that already points into
+`absSourceDir`).
+
+### Behavior
+
+1. Calls `os.Lstat(absPath)` — if path does not exist or is not a symlink, returns nil
+   (not already adopted)
+2. Reads the symlink target via `os.Readlink`
+3. Resolves to an absolute path
+4. Checks `filepath.Rel(absSourceDir, cleanTarget)` — if the result does not start
+   with `..` and is not `.`, the file is already adopted
+5. Returns `LinkError` with `ErrAlreadyAdopted` and hint to run `lnk status`
+
+### Usage
+
+Used by: `adopt` (Phase 1 validation).
+
+---
+
+## 11. LoadIgnoreFile
+
+```go
+func LoadIgnoreFile(sourceDir string) ([]string, error)
+```
+
+Loads ignore patterns from `<sourceDir>/.lnkignore`. Returns an empty slice without
+error if the file does not exist.
+
+### Behavior
+
+1. Resolves `<sourceDir>/.lnkignore` to an absolute path
+2. If the file does not exist: logs via `PrintVerbose` and returns `[]string{}, nil`
+3. Reads the file and parses it line by line:
+   - Skips empty lines and lines beginning with `#`
+   - Each non-comment line is appended as a pattern
+4. Returns the collected patterns
+
+### Usage
+
+Used by: `LoadConfig` in `config.go`.
+
+---
+
+## 12. Related Specifications
+
+- [create.md](create.md) — Uses `CreateSymlink`, `ValidateSymlinkCreation`, `PatternMatcher`
 - [remove.md](remove.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `CleanEmptyDirs`
 - [status.md](status.md) — Uses `FindManagedLinks`
 - [prune.md](prune.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `CleanEmptyDirs`
-- [adopt.md](adopt.md) — Uses `MoveFile`
+- [adopt.md](adopt.md) — Uses `MoveFile`, `CleanEmptyDirs` (rollback), `ValidateSymlinkCreation`, `validateAdoptSource`
 - [orphan.md](orphan.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `MoveFile`, `CleanEmptyDirs`
+- [config.md](config.md) — Uses `LoadIgnoreFile`
 - [error-handling.md](error-handling.md) — Error types returned by these functions

@@ -69,11 +69,15 @@ For each path in `opts.Paths`:
 2. **Stat** with `os.Lstat`:
    - If not found: return `PathError` (op: `"orphan"`, path, err: `os.ErrNotExist`) with
      hint to check the path
-3. **If directory** (not itself a symlink): call `FindManagedLinks(absPath, []string{absSourceDir})`
+3. **Validate home directory**: compute `filepath.Rel(homeDir, absPath)` — if the path
+   is not within `~`, return `ValidationError` with hint that only paths within the home
+   directory can be orphaned
+4. **If directory** (not itself a symlink): call `FindManagedLinks(absPath, []string{absSourceDir})`
    to find all managed symlinks within. If none found: return error `"no managed symlinks
 found in <path>"` with hint to run `lnk status`. Add all found links to the collection.
-4. **If file**:
-   - Must be a symlink: if not, return `PathError` with `ErrNotSymlink` and hint to use `rm`
+5. **If file**:
+   - Must be a symlink: if not, return `PathError` with `ErrNotSymlink` and hint to use
+     `rm`
    - Read symlink target with `os.Readlink`
    - Resolve to absolute path
    - Verify target is within `absSourceDir` via `filepath.Rel`: if not, return `LinkError`
@@ -198,15 +202,16 @@ Next: Run 'lnk status <source-dir>' to view remaining managed files
 
 All Phase 1 errors abort the entire operation before any filesystem changes are made.
 
-| Scenario                         | Phase | Error Type  | Error                                                             |
-| -------------------------------- | ----- | ----------- | ----------------------------------------------------------------- |
-| Path does not exist              | 1     | `PathError` | `orphan <path>: no such file or directory` + check path hint      |
-| Path is a regular file           | 1     | `PathError` | `orphan <path>: not a symlink` + hint to use `rm`                 |
-| Symlink not managed by source    | 1     | `LinkError` | `orphan <path>: not managed by source` + hint to use `rm`         |
-| Broken symlink                   | 1     | `PathError` | `orphan <path>: symlink target does not exist` + hint to use `rm` |
-| No managed links in directory    | 1     | error       | `no managed symlinks found in <path>` + hint to run `lnk status`  |
-| Move fails (with rollback)       | 2     | error       | Error about failed move; all completed orphans reversed           |
-| Move fails (rollback also fails) | 2     | error       | Combined error: `"orphan failed: <err>; rollback failed: <err>"`  |
+| Scenario                         | Phase | Error Type        | Error                                                             |
+| -------------------------------- | ----- | ----------------- | ----------------------------------------------------------------- |
+| Path does not exist              | 1     | `PathError`       | `orphan <path>: no such file or directory` + check path hint      |
+| Path outside home directory      | 1     | `ValidationError` | `path <path> must be within home directory` + hint                |
+| Path is a regular file           | 1     | `PathError`       | `orphan <path>: not a symlink` + hint to use `rm`                 |
+| Symlink not managed by source    | 1     | `LinkError`       | `orphan <path>: not managed by source` + hint to use `rm`         |
+| Broken symlink                   | 1     | `PathError`       | `orphan <path>: symlink target does not exist` + hint to use `rm` |
+| No managed links in directory    | 1     | error             | `no managed symlinks found in <path>` + hint to run `lnk status`  |
+| Move fails (with rollback)       | 2     | error             | Error about failed move; all completed orphans reversed           |
+| Move fails (rollback also fails) | 2     | error             | Combined error: `"orphan failed: <err>; rollback failed: <err>"`  |
 
 ---
 

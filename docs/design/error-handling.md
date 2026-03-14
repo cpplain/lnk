@@ -223,9 +223,10 @@ hint: Ensure the source directory exists or specify a different path
 
 Two patterns are used depending on the operation:
 
-**Continue on failure** (`create`, `remove`, `prune`): per-item failures are printed
-inline and counted; processing continues for remaining items; an aggregate error is
-returned after all items are processed.
+**Continue on failure** (`create`, `remove`, `prune`): validation is all-or-nothing
+(any validation failure aborts before filesystem changes are made); during execution,
+per-item failures are printed inline and counted, processing continues for remaining
+items, and an aggregate error is returned after all items are processed.
 
 **Transactional** (`adopt`, `orphan`): all validations must pass before any filesystem
 changes are made; if any execution step fails, all completed operations are rolled back
@@ -266,13 +267,14 @@ Examples:
 
 ### Orphan (Phase 1 validation)
 
-| Scenario                      | Error Type    | Constructor                                           |
-| ----------------------------- | ------------- | ----------------------------------------------------- |
-| Path does not exist           | `PathError`   | `NewPathErrorWithHint(op, path, err, hint)`           |
-| Path is not a symlink         | `PathError`   | `NewPathErrorWithHint` with `ErrNotSymlink`           |
-| Symlink not managed by source | `LinkError`   | `NewLinkErrorWithHint(op, source, target, err, hint)` |
-| Broken symlink                | `PathError`   | `NewPathErrorWithHint(op, path, err, hint)`           |
-| No managed links in directory | `HintedError` | `WithHint(err, hint)`                                 |
+| Scenario                      | Error Type        | Constructor                                           |
+| ----------------------------- | ----------------- | ----------------------------------------------------- |
+| Path does not exist           | `PathError`       | `NewPathErrorWithHint(op, path, err, hint)`           |
+| Path outside home directory   | `ValidationError` | `NewValidationErrorWithHint(field, value, msg, hint)` |
+| Path is not a symlink         | `PathError`       | `NewPathErrorWithHint` with `ErrNotSymlink`           |
+| Symlink not managed by source | `LinkError`       | `NewLinkErrorWithHint(op, source, target, err, hint)` |
+| Broken symlink                | `PathError`       | `NewPathErrorWithHint(op, path, err, hint)`           |
+| No managed links in directory | `HintedError`     | `WithHint(err, hint)`                                 |
 
 ---
 
