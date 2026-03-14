@@ -154,7 +154,7 @@ See [config.md](config.md) for the full list of active patterns and their source
 | Does not exist                     | Create symlink                                                                                                                                                   |
 | Symlink pointing to correct source | Skip silently (`LinkExistsError`)                                                                                                                                |
 | Symlink pointing elsewhere         | Remove and recreate                                                                                                                                              |
-| Regular file or directory          | Warning printed; link skipped; run continues. Error returned at end if failure count > 0. Hint: `"Use 'lnk adopt <source-dir> <file>' to adopt this file first"` |
+| Regular file or directory          | Warning printed; link skipped; run continues. Error returned at end if failure count > 0. Hint: `"Use 'lnk adopt <source-dir> <path>' to adopt this file first"` |
 
 Collisions with regular files do not abort the entire run; all other links are still
 attempted. The command exits non-zero if any collisions occurred.

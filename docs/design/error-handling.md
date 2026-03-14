@@ -220,8 +220,16 @@ hint: Ensure the source directory exists or specify a different path
 - Library functions (`CreateLinks`, `RemoveLinks`, etc.) return errors to `main`
 - `main` calls `PrintErrorWithHint(err)` then `os.Exit(ExitError)` for runtime errors
 - Usage errors in `main` call `PrintErrorWithHint(err)` then `os.Exit(ExitUsage)`
-- Within operations, per-item failures are printed inline and counted; an aggregate
-  error is returned after processing all items
+
+Two patterns are used depending on the operation:
+
+**Continue on failure** (`create`, `remove`, `prune`): per-item failures are printed
+inline and counted; processing continues for remaining items; an aggregate error is
+returned after all items are processed.
+
+**Transactional** (`adopt`, `orphan`): all validations must pass before any filesystem
+changes are made; if any execution step fails, all completed operations are rolled back
+in reverse order and the error is returned — no partial state is left on disk.
 
 ---
 
@@ -237,7 +245,7 @@ Examples:
 
 ```
 "Check that the file path is correct and the file exists"
-"Use 'lnk adopt <source-dir> <file>' to adopt this file first"
+"Use 'lnk adopt <source-dir> <path>' to adopt this file first"
 "Run 'lnk status' to see managed files"
 "Ensure source and target paths are different"
 ```
@@ -252,7 +260,7 @@ Examples:
 | --------------------------------------------- | ----------------- | ----------------------------------------------------- |
 | Path does not exist                           | `PathError`       | `NewPathErrorWithHint(op, path, err, hint)`           |
 | Already adopted (is a symlink into sourceDir) | `LinkError`       | `NewLinkErrorWithHint` with `ErrAlreadyAdopted`       |
-| Path outside target directory                 | `ValidationError` | `NewValidationErrorWithHint(field, value, msg, hint)` |
+| Path outside home directory                   | `ValidationError` | `NewValidationErrorWithHint(field, value, msg, hint)` |
 | Destination already exists                    | `PathError`       | `NewPathErrorWithHint(op, destPath, err, hint)`       |
 | Permission denied                             | `PathError`       | `NewPathErrorWithHint(op, path, err, hint)`           |
 
@@ -268,7 +276,7 @@ Examples:
 
 ---
 
-## 13. Related Specifications
+## 12. Related Specifications
 
 - [cli.md](cli.md) — Where exit codes are applied
 - [output.md](output.md) — `PrintErrorWithHint` implementation details

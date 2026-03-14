@@ -28,8 +28,10 @@ defaults, an optional `.lnkignore` file, and CLI arguments — into a single res
 
 ### Target Directory
 
-The target directory comes from the CLI positional argument (second positional arg
-after the command name). If not provided, it defaults to `~` (user home directory).
+For `create`, `remove`, `status`, and `prune`, the target directory is an optional
+second positional argument (default: `~`). The `adopt` and `orphan` commands do not
+use a target directory parameter; paths provided to these commands must be within the
+user's home directory (`~`).
 
 ### Ignore Patterns
 

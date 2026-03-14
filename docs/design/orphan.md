@@ -32,11 +32,13 @@ back to the target location, and restores the original file permissions.
 ### CLI
 
 ```
-lnk orphan [flags] <source-dir> <file...>
+lnk orphan [flags] <source-dir> <path...>
 ```
 
 `source-dir` is the repository directory that manages the files (required). One or
-more file or directory paths are required after the source directory.
+more paths are required after the source directory. Each path may be a managed symlink
+or a directory containing managed symlinks, and must be within the user's home
+directory (`~`).
 
 ### Go Function
 
@@ -47,7 +49,6 @@ func Orphan(opts OrphanOptions) error
 ```go
 type OrphanOptions struct {
     SourceDir string   // repository directory (managed link source)
-    TargetDir string   // where symlinks live (default: ~)
     Paths     []string // one or more symlink paths to orphan
     DryRun    bool     // preview mode
 }
@@ -148,7 +149,7 @@ This is identical to the detection used by `FindManagedLinks`.
 
 ## 5. Path Behavior
 
-- `SourceDir` and `TargetDir` are expanded with `ExpandPath` before use
+- `SourceDir` is expanded with `ExpandPath` before use
 - `SourceDir` must exist and be a directory
 - Each `Path` is expanded with `ExpandPath` before processing
 - Displayed paths use `ContractPath`

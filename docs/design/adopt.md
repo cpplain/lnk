@@ -7,7 +7,7 @@
 ### Purpose
 
 The `adopt` command brings existing files under `lnk` management: it moves each
-specified file from the target directory into the source (repository) directory and
+specified file from the home directory into the source (repository) directory and
 creates a symlink in the original location pointing to the new repository copy.
 
 ### Goals
@@ -21,7 +21,7 @@ creates a symlink in the original location pointing to the new repository copy.
 
 ### Non-Goals
 
-- Adopting files outside the target directory
+- Adopting files outside the home directory
 - Merging file contents
 - Adopting symlinks that already point elsewhere
 
@@ -32,11 +32,12 @@ creates a symlink in the original location pointing to the new repository copy.
 ### CLI
 
 ```
-lnk adopt [flags] <source-dir> <file...>
+lnk adopt [flags] <source-dir> <path...>
 ```
 
 `source-dir` is the repository directory to move files into (required). One or more
-file paths are required after the source directory. Each path may be absolute or use `~`.
+paths are required after the source directory. Each path may be a file or directory and
+must be within the user's home directory (`~`).
 
 ### Go Function
 
@@ -47,8 +48,7 @@ func Adopt(opts AdoptOptions) error
 ```go
 type AdoptOptions struct {
     SourceDir string   // repository directory to move files into
-    TargetDir string   // where files currently live (default: ~)
-    Paths     []string // one or more file paths to adopt
+    Paths     []string // one or more file/directory paths to adopt (must be within ~)
     DryRun    bool     // preview mode
 }
 ```
@@ -73,9 +73,9 @@ For each path in `opts.Paths`:
 4. **Validate** via `validateAdoptSource(absPath, absSourceDir)`:
    - If path is a symlink already pointing into `sourceDir`: return error
      `"file already adopted"` with hint to run `lnk status`
-5. **Compute relative path** from `targetDir` to `absPath`:
-   - If the path is not within `targetDir`: return error with hint that only files
-     within the target directory can be adopted
+5. **Compute relative path** from the user's home directory (`os.UserHomeDir`) to `absPath`:
+   - If the path is not within `~`: return error with hint that only files
+     within the home directory can be adopted
 6. **Compute destination**: `destPath = filepath.Join(absSourceDir, relPath)`
 7. **Check destination**: if `destPath` already exists, return error with hint to
    remove it first
@@ -145,10 +145,11 @@ A file is considered already adopted if:
 
 ## 6. Path Behavior
 
-- `SourceDir` and `TargetDir` are expanded with `ExpandPath` before use
+- `SourceDir` is expanded with `ExpandPath` before use
 - `SourceDir` must exist and be a directory
 - Each `Path` is expanded with `ExpandPath` before processing
-- Each path must reside within `TargetDir`; paths outside produce an error
+- Each path must reside within the user's home directory (`~`); paths outside produce an error
+- The home directory is resolved internally via `os.UserHomeDir()`
 - Displayed paths use `ContractPath`
 
 ---
@@ -190,13 +191,13 @@ Next: Run 'lnk status' to view adopted files
 
 ## 9. Error Cases
 
-| Scenario                   | Error Message                                                   |
-| -------------------------- | --------------------------------------------------------------- |
-| File does not exist        | `adopt <path>: no such file or directory` + hint to check path  |
-| File already adopted       | `adopt <path>: file already adopted` + hint to run `lnk status` |
-| Path outside target dir    | `path <path> must be within target directory <target>` + hint   |
-| Destination already exists | `destination <dest> already exists` + hint to remove first      |
-| Permission denied          | OS error wrapped in `PathError` with permission hint            |
+| Scenario                    | Error Message                                                   |
+| --------------------------- | --------------------------------------------------------------- |
+| File does not exist         | `adopt <path>: no such file or directory` + hint to check path  |
+| File already adopted        | `adopt <path>: file already adopted` + hint to run `lnk status` |
+| Path outside home directory | `path <path> must be within home directory` + hint              |
+| Destination already exists  | `destination <dest> already exists` + hint to remove first      |
+| Permission denied           | OS error wrapped in `PathError` with permission hint            |
 
 ---
 

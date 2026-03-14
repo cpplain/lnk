@@ -41,14 +41,14 @@ arguments.
 
 ### Commands
 
-| Command  | Args                          | Description                           |
-| -------- | ----------------------------- | ------------------------------------- |
-| `create` | `<source-dir> [target-dir]`   | Create symlinks from source to target |
-| `remove` | `<source-dir> [target-dir]`   | Remove managed symlinks               |
-| `status` | `<source-dir> [target-dir]`   | Show status of managed symlinks       |
-| `prune`  | `<source-dir> [target-dir]`   | Remove broken symlinks                |
-| `adopt`  | `<source-dir> <file...>`      | Adopt files into source directory     |
-| `orphan` | `<source-dir> <file...>`      | Remove files from management          |
+| Command  | Args                        | Description                           |
+| -------- | --------------------------- | ------------------------------------- |
+| `create` | `<source-dir> [target-dir]` | Create symlinks from source to target |
+| `remove` | `<source-dir> [target-dir]` | Remove managed symlinks               |
+| `status` | `<source-dir> [target-dir]` | Show status of managed symlinks       |
+| `prune`  | `<source-dir> [target-dir]` | Remove broken symlinks                |
+| `adopt`  | `<source-dir> <path...>`    | Adopt files into source directory     |
+| `orphan` | `<source-dir> <path...>`    | Remove files from management          |
 
 For all commands, `source-dir` is the first required positional argument (the dotfiles
 repository directory).
@@ -57,8 +57,11 @@ For `create`, `remove`, `status`, `prune`: an optional second positional argumen
 the target directory (default: `~`). Extra positional arguments beyond the second are a
 usage error (exit 2).
 
-For `adopt` and `orphan`: one or more file paths are required as the second and
-subsequent positional arguments.
+For `adopt`: one or more files or directories within `~` to move into the source
+directory are required as the second and subsequent positional arguments.
+
+For `orphan`: one or more managed symlinks or directories within `~` containing
+managed symlinks are required as the second and subsequent positional arguments.
 
 ### Global Flags
 
@@ -163,6 +166,48 @@ Examples:
   lnk create -n .
 ```
 
+```
+lnk adopt --help
+
+Usage: lnk adopt [flags] <source-dir> <path...>
+
+Adopt files into the source directory.
+
+Arguments:
+  source-dir    Source directory to move files into (required)
+  path          One or more files or directories to adopt; must be within ~ (required)
+
+Flags:
+  (all global flags apply)
+
+Examples:
+  lnk adopt . ~/.bashrc
+  lnk adopt . ~/.bashrc ~/.vimrc
+  lnk adopt ~/git/dotfiles ~/.config/nvim
+  lnk adopt -n . ~/.bashrc
+```
+
+```
+lnk orphan --help
+
+Usage: lnk orphan [flags] <source-dir> <path...>
+
+Remove files from management.
+
+Arguments:
+  source-dir    Source directory that manages the files (required)
+  path          One or more managed symlinks or directories to orphan; must be within ~ (required)
+
+Flags:
+  (all global flags apply)
+
+Examples:
+  lnk orphan . ~/.bashrc
+  lnk orphan . ~/.bashrc ~/.vimrc
+  lnk orphan ~/git/dotfiles ~/.config/nvim
+  lnk orphan -n . ~/.bashrc
+```
+
 ### Version Output
 
 ```
@@ -184,8 +229,8 @@ Commands:
   remove <source-dir> [target-dir]   Remove managed symlinks
   status <source-dir> [target-dir]   Show status of managed symlinks
   prune  <source-dir> [target-dir]   Remove broken symlinks
-  adopt  <source-dir> <file...>      Adopt files into source directory
-  orphan <source-dir> <file...>      Remove files from management
+  adopt  <source-dir> <path...>      Adopt files into source directory
+  orphan <source-dir> <path...>      Remove files from management
 
 Flags:
       --ignore PATTERN  Additional ignore pattern, repeatable
