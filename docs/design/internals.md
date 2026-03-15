@@ -64,8 +64,10 @@ broken:
 1. Call `os.Readlink(symlinkPath)` to get the raw target string
 2. If the target is relative, resolve it: `filepath.Join(filepath.Dir(symlinkPath), rawTarget)`
 3. Call `filepath.Abs` to normalize
-4. Check containment with `filepath.Rel(source, resolvedTarget)`
-5. If matched: create `ManagedLink` with `IsBroken: true`
+4. Check containment: for any source in `sources`, check that
+   `filepath.Rel(source, resolvedTarget)` does not start with `..` and is not `.`
+5. If matched: create `ManagedLink` with `IsBroken: true`, using the matching
+   source as the `Source` field
 
 This ensures broken managed symlinks (e.g., from deleted source files) are still
 discovered and reported by `status` and `prune`.
