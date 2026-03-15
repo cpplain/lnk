@@ -277,10 +277,13 @@ error if the file does not exist.
 
 1. Resolves `<sourceDir>/.lnkignore` to an absolute path
 2. If the file does not exist: logs via `PrintVerbose` and returns `[]string{}, nil`
-3. Reads the file and parses it line by line:
+3. Opens and reads the file; if any I/O error occurs (e.g., permission denied):
+   returns `nil, err` — propagates to `LoadConfig`, which returns the error to
+   the caller and aborts the operation
+4. Parses the file content line by line:
    - Skips empty lines and lines beginning with `#`
    - Each non-comment line is appended as a pattern
-4. Returns the collected patterns
+5. Returns the collected patterns
 
 ### Usage
 
