@@ -151,8 +151,11 @@ A file is considered already adopted if:
 
 1. `os.Rename(src, dst)` — fast path (same filesystem)
 2. If rename fails (e.g., cross-device): copy then delete
-   - Copy verifies file size matches after copy
-   - Original is removed only after successful copy
+   - Read `src` file mode via `os.Lstat`
+   - Copy file contents from `src` to `dst`
+   - Apply the original file mode to `dst` via `os.Chmod`
+   - Verify the copy by comparing file sizes
+   - Remove `src` only after a successful, verified copy
 
 ---
 
