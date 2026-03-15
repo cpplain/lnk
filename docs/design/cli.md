@@ -87,7 +87,7 @@ Notes:
 1. Parse all flags and the command name from `os.Args[1:]`
 2. Apply `--no-color` before any output is produced
 3. Handle `--version`: print `lnk <version>` and exit 0
-4. Handle `--help` (or bare `lnk` with no command): print usage and exit 0
+4. Handle `--help` or bare `lnk` (invoked with no arguments at all): print usage and exit 0
 5. Set verbosity level
 6. Load configuration (see [config.md](config.md))
 7. Dispatch to the command handler
