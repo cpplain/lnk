@@ -1,0 +1,8 @@
+{
+  "includeCoAuthoredBy": false,
+  "model": "sonnet",
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  }
+}
