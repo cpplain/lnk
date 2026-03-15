@@ -122,6 +122,9 @@ If any step fails:
 - Roll back all completed adoptions in reverse order:
   - Remove the symlink (if created)
   - Move `destPath` back to `absPath` via `MoveFile`
+  - If a rollback step also fails: return a combined error reporting both the
+    original failure and the rollback failure (e.g.,
+    `"adopt failed: <err>; rollback failed: <err>"`)
 - Call `CleanEmptyDirs` on parent directories of rolled-back destinations, bounded
   by `sourceDir`, but only for directories that were **created by `MkdirAll` during
   this operation** (track newly created dirs before calling `MkdirAll` by checking
