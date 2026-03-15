@@ -104,9 +104,9 @@ Print a count header, then per-file detail:
 [DRY RUN] Would adopt: ~/.vimrc
   Move to: ~/git/dotfiles/.vimrc
   Create symlink: ~/.vimrc -> ~/git/dotfiles/.vimrc
-```
 
-End with `PrintDryRunSummary()`.
+No changes made in dry-run mode
+```
 
 ### Phase 2: Execute
 
