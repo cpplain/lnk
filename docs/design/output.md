@@ -199,10 +199,9 @@ Dry-run:
 
 ```
 1. PrintCommandHeader("Command Name")
-2. blank line
-3. PrintDryRun("Would do X ...")
-4. blank line
-5. PrintDryRunSummary()
+2. PrintDryRun("Would do X ...")
+3. blank line
+4. PrintDryRunSummary()
 ```
 
 ---
