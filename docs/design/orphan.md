@@ -121,13 +121,16 @@ For each managed link in order, call `orphanManagedLink(link)`:
 
 1. Verify target still exists (`os.Stat(link.Target)`): if gone, return error with
    hint to use `rm` for the broken symlink
-2. **Remove symlink** via `RemoveSymlink(link.Path)`
-3. **Move file** from `link.Target` to `link.Path` via `MoveFile`
-4. **Restore permissions** via `os.Chmod(link.Path, originalMode)`:
+2. **Read original file mode** from `link.Target` via `os.Lstat`: store
+   `info.Mode()` for use in step 5
+3. **Remove symlink** via `RemoveSymlink(link.Path)`
+4. **Move file** from `link.Target` to `link.Path` via `MoveFile`
+5. **Restore permissions** via `os.Chmod(link.Path, originalMode)`:
+   - `originalMode` is the mode read in step 2
    - Failure here is a warning only; log it and continue
-5. Print `"Orphaned: <link.Path>"`
+6. Print `"Orphaned: <link.Path>"`
 
-If any step (2 or 3) fails:
+If any step (3 or 4) fails:
 
 - Roll back all completed orphans in reverse order:
   - Move `link.Path` back to `link.Target` via `MoveFile` (if file was already moved)
