@@ -94,7 +94,7 @@ Symlink Status
 
 ✗ Broken: ~/.zshrc
 
-Total: 4 links (3 active, 1 broken)
+✓ Total: 4 links (3 active, 1 broken)
 ```
 
 #### Piped Output
@@ -181,7 +181,7 @@ Symlink Status
 ✓ Active: ~/.config/git/config
 ✓ Active: ~/.vimrc
 
-Total: 3 links (3 active, 0 broken)
+✓ Total: 3 links (3 active, 0 broken)
 ```
 
 With broken links:
@@ -194,7 +194,7 @@ Symlink Status
 
 ✗ Broken: ~/.zshrc
 
-Total: 3 links (2 active, 1 broken)
+✓ Total: 3 links (2 active, 1 broken)
 ```
 
 ---
