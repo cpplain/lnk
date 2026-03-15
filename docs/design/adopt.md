@@ -82,8 +82,9 @@ For each path in `opts.Paths`:
 6. **Compute destination**: `destPath = filepath.Join(absSourceDir, relPath)`
 7. **Check destination**: if `destPath` already exists, return error with hint to
    remove it first
-8. **Validate symlink** via `ValidateSymlinkCreation(absPath, destPath)` — checks for
-   circular references and overlapping paths
+8. **Validate symlink** via `ValidateSymlinkCreation(destPath, absPath)` — checks for
+   circular references and overlapping paths (source=destPath, the real file after the
+   move; target=absPath, the symlink location)
 
 After collecting all paths, **deduplicate** by absolute path — if the same file was
 collected more than once (e.g., via both a directory argument and an explicit file
