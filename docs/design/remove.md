@@ -113,11 +113,14 @@ symlink chain, then `filepath.Rel` to confirm containment:
 
 ```go
 resolved, err := filepath.EvalSymlinks(symlinkPath)
+if err != nil {
+    continue // broken or inaccessible symlink; skip silently
+}
 rel, _ := filepath.Rel(sourceDir, resolved)
 isManaged := !strings.HasPrefix(rel, "..")
 ```
 
-Links that do not meet this criterion are ignored silently.
+Links that do not meet this criterion are ignored silently. If `filepath.EvalSymlinks` returns an error (e.g., the symlink is broken), the path is skipped silently — it cannot be confirmed to point into `sourceDir`.
 
 ---
 
