@@ -117,9 +117,10 @@ For each `PlannedLink`:
 
 After all links are processed:
 
-- If `created > 0`: print summary `"Created N symlink(s) successfully"` and next-step hint
+- If `created > 0`: print summary `"Created N symlink(s) successfully"`
 - If `created == 0` and `failed == 0`: print `"All symlinks already exist"`
 - If `failed > 0`: print warning `"Failed to create N symlink(s)"` and return error
+- Print next-step hint only when `failed == 0`
 
 ---
 
@@ -209,6 +210,20 @@ All links already exist (idempotent re-run):
 Creating Symlinks
 
 All symlinks already exist
+```
+
+Partial success (some created, some failed):
+
+```
+Creating Symlinks
+
+✓ Created: ~/.bashrc
+✓ Created: ~/.vimrc
+! Failed to create symlink: ~/.zshrc -> ~/git/dotfiles/.zshrc: permission denied
+  Try: Use 'lnk adopt <source-dir> <path>' to adopt this file first
+
+✓ Created 2 symlink(s) successfully
+! Failed to create 1 symlink(s)
 ```
 
 ---

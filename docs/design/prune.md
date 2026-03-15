@@ -94,8 +94,9 @@ After all links are processed:
   symlinks and `targetDir` as the boundary. This walks upward from each parent,
   removing empty directories until reaching `targetDir` (which is never removed).
   Each removed directory is logged via `PrintVerbose`.
-- If `pruned > 0`: print summary `"Pruned N broken symlink(s) successfully"` and next-step hint
+- If `pruned > 0`: print summary `"Pruned N broken symlink(s) successfully"`
 - If `failed > 0`: print warning `"Failed to prune N symlink(s)"` and return error
+- Print next-step hint only when `failed == 0`
 
 ---
 
@@ -152,6 +153,18 @@ No broken links found:
 Pruning Broken Symlinks
 
 No broken symlinks found.
+```
+
+Partial success (some pruned, some failed):
+
+```
+Pruning Broken Symlinks
+
+✓ Pruned: ~/.zshrc
+! Failed to prune symlink: ~/.bashrc: permission denied
+
+✓ Pruned 1 broken symlink(s) successfully
+! Failed to prune 1 symlink(s)
 ```
 
 ---
