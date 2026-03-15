@@ -17,6 +17,7 @@ Design documentation for `lnk`, an opinionated symlink manager for dotfiles.
 | [error-handling.md](error-handling.md) | Error types, hints, exit codes, and per-operation error type mappings       |
 | [output.md](output.md)                 | Output system: verbosity, color, piped format                               |
 | [internals.md](internals.md)           | Internal helpers: `FindManagedLinks`, `CreateSymlink`, `MoveFile`, etc.     |
+| [stdlib.md](stdlib.md)                 | Standard library usage: which packages/functions to use and why             |
 
 ## Glossary
 

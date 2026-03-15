@@ -61,7 +61,7 @@ type LinkOptions struct {
 Call `FindManagedLinks(targetDir, []string{sourceDir})` to collect all symlinks
 in `targetDir` pointing into `sourceDir`.
 
-Each `ManagedLink` carries:
+Each entry carries:
 
 ```go
 type ManagedLink struct {
@@ -205,3 +205,4 @@ Total: 3 links (2 active, 1 broken)
 - [remove.md](remove.md) — Removing active links
 - [prune.md](prune.md) — Removing broken links shown by status
 - [output.md](output.md) — Terminal vs. machine-readable output rules
+- [stdlib.md](stdlib.md) — `filepath.WalkDir` and `filepath.EvalSymlinks` used by `FindManagedLinks`

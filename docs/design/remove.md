@@ -6,9 +6,9 @@
 
 ### Purpose
 
-The `remove` command finds all symlinks in the target directory that point into the
-source directory and removes them. Only managed symlinks (those created by `lnk` from
-the specified source) are removed; other files are untouched.
+The `remove` command walks the source directory, computes where each file's symlink
+should be in the target directory, and removes any that are managed by this source.
+Only managed symlinks are removed; other files are untouched.
 
 ### Goals
 
@@ -54,10 +54,18 @@ type LinkOptions struct {
 
 ## 3. Behavior
 
-### Step 1: Discover Managed Links
+### Step 1: Collect Managed Links
 
-Call `FindManagedLinks(targetDir, []string{sourceDir})` to walk the target directory
-and collect all symlinks whose resolved target path is within `sourceDir`.
+Walk `SourceDir` recursively using `filepath.WalkDir` — the same traversal strategy
+as `create`. For each file found, compute the corresponding symlink path in `TargetDir`. Check each computed path with `os.Lstat`:
+
+- If the path is a symlink pointing to the source file (verified via
+  `filepath.EvalSymlinks`): add to the removal list
+- Otherwise: skip silently (not managed by this source)
+
+**Scope**: this approach only removes symlinks for files that currently exist in
+`SourceDir`. Broken symlinks left by previously-deleted source files are out of
+scope for `remove` and are handled by `prune`.
 
 If no managed links are found, print `"No symlinks to remove found."` and return nil.
 
@@ -98,13 +106,15 @@ After all links are processed:
 
 ## 4. Managed Link Detection
 
-A symlink is "managed" by a source directory if its resolved absolute target path
-is inside `sourceDir`. Resolution:
+A symlink is "managed" by a source directory if its fully resolved target path
+is inside `sourceDir`. Resolution uses `filepath.EvalSymlinks` to follow the complete
+symlink chain, then `filepath.Rel` to confirm containment:
 
-1. Read the symlink target with `os.Readlink`
-2. If the target is relative, resolve it relative to the symlink's parent directory
-3. Call `filepath.Abs` to clean the path
-4. Check if `filepath.Rel(sourceDir, cleanTarget)` does not start with `..` and is not `.`
+```go
+resolved, err := filepath.EvalSymlinks(symlinkPath)
+rel, _ := filepath.Rel(sourceDir, resolved)
+isManaged := !strings.HasPrefix(rel, "..")
+```
 
 Links that do not meet this criterion are ignored silently.
 
@@ -114,7 +124,6 @@ Links that do not meet this criterion are ignored silently.
 
 - `SourceDir` and `TargetDir` are expanded with `ExpandPath` before use
 - `SourceDir` must exist and be a directory; validation error otherwise
-- Walk skips `Library` and `.Trash` directories on macOS (system directories)
 - Displayed paths use `ContractPath` (home directory shown as `~`)
 
 ---
@@ -166,3 +175,4 @@ No symlinks to remove found.
 - [prune.md](prune.md) — Removing only broken links
 - [error-handling.md](error-handling.md) — Error types used during removal
 - [output.md](output.md) — Output functions and verbosity
+- [stdlib.md](stdlib.md) — Source-dir traversal strategy and `filepath.EvalSymlinks` usage

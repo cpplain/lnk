@@ -32,24 +32,47 @@ func FindManagedLinks(startPath string, sources []string) ([]ManagedLink, error)
 Walks `startPath` recursively and returns all symlinks whose resolved absolute
 target is inside any of the specified `sources` directories.
 
+This function is only needed by commands that must scan the target directory for
+symlinks whose source files may no longer exist (`prune`) or for discovering
+managed symlinks within a directory argument (`orphan`). Commands that know their
+source directory (`create`, `remove`) walk the source directory instead.
+See [stdlib.md](stdlib.md) for the source-dir vs target-dir traversal strategy.
+
 ### Behavior
 
-1. Uses `filepath.Walk` to traverse the directory tree rooted at `startPath`
-2. Skips non-symlink entries (regular files, directories)
+1. Uses `filepath.WalkDir` to traverse the directory tree rooted at `startPath`.
+   `fs.DirEntry.Type()` provides the file type without an extra `Lstat` syscall,
+   allowing non-symlink entries to be skipped cheaply.
+2. Skips non-symlink entries: `d.Type()&fs.ModeSymlink == 0`
 3. On macOS, skips `Library` and `.Trash` directories entirely (`filepath.SkipDir`)
 4. For each symlink found:
-   - Reads the target via `os.Readlink`
-   - Resolves relative targets relative to the symlink's parent directory
-   - Calls `filepath.Abs` to produce a clean absolute path
-   - Checks if `filepath.Rel(source, cleanTarget)` does not start with `..` and
+   - Calls `filepath.EvalSymlinks` to resolve the full symlink chain to a clean
+     absolute path
+   - Checks if `filepath.Rel(source, resolvedTarget)` does not start with `..` and
      is not `.` for any source in `sources`
-   - If matched: creates a `ManagedLink`; sets `IsBroken` if `os.Stat(cleanTarget)` fails
+   - If matched: creates a `ManagedLink`
+   - Sets `IsBroken` based on whether the target file exists (see broken link handling below)
 5. Walk errors (e.g., permission denied on a subdirectory) are logged at verbose
    level and do not abort the walk — results may be incomplete
 
+### Broken Link Handling
+
+`filepath.EvalSymlinks` fails on broken symlinks (the chain cannot be resolved). When
+it fails, fall back to manual resolution to still check containment and mark the link
+broken:
+
+1. Call `os.Readlink(symlinkPath)` to get the raw target string
+2. If the target is relative, resolve it: `filepath.Join(filepath.Dir(symlinkPath), rawTarget)`
+3. Call `filepath.Abs` to normalize
+4. Check containment with `filepath.Rel(source, resolvedTarget)`
+5. If matched: create `ManagedLink` with `IsBroken: true`
+
+This ensures broken managed symlinks (e.g., from deleted source files) are still
+discovered and reported by `status` and `prune`.
+
 ### Return Value
 
-Returns the collected `[]ManagedLink` and the error from `filepath.Walk` (nil
+Returns the collected `[]ManagedLink` and the error from `filepath.WalkDir` (nil
 unless the root `startPath` itself cannot be walked). An empty slice with nil
 error means no managed links were found.
 
@@ -59,7 +82,7 @@ error means no managed links were found.
 links, err := FindManagedLinks(targetDir, []string{sourceDir})
 ```
 
-Used by: `remove`, `status`, `prune`, `orphan`.
+Used by: `status`, `prune`, `orphan`.
 
 ---
 
@@ -268,10 +291,11 @@ Used by: `LoadConfig` in `config.go`.
 ## 12. Related Specifications
 
 - [create.md](create.md) — Uses `CreateSymlink`, `ValidateSymlinkCreation`, `PatternMatcher`
-- [remove.md](remove.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `CleanEmptyDirs`
+- [remove.md](remove.md) — Uses `RemoveSymlink`, `CleanEmptyDirs` (source-dir walk)
 - [status.md](status.md) — Uses `FindManagedLinks`
 - [prune.md](prune.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `CleanEmptyDirs`
 - [adopt.md](adopt.md) — Uses `MoveFile`, `CleanEmptyDirs` (rollback), `ValidateSymlinkCreation`, `validateAdoptSource`
 - [orphan.md](orphan.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `MoveFile`, `CleanEmptyDirs`
 - [config.md](config.md) — Uses `LoadIgnoreFile`
 - [error-handling.md](error-handling.md) — Error types returned by these functions
+- [stdlib.md](stdlib.md) — Standard library functions used by these helpers
