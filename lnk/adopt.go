@@ -1,0 +1,328 @@
+package lnk
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+// AdoptOptions holds options for adopting files into the source directory
+type AdoptOptions struct {
+	SourceDir string   // base directory for dotfiles (e.g., ~/git/dotfiles)
+	TargetDir string   // where files currently are (default: ~)
+	Paths     []string // files to adopt (e.g., ["~/.bashrc", "~/.vimrc"])
+	DryRun    bool     // preview mode
+}
+
+// validateAdoptSource validates the source path and checks if it's already adopted
+func validateAdoptSource(absSource, absSourceDir string) error {
+	// Check if source exists
+	sourceInfo, err := os.Lstat(absSource)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return NewPathErrorWithHint("adopt", absSource, err,
+				"Check that the file path is correct and the file exists")
+		}
+		return fmt.Errorf("failed to check source: %w", err)
+	}
+
+	// Check if source is already a symlink
+	if sourceInfo.Mode()&os.ModeSymlink != 0 {
+		target, err := os.Readlink(absSource)
+		if err != nil {
+			return fmt.Errorf("failed to read symlink: %w", err)
+		}
+
+		// Check if it's already managed using proper path comparison
+		absTarget := target
+		if !filepath.IsAbs(target) {
+			absTarget = filepath.Join(filepath.Dir(absSource), target)
+		}
+		if cleanTarget, err := filepath.Abs(absTarget); err == nil {
+			if relPath, err := filepath.Rel(absSourceDir, cleanTarget); err == nil && !strings.HasPrefix(relPath, "..") && relPath != "." {
+				return NewLinkErrorWithHint("adopt", absSource, target, ErrAlreadyAdopted,
+					"This file is already managed by lnk. Use 'lnk status' to see managed files")
+			}
+		}
+	}
+	return nil
+}
+
+// performAdoption performs the actual file move and symlink creation
+func performAdoption(absSource, destPath string) error {
+	// Check if source is a directory
+	sourceInfo, err := os.Stat(absSource)
+	if err != nil {
+		return fmt.Errorf("failed to check source: %w", err)
+	}
+
+	if sourceInfo.IsDir() {
+		// For directories, adopt each file individually
+		return performDirectoryAdoption(absSource, destPath)
+	}
+
+	// For files, perform adoption inline
+	// Create parent directory
+	destDir := filepath.Dir(destPath)
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return fmt.Errorf("failed to create destination directory: %w", err)
+	}
+
+	// Move file to repo
+	if err := MoveFile(absSource, destPath); err != nil {
+		return err
+	}
+
+	// Create symlink back
+	if err := CreateSymlink(destPath, absSource); err != nil {
+		// Rollback: move file back
+		if rollbackErr := os.Rename(destPath, absSource); rollbackErr != nil {
+			return fmt.Errorf("failed to create symlink: %v (rollback also failed: %v)", err, rollbackErr)
+		}
+		return fmt.Errorf("failed to create symlink: %w", err)
+	}
+
+	return nil
+}
+
+// performDirectoryAdoption recursively adopts all files in a directory
+func performDirectoryAdoption(absSource, destPath string) error {
+	// First, create the destination directory structure
+	if err := os.MkdirAll(destPath, 0755); err != nil {
+		return fmt.Errorf("failed to create destination directory: %w", err)
+	}
+
+	// Track results
+	var adopted, skipped int
+	var walkErr error
+	var fileCount int
+
+	// Walk the source directory
+	processFiles := func() error {
+		return filepath.Walk(absSource, func(sourcePath string, info os.FileInfo, err error) error {
+			fileCount++
+			if err != nil {
+				return err
+			}
+
+			// Calculate relative path from source root
+			relPath, err := filepath.Rel(absSource, sourcePath)
+			if err != nil {
+				return fmt.Errorf("failed to calculate relative path: %w", err)
+			}
+
+			// Skip the root directory itself
+			if relPath == "." {
+				return nil
+			}
+
+			// Calculate destination path
+			destItemPath := filepath.Join(destPath, relPath)
+
+			if info.IsDir() {
+				// Create directory in destination
+				if err := os.MkdirAll(destItemPath, info.Mode()); err != nil {
+					return fmt.Errorf("failed to create directory %s: %w", destItemPath, err)
+				}
+				// Directory will be created in original location after all files are moved
+				return nil
+			}
+
+			// It's a file - check if it's already adopted
+			sourceFileInfo, err := os.Lstat(sourcePath)
+			if err != nil {
+				return fmt.Errorf("failed to check file %s: %w", relPath, err)
+			}
+
+			// Skip if it's already a symlink
+			if sourceFileInfo.Mode()&os.ModeSymlink != 0 {
+				// Check if it points to our destination
+				if target, err := os.Readlink(sourcePath); err == nil && target == destItemPath {
+					PrintVerbose("Skipping already adopted file: %s", relPath)
+					skipped++
+					return nil
+				}
+			}
+
+			// Check if destination already exists
+			if _, err := os.Stat(destItemPath); err == nil {
+				PrintSkip("Skipping %s: file already exists in repository at %s", ContractPath(sourcePath), ContractPath(destItemPath))
+				skipped++
+				return nil
+			}
+
+			// Move file to repo
+			if err := MoveFile(sourcePath, destItemPath); err != nil {
+				return fmt.Errorf("failed to move file %s: %w", relPath, err)
+			}
+
+			// Create parent directory in original location if needed
+			sourceDir := filepath.Dir(sourcePath)
+			if err := os.MkdirAll(sourceDir, 0755); err != nil {
+				// Rollback: move file back
+				if rollbackErr := os.Rename(destItemPath, sourcePath); rollbackErr != nil {
+					return fmt.Errorf("failed to create parent directory: %v (rollback failed, file at %s: %v)", err, destItemPath, rollbackErr)
+				}
+				return fmt.Errorf("failed to create parent directory for symlink: %w", err)
+			}
+
+			// Create symlink back
+			if err := CreateSymlink(destItemPath, sourcePath); err != nil {
+				// Rollback: move file back
+				if rollbackErr := os.Rename(destItemPath, sourcePath); rollbackErr != nil {
+					return fmt.Errorf("failed to create symlink: %v (rollback also failed: %v)", err, rollbackErr)
+				}
+				return fmt.Errorf("failed to create symlink for %s: %w", relPath, err)
+			}
+
+			PrintSuccess("Adopted: %s", ContractPath(sourcePath))
+			adopted++
+			return nil
+		})
+	}
+
+	// Use ShowProgress to handle the 1-second delay
+	walkErr = ShowProgress("Scanning files to adopt", processFiles)
+
+	// Print summary if we adopted multiple files
+	if walkErr == nil && (adopted > 0 || skipped > 0) {
+		if adopted > 0 {
+			PrintSummary("Successfully adopted %d file(s)", adopted)
+			PrintNextStep("create", "create symlinks")
+		}
+		if skipped > 0 {
+			PrintInfo("Skipped %d file(s) (already adopted or exist in repo)", skipped)
+		}
+	}
+
+	return walkErr
+}
+
+// copyAndVerify copies a file and verifies the copy succeeded
+// Adopt adopts files into a package using the options-based interface
+func Adopt(opts AdoptOptions) error {
+	PrintCommandHeader("Adopting Files")
+
+	// Validate inputs
+	if len(opts.Paths) == 0 {
+		return NewValidationErrorWithHint("paths", "", "at least one file path is required",
+			"Specify which files to adopt, e.g.: lnk -A ~/.bashrc ~/.vimrc")
+	}
+
+	// Expand and validate paths
+	paths, err := ResolvePaths(opts.SourceDir, opts.TargetDir)
+	if err != nil {
+		return err
+	}
+	absSourceDir, absTargetDir := paths.SourceDir, paths.TargetDir
+	PrintVerbose("Source directory: %s", absSourceDir)
+	PrintVerbose("Target directory: %s", absTargetDir)
+
+	// Process each file path
+	adopted := 0
+	var adoptErrors int
+	for _, path := range opts.Paths {
+		// Expand path
+		absPath, err := ExpandPath(path)
+		if err != nil {
+			PrintErrorWithHint(WithHint(
+				fmt.Errorf("failed to expand path %s: %w", path, err),
+				"Check that the path is valid"))
+			adoptErrors++
+			continue
+		}
+
+		// Validate the file exists and isn't already adopted
+		if err := validateAdoptSource(absPath, absSourceDir); err != nil {
+			PrintErrorWithHint(err)
+			adoptErrors++
+			continue
+		}
+
+		// Determine relative path from target directory
+		relPath, err := filepath.Rel(absTargetDir, absPath)
+		if err != nil || strings.HasPrefix(relPath, "..") {
+			PrintErrorWithHint(WithHint(
+				fmt.Errorf("path %s must be within target directory %s", path, absTargetDir),
+				"Only files within the target directory can be adopted"))
+			adoptErrors++
+			continue
+		}
+
+		// Destination path in source directory
+		destPath := filepath.Join(absSourceDir, relPath)
+
+		// Check if source is a directory
+		sourceInfo, err := os.Stat(absPath)
+		if err != nil {
+			PrintErrorWithHint(WithHint(
+				fmt.Errorf("failed to stat %s: %w", path, err),
+				"Check that the file exists"))
+			adoptErrors++
+			continue
+		}
+
+		// Check if destination already exists (for files only)
+		if !sourceInfo.IsDir() {
+			if _, err := os.Stat(destPath); err == nil {
+				PrintErrorWithHint(WithHint(
+					fmt.Errorf("destination %s already exists", ContractPath(destPath)),
+					"Remove the existing file first or choose a different file"))
+				adoptErrors++
+				continue
+			}
+		}
+
+		// Validate symlink creation would work
+		if err := ValidateSymlinkCreation(absPath, destPath); err != nil {
+			PrintErrorWithHint(WithHint(
+				fmt.Errorf("failed to validate adoption: %w", err),
+				"Check file permissions and paths"))
+			adoptErrors++
+			continue
+		}
+
+		// Dry-run or perform adoption
+		if opts.DryRun {
+			PrintDryRun("Would adopt: %s", ContractPath(absPath))
+			if sourceInfo.IsDir() {
+				PrintDetail("Move directory contents to: %s", ContractPath(destPath))
+				PrintDetail("Create individual symlinks for each file")
+			} else {
+				PrintDetail("Move to: %s", ContractPath(destPath))
+				PrintDetail("Create symlink: %s -> %s", ContractPath(absPath), ContractPath(destPath))
+			}
+		} else {
+			// Perform the adoption
+			if err := performAdoption(absPath, destPath); err != nil {
+				PrintErrorWithHint(WithHint(err, "Failed to adopt file"))
+				adoptErrors++
+				continue
+			}
+
+			if !sourceInfo.IsDir() {
+				PrintSuccess("Adopted: %s", ContractPath(absPath))
+			}
+		}
+
+		adopted++
+	}
+
+	// Print summary
+	if adopted > 0 {
+		if opts.DryRun {
+			PrintSummary("Would adopt %d file(s)/directory(ies)", adopted)
+		} else {
+			PrintSummary("Successfully adopted %d file(s)/directory(ies)", adopted)
+			PrintNextStep("status", "view adopted files with status command")
+		}
+	} else {
+		PrintInfo("No files were adopted (see errors above)")
+	}
+
+	if adoptErrors > 0 {
+		return fmt.Errorf("failed to adopt %d file(s)", adoptErrors)
+	}
+	return nil
+}
