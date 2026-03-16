@@ -255,7 +255,9 @@ Checks whether a path is already adopted (i.e., a symlink that already points in
 1. Calls `os.Lstat(absPath)` — if path does not exist or is not a symlink, returns nil
    (not already adopted)
 2. Reads the symlink target via `os.Readlink`
-3. Resolves to an absolute path
+3. Resolves to an absolute path: if `rawTarget` is relative, compute
+   `filepath.Join(filepath.Dir(absPath), rawTarget)` then `filepath.Clean`
+   to normalize; if `rawTarget` is already absolute, use it directly
 4. Checks `filepath.Rel(absSourceDir, cleanTarget)` — if the result does not start
    with `..` and is not `.`, the file is already adopted
 5. Returns `LinkError` with `ErrAlreadyAdopted` and hint to run `lnk status`
