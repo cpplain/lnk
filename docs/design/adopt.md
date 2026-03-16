@@ -121,9 +121,10 @@ For each planned adoption in order:
 
 If any step fails:
 
-- Roll back all completed adoptions in reverse order:
+- Roll back in reverse order all adoptions up to and including the failing one
+  (the per-step conditionals handle partial state):
   - Remove the symlink (if created)
-  - Move `destPath` back to `absPath` via `MoveFile`
+  - Move `destPath` back to `absPath` via `MoveFile` (if moved)
   - If a rollback step also fails: return a combined error reporting both the
     original failure and the rollback failure (e.g.,
     `"adopt failed: <err>; rollback failed: <err>"`)
