@@ -75,7 +75,10 @@ For each path in `opts.Paths`:
    target directory can be orphaned
 4. **If directory** (not itself a symlink): call `FindManagedLinks(absPath, []string{absSourceDir})`
    to find all managed symlinks within. If none found: return error `"no managed symlinks
-found in <path>"` with hint to run `lnk status`. Add all found links to the collection.
+   found in <path>"` with hint to run `lnk status`. For each found link where
+   `link.IsBroken == true`: return `PathError` (op: `"orphan"`, path: `link.Path`,
+   err: `"symlink target does not exist"`) with hint to use `rm` directly. Add only
+   active links to the collection.
 5. **If file**:
    - Must be a symlink: if not, return `PathError` with `ErrNotSymlink` and hint to use
      `rm`
