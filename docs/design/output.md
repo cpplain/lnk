@@ -106,8 +106,6 @@ Each function has two output modes:
 | Function             | Terminal                                | Piped                          |
 | -------------------- | --------------------------------------- | ------------------------------ |
 | `PrintSuccess`       | `✓ <message>` (green icon)              | `success <message>`            |
-| `PrintActiveLink`    | `✓ Active: <path>` (green icon)         | `active <path>`                |
-| `PrintBrokenLink`    | `✗ Broken: <path>` (red icon)           | `broken <path>`                |
 | `PrintError`         | `✗ Error: <message>` (red icon, stderr) | `error: <message>` (stderr)    |
 | `PrintWarning`       | `! <message>` (yellow icon, stderr)     | `warning: <message>` (stderr)  |
 | `PrintSkip`          | `○ <message>` (yellow icon)             | `skip <message>`               |
@@ -122,8 +120,6 @@ Each function has two output modes:
 | Function             | Normal     | Verbose |
 | -------------------- | ---------- | ------- |
 | `PrintSuccess`       | shown      | shown   |
-| `PrintActiveLink`    | shown      | shown   |
-| `PrintBrokenLink`    | shown      | shown   |
 | `PrintInfo`          | shown      | shown   |
 | `PrintDetail`        | shown      | shown   |
 | `PrintSkip`          | shown      | shown   |
