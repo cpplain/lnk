@@ -113,7 +113,7 @@ Each function has two output modes:
 | `PrintInfo`          | `<message>` (no prefix)                 | `<message>` (no prefix)        |
 | `PrintDetail`        | `  <message>` (2-space indent)          | `  <message>` (2-space indent) |
 | `PrintVerbose`       | `[VERBOSE] <message>`                   | `[VERBOSE] <message>`          |
-| `PrintCommandHeader` | bold `<text>` + blank line              | blank line only                |
+| `PrintCommandHeader` | bold `<text>` + blank line              | nothing (no output)            |
 
 ### Verbosity Gating
 
@@ -146,8 +146,8 @@ Always writes to stderr. Not gated by verbosity (errors are always shown).
 func PrintCommandHeader(text string) {
     if !ShouldSimplifyOutput() {
         fmt.Println(Bold(text))
+        fmt.Println() // blank line after header, terminal only
     }
-    fmt.Println() // blank line always printed
 }
 ```
 
