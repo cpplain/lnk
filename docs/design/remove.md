@@ -91,7 +91,7 @@ For each managed link:
    - Verifies the path is a symlink before removing
    - Returns error if path is not a symlink or removal fails
 2. On success: print `"Removed: <path>"`
-3. On failure: print error and increment failure counter; continue with remaining links
+3. On failure: call `PrintWarningWithHint(err)` and increment failure counter; continue with remaining links
 
 After all links are processed:
 
