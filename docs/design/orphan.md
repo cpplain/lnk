@@ -138,7 +138,8 @@ For each managed link in order, call `orphanManagedLink(link)`:
 
 If any step (1, 3, or 4) fails:
 
-- Roll back all completed orphans in reverse order:
+- Roll back in reverse order all orphans up to and including the failing one
+  (the per-step conditionals handle partial state):
   - Move `link.Path` back to `link.Target` via `MoveFile` (if file was already moved)
   - Recreate the symlink via `os.Symlink(link.Target, link.Path)` (if symlink was removed)
   - If a rollback step also fails: return a combined error reporting both the original
