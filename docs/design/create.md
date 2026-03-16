@@ -94,6 +94,8 @@ All-or-nothing: the user sees the problem before any filesystem changes are made
 Print what would happen without making changes:
 
 ```
+Creating Symlinks
+
 [DRY RUN] Would create 3 symlink(s):
 [DRY RUN] Would link: ~/.bashrc -> ~/git/dotfiles/.bashrc
 [DRY RUN] Would link: ~/.vimrc -> ~/git/dotfiles/.vimrc

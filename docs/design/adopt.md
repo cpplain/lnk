@@ -98,6 +98,8 @@ If any validation fails, return the error immediately. No filesystem changes are
 Print a count header, then per-file detail:
 
 ```
+Adopting Files
+
 [DRY RUN] Would adopt 2 file(s):
 [DRY RUN] Would adopt: ~/.bashrc
   Move to: ~/git/dotfiles/.bashrc
