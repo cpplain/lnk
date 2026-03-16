@@ -67,8 +67,13 @@ broken:
 3. Call `filepath.Abs` to normalize
 4. Check containment: for any source in `sources`, check that
    `filepath.Rel(source, resolvedTarget)` does not start with `..` and is not `.`
-5. If matched: create `ManagedLink` with `IsBroken: true`, `Target` set to the
-   normalized absolute path computed in step 3, and `Source` set to the matching source
+5. If matched: call `os.Stat(resolvedTarget)` to determine whether the target is
+   genuinely missing:
+   - If `os.IsNotExist(err)`: create `ManagedLink` with `IsBroken: true`,
+     `Target` set to the normalized absolute path computed in step 3, and `Source`
+     set to the matching source
+   - For any other error (e.g., permission denied): skip the link — the target may
+     still exist; it cannot be classified as broken
 
 This ensures broken managed symlinks (e.g., from deleted source files) are still
 discovered and reported by `status` and `prune`.
