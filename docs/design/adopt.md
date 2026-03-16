@@ -69,7 +69,8 @@ For each path in `opts.Paths`:
 1. **Expand** the path using `ExpandPath`
 2. **Stat** with `os.Lstat`:
    - If path does not exist: return error with hint to check the path
-3. **If directory** (not itself a symlink): walk it and collect each file within;
+3. **If directory** (not itself a symlink): walk it recursively and collect each regular file
+   within (`d.Type().IsRegular()`); symlinks and other non-regular entries are skipped;
    apply steps 4–8 to each collected file. If no files are found after walking,
    return error `"no files to adopt in <path>"` with hint to check that the
    directory contains regular files
