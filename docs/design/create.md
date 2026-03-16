@@ -221,7 +221,7 @@ Creating Symlinks
 
 ✓ Created: ~/.bashrc
 ✓ Created: ~/.vimrc
-! Failed to create symlink: ~/.zshrc -> ~/git/dotfiles/.zshrc: permission denied
+! Failed to create symlink: ~/.zshrc -> ~/git/dotfiles/.zshrc: regular file exists at target
   Try: Use 'lnk adopt <source-dir> <path>' to adopt this file first
 
 ✓ Created 2 symlink(s) successfully
