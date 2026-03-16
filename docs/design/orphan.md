@@ -136,7 +136,7 @@ For each managed link in order, call `orphanManagedLink(link)`:
    - Failure here is a warning only; log it and continue
 6. Print `"Orphaned: <link.Path>"`
 
-If any step (3 or 4) fails:
+If any step (1, 3, or 4) fails:
 
 - Roll back all completed orphans in reverse order:
   - Move `link.Path` back to `link.Target` via `MoveFile` (if file was already moved)
