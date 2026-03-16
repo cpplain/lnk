@@ -134,7 +134,7 @@ To check if `child` is within `parent`:
 
 ```go
 rel, err := filepath.Rel(parent, child)
-isWithin := err == nil && !strings.HasPrefix(rel, "..")
+isWithin := err == nil && !strings.HasPrefix(rel, "..") && rel != "."
 ```
 
 ---
