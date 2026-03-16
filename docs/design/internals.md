@@ -51,7 +51,7 @@ See [stdlib.md](stdlib.md) for the source-dir vs target-dir traversal strategy.
    - Checks if `filepath.Rel(source, resolvedTarget)` does not start with `..` and
      is not `.` for any source in `sources`
    - If matched: creates a `ManagedLink`; sets `Target` to the resolved absolute path
-     returned by `filepath.EvalSymlinks`
+     returned by `filepath.EvalSymlinks`, and `Source` to the matching source directory
    - Sets `IsBroken` based on whether the target file exists (see broken link handling below)
 5. Walk errors (e.g., permission denied on a subdirectory) are logged at verbose
    level and do not abort the walk — results may be incomplete
