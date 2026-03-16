@@ -146,7 +146,9 @@ Moves a file from `src` to `dst`.
 2. If rename fails (e.g., cross-device): falls back to copy-then-delete:
    - Reads `src` file mode via `os.Lstat`
    - Copies file contents from `src` to `dst`
-   - Applies the original file mode to `dst` via `os.Chmod`
+   - Applies the original file mode to `dst` via `os.Chmod`; if `os.Chmod` fails,
+     log a warning via `PrintVerbose` and continue — permission restoration is
+     best-effort and does not abort the copy
    - Verifies the copy by comparing file sizes
    - If copy or verification fails: call `os.Remove(dst)` (ignore any removal error) before returning the error
    - Removes `src` only after a successful, verified copy

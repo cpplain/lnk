@@ -159,7 +159,9 @@ A file is considered already adopted if:
 2. If rename fails (e.g., cross-device): copy then delete
    - Read `src` file mode via `os.Lstat`
    - Copy file contents from `src` to `dst`
-   - Apply the original file mode to `dst` via `os.Chmod`
+   - Apply the original file mode to `dst` via `os.Chmod`; if `os.Chmod` fails,
+     log a warning via `PrintVerbose` and continue — permission restoration is
+     best-effort and does not abort the copy
    - Verify the copy by comparing file sizes
    - If copy or verification fails: call `os.Remove(dst)` (ignore any removal error) before returning the error
    - Remove `src` only after a successful, verified copy
