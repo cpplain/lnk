@@ -89,8 +89,8 @@ non-empty), then broken links:
 Symlink Status
 
 ✓ Active: ~/.bashrc
-✓ Active: ~/.vimrc
 ✓ Active: ~/.config/git/config
+✓ Active: ~/.vimrc
 
 ✗ Broken: ~/.zshrc
 
@@ -107,8 +107,8 @@ use `ContractPath` (`~/`) consistent with terminal output:
 
 ```
 active ~/.bashrc
-active ~/.vimrc
 active ~/.config/git/config
+active ~/.vimrc
 broken ~/.zshrc
 ```
 
