@@ -110,7 +110,7 @@ For each `PlannedLink`:
 2. Call `CreateSymlink(source, target)`:
    - If target is already a symlink pointing to `source`: silently skip (`LinkExistsError`)
    - If target is a symlink pointing elsewhere: remove and recreate
-   - If target is a regular file: return error with hint to use `adopt`
+   - If target is a regular file or directory: return error with hint to use `adopt`
 3. On success: print `"Created: <target>"`
 4. On skip (`LinkExistsError`): continue silently
 5. On failure: print warning and increment failure counter; continue with remaining links
