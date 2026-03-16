@@ -63,7 +63,7 @@ phases do not run.
 
 Walk `SourceDir` recursively. For each entry:
 
-1. Skip directories (only files are linked)
+1. Skip non-regular entries: only collect files where `d.Type().IsRegular()`; directories, symlinks, and other special entries are skipped
 2. Compute the relative path from `SourceDir`
 3. Check the relative path against ignore patterns via `PatternMatcher`
 4. If not ignored, add `PlannedLink{Source: absFile, Target: targetDir/relPath}`
