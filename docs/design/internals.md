@@ -43,8 +43,8 @@ See [stdlib.md](stdlib.md) for the source-dir vs target-dir traversal strategy.
 1. Uses `filepath.WalkDir` to traverse the directory tree rooted at `startPath`.
    `fs.DirEntry.Type()` provides the file type without an extra `Lstat` syscall,
    allowing non-symlink entries to be skipped cheaply.
-2. Skips non-symlink entries: `d.Type()&fs.ModeSymlink == 0`
-3. On macOS, skips `Library` and `.Trash` directories entirely (`filepath.SkipDir`)
+2. On macOS, skips `Library` and `.Trash` directories entirely (`filepath.SkipDir`)
+3. Skips non-symlink entries: `d.Type()&fs.ModeSymlink == 0`
 4. For each symlink found:
    - Calls `filepath.EvalSymlinks` to resolve the full symlink chain to a clean
      absolute path
