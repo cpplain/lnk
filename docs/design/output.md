@@ -165,7 +165,9 @@ custom message.
 
 #### PrintNextStep(command, sourceDir, description string)
 
-Prints `"Next: Run 'lnk <command> <sourceDir>' to <description>"` via `PrintInfo`.
+Contracts `sourceDir` via `ContractPath`, then prints
+`"Next: Run 'lnk <command> <contractedSourceDir>' to <description>"` via `PrintInfo`.
+Callers pass the expanded absolute path; this function handles display formatting.
 
 #### PrintDryRunSummary()
 
