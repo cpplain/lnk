@@ -288,7 +288,8 @@ error if the file does not exist.
 
 ### Behavior
 
-1. Resolves `<sourceDir>/.lnkignore` to an absolute path
+1. Expands `sourceDir` via `ExpandPath` and joins with `.lnkignore` to form the
+   absolute file path: `filepath.Join(expandedSourceDir, ".lnkignore")`
 2. If the file does not exist: logs via `PrintVerbose` and returns `[]string{}, nil`
 3. Opens and reads the file; if any I/O error occurs (e.g., permission denied):
    returns `nil, err` — propagates to `LoadConfig`, which returns the error to
