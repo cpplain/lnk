@@ -80,7 +80,9 @@ found in <path>"` with hint to run `lnk status`. Add all found links to the coll
    - Must be a symlink: if not, return `PathError` with `ErrNotSymlink` and hint to use
      `rm`
    - Read symlink target with `os.Readlink`
-   - Resolve to absolute path
+   - Resolve the raw target to an absolute path: if `rawTarget` is relative, resolve it as
+     `filepath.Join(filepath.Dir(absPath), rawTarget)`, then call `filepath.Clean` to normalize;
+     if `rawTarget` is already absolute, use it directly
    - Verify target is within `absSourceDir` via `filepath.Rel`: if not, return `LinkError`
      with hint to use `rm` directly
    - Verify target file exists (not broken) via `os.Stat`: if broken, return `PathError`
