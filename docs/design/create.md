@@ -122,7 +122,7 @@ After all links are processed:
 - If `created > 0`: print summary `"Created N symlink(s) successfully"`
 - If `created == 0` and `failed == 0`: print `"All symlinks already exist"`
 - If `failed > 0`: print warning `"Failed to create N symlink(s)"` and return error
-- Print next-step hint only when `failed == 0`
+- Print next-step hint only when `created > 0` and `failed == 0`
 
 ---
 
