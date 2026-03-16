@@ -261,6 +261,7 @@ Examples:
 | --------------------------------------------- | ----------------- | ----------------------------------------------------- |
 | Path does not exist                           | `PathError`       | `NewPathErrorWithHint(op, path, err, hint)`           |
 | Already adopted (is a symlink into sourceDir) | `LinkError`       | `NewLinkErrorWithHint` with `ErrAlreadyAdopted`       |
+| Path is a non-adopted symlink                 | `PathError`       | `NewPathErrorWithHint(op, path, err, hint)`           |
 | Path outside target directory                 | `ValidationError` | `NewValidationErrorWithHint(field, value, msg, hint)` |
 | Destination already exists                    | `PathError`       | `NewPathErrorWithHint(op, destPath, err, hint)`       |
 | Permission denied                             | `PathError`       | `NewPathErrorWithHint(op, path, err, hint)`           |

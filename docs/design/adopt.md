@@ -77,6 +77,10 @@ For each path in `opts.Paths`:
 4. **Validate** via `validateAdoptSource(absPath, absSourceDir)`:
    - If path is a symlink already pointing into `sourceDir`: return error
      `"file already adopted"` with hint to run `lnk status`
+   - If `validateAdoptSource` returns nil but the path is a symlink (detected via
+     the `os.Lstat` result from step 2): return `PathError` (op: `"adopt"`, path,
+     err: a descriptive error) with hint to remove the symlink first — adopting
+     symlinks that point outside `sourceDir` is not supported
 5. **Compute relative path** from `opts.TargetDir` to `absPath`:
    - If the path is not within `TargetDir`: return error with hint that only files
      within the target directory can be adopted
@@ -221,6 +225,7 @@ Next: Run 'lnk status <source-dir>' to view adopted files
 | ----------------------------- | --------------------------------------------------------------------------------- |
 | File does not exist           | `adopt <path>: no such file or directory` + hint to check path                    |
 | File already adopted          | `adopt <path>: file already adopted` + hint to run `lnk status`                   |
+| Path is a non-adopted symlink | `adopt <path>: cannot adopt a symlink` + hint to remove the symlink first         |
 | Path outside target directory | `path <path> must be within target directory` + hint                              |
 | Destination already exists    | `destination <dest> already exists` + hint to remove first                        |
 | Empty directory argument      | `no files to adopt in <path>` + hint to check directory contains regular files    |
