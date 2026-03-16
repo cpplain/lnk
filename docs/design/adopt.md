@@ -160,6 +160,7 @@ A file is considered already adopted if:
    - Copy file contents from `src` to `dst`
    - Apply the original file mode to `dst` via `os.Chmod`
    - Verify the copy by comparing file sizes
+   - If copy or verification fails: call `os.Remove(dst)` (ignore any removal error) before returning the error
    - Remove `src` only after a successful, verified copy
 
 ---

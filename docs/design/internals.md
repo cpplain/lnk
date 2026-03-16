@@ -147,6 +147,7 @@ Moves a file from `src` to `dst`.
    - Copies file contents from `src` to `dst`
    - Applies the original file mode to `dst` via `os.Chmod`
    - Verifies the copy by comparing file sizes
+   - If copy or verification fails: call `os.Remove(dst)` (ignore any removal error) before returning the error
    - Removes `src` only after a successful, verified copy
 
 ---
