@@ -115,7 +115,7 @@ For each `PlannedLink`:
    - If target is a regular file or directory: return error with hint to use `adopt`
 3. On success: print `"Created: <target>"`
 4. On skip (`LinkExistsError`): continue silently
-5. On failure: print warning and increment failure counter; continue with remaining links
+5. On failure: call `PrintWarningWithHint(err)` and increment failure counter; continue with remaining links
 
 After all links are processed:
 
