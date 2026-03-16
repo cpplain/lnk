@@ -99,9 +99,11 @@ Symlink Status
 
 #### Piped Output
 
-When `ShouldSimplifyOutput()` is true (stdout is not a terminal), each link is
-printed as a space-separated `status path` pair with no icons. Paths use
-`ContractPath` (`~/`) consistent with terminal output:
+When `ShouldSimplifyOutput()` is true (stdout is not a terminal), active links
+are printed first (in path-sorted order), then broken links (in path-sorted order)
+— the same active-before-broken grouping as terminal output, but without icons or
+blank-line separators. Each link is a space-separated `status path` pair. Paths
+use `ContractPath` (`~/`) consistent with terminal output:
 
 ```
 active ~/.bashrc
