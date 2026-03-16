@@ -66,7 +66,7 @@ Each entry carries:
 ```go
 type ManagedLink struct {
     Path     string // absolute path of the symlink in target
-    Target   string // raw symlink target value
+    Target   string // absolute path of the symlink's resolved target (never relative)
     IsBroken bool   // true if the target file does not exist
     Source   string // absolute source directory that manages this link
 }
