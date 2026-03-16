@@ -133,7 +133,8 @@ For each managed link in order, call `orphanManagedLink(link)`:
 4. **Move file** from `link.Target` to `link.Path` via `MoveFile`
 5. **Restore permissions** via `os.Chmod(link.Path, originalMode)`:
    - `originalMode` is the mode read in step 2
-   - Failure here is a warning only; log it and continue
+   - Failure here is a warning only; log it via `PrintVerbose` and continue —
+     permission restoration is best-effort and does not abort the orphan
 6. Print `"Orphaned: <link.Path>"`
 
 If any step (1, 2, 3, or 4) fails:
