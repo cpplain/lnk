@@ -112,14 +112,7 @@ active ~/.vimrc
 broken ~/.zshrc
 ```
 
-No summary line is printed in piped mode. Gate the Total line with
-`if !ShouldSimplifyOutput()`:
-
-```go
-if !ShouldSimplifyOutput() {
-    PrintSummary("Total: %d links (%d active, %d broken)", total, active, broken)
-}
-```
+No summary line is printed in piped mode.
 
 ### Empty Result
 
