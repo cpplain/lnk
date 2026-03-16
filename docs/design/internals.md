@@ -15,7 +15,7 @@ the operation specs.
 ```go
 type ManagedLink struct {
     Path     string // absolute path of the symlink in the target directory
-    Target   string // raw symlink target value (as stored on disk)
+    Target   string // absolute path of the symlink's resolved target (never relative)
     IsBroken bool   // true if the resolved target file does not exist
     Source   string // absolute source directory that manages this link
 }
@@ -50,7 +50,8 @@ See [stdlib.md](stdlib.md) for the source-dir vs target-dir traversal strategy.
      absolute path
    - Checks if `filepath.Rel(source, resolvedTarget)` does not start with `..` and
      is not `.` for any source in `sources`
-   - If matched: creates a `ManagedLink`
+   - If matched: creates a `ManagedLink`; sets `Target` to the resolved absolute path
+     returned by `filepath.EvalSymlinks`
    - Sets `IsBroken` based on whether the target file exists (see broken link handling below)
 5. Walk errors (e.g., permission denied on a subdirectory) are logged at verbose
    level and do not abort the walk — results may be incomplete
@@ -66,8 +67,8 @@ broken:
 3. Call `filepath.Abs` to normalize
 4. Check containment: for any source in `sources`, check that
    `filepath.Rel(source, resolvedTarget)` does not start with `..` and is not `.`
-5. If matched: create `ManagedLink` with `IsBroken: true`, using the matching
-   source as the `Source` field
+5. If matched: create `ManagedLink` with `IsBroken: true`, `Target` set to the
+   normalized absolute path computed in step 3, and `Source` set to the matching source
 
 This ensures broken managed symlinks (e.g., from deleted source files) are still
 discovered and reported by `status` and `prune`.
