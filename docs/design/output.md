@@ -144,6 +144,16 @@ Extracts a hint from the error (via `GetErrorHint`) and displays:
 
 Always writes to stderr. Not gated by verbosity (errors are always shown).
 
+#### PrintWarningWithHint(err error)
+
+Extracts a hint from the error (via `GetErrorHint`) and displays:
+
+- Terminal: `"! <err>"` on stderr; if hint present: `"  Try: <hint>"` (cyan `Try:`)
+  on stderr
+- Piped: `"warning: <err>"` on stderr; if hint present: `"hint: <hint>"` on stderr
+
+Always writes to stderr. Not gated by verbosity (warnings are always shown).
+
 #### PrintCommandHeader(text string)
 
 ```go
