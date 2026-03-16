@@ -136,7 +136,7 @@ For each managed link in order, call `orphanManagedLink(link)`:
    - Failure here is a warning only; log it and continue
 6. Print `"Orphaned: <link.Path>"`
 
-If any step (1, 3, or 4) fails:
+If any step (1, 2, 3, or 4) fails:
 
 - Roll back in reverse order all orphans up to and including the failing one
   (the per-step conditionals handle partial state):
