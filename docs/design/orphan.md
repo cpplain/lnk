@@ -86,7 +86,8 @@ For each path in `opts.Paths`:
    - Resolve the raw target to an absolute path: if `rawTarget` is relative, resolve it as
      `filepath.Join(filepath.Dir(absPath), rawTarget)`, then call `filepath.Clean` to normalize;
      if `rawTarget` is already absolute, use it directly
-   - Verify target is within `absSourceDir` via `filepath.Rel`: if not, return `LinkError`
+   - Verify target is within `absSourceDir`: compute `rel, _ := filepath.Rel(absSourceDir,
+     resolvedTarget)`; if `rel` starts with `..` or equals `"."`, return `LinkError`
      with hint to use `rm` directly
    - Verify target file exists (not broken) via `os.Stat`: if broken, return `PathError`
      with hint to use `rm`
