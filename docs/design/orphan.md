@@ -75,7 +75,7 @@ For each path in `opts.Paths`:
    target directory can be orphaned
 4. **If directory** (not itself a symlink): call `FindManagedLinks(absPath, []string{absSourceDir})`
    to find all managed symlinks within. If none found: return error `"no managed symlinks
-   found in <path>"` with hint to run `lnk status`. For each found link where
+found in <path>"` with hint to run `lnk status`. For each found link where
    `link.IsBroken == true`: return `PathError` (op: `"orphan"`, path: `link.Path`,
    err: `"symlink target does not exist"`) with hint to use `rm` directly. Add only
    active links to the collection.
@@ -87,7 +87,7 @@ For each path in `opts.Paths`:
      `filepath.Join(filepath.Dir(absPath), rawTarget)`, then call `filepath.Clean` to normalize;
      if `rawTarget` is already absolute, use it directly
    - Verify target is within `absSourceDir`: compute `rel, _ := filepath.Rel(absSourceDir,
-     resolvedTarget)`; if `rel` starts with `..` or equals `"."`, return `LinkError`
+resolvedTarget)`; if `rel` starts with `..` or equals `"."`, return `LinkError`
      with hint to use `rm` directly
    - Verify target file exists (not broken) via `os.Stat`: if broken, return `PathError`
      with hint to use `rm`

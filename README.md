@@ -4,11 +4,11 @@ An opinionated symlink manager for dotfiles.
 
 ## Key Features
 
-- **Simple CLI** - Subcommand-based interface (`lnk <command> [args]`)
+- **Simple CLI** - Subcommand-based interface (`lnk <command> [flags] <source-dir>`)
 - **Recursive file linking** - Links individual files throughout directory trees
 - **Flexible organization** - Support for multiple source directories
 - **Safety first** - Dry-run mode and clear status reporting
-- **Flexible configuration** - Optional config files with CLI override
+- **Ignore patterns** - Optional `.lnkignore` file with gitignore syntax
 - **No dependencies** - Single binary, stdlib only (git integration optional)
 
 ## Installation
@@ -28,45 +28,37 @@ lnk create .                  # Link everything from current directory
 lnk create home               # Link everything from home/ subdirectory
 
 # Link from an absolute path
-lnk create ~/git/dotfiles    # Link from specific path
+lnk create ~/git/dotfiles     # Link from specific path
 ```
 
 ## Usage
 
 ```bash
-lnk [flags] <command> [args]
+lnk <command> [flags] <source-dir>
 ```
 
 ### Commands
 
-| Command  | Args           | Description                           |
-| -------- | -------------- | ------------------------------------- |
-| `create` | `[source-dir]` | Create symlinks from source to target |
-| `remove` | `[source-dir]` | Remove managed symlinks               |
-| `status` | `[source-dir]` | Show status of managed symlinks       |
-| `prune`  | `[source-dir]` | Remove broken symlinks                |
-| `adopt`  | `<file...>`    | Adopt files into source directory     |
-| `orphan` | `<file...>`    | Remove files from management          |
+| Command  | Args                     | Description                           |
+| -------- | ------------------------ | ------------------------------------- |
+| `create` | `<source-dir>`           | Create symlinks from source to target |
+| `remove` | `<source-dir>`           | Remove managed symlinks               |
+| `status` | `<source-dir>`           | Show status of managed symlinks       |
+| `prune`  | `<source-dir>`           | Remove broken symlinks                |
+| `adopt`  | `<source-dir> <path...>` | Adopt files into source directory     |
+| `orphan` | `<source-dir> <path...>` | Remove files from management          |
 
-For `create`/`remove`/`status`/`prune`: the optional positional argument sets the source directory (default: `--source` or `.`).
+For all commands, `source-dir` is the first required positional argument (the dotfiles directory). The target directory is always `~`.
 
-For `adopt`/`orphan`: one or more file paths are required.
+For `adopt`/`orphan`: one or more file or directory paths within `~` are required as additional positional arguments.
 
 ### Flags
 
-| Flag               | Description                                       |
-| ------------------ | ------------------------------------------------- |
-| `-s, --source DIR` | Source directory (default: `.`) |
-| `-t, --target DIR` | Target directory (default: `~`)                   |
-
-### Other Flags
-
 | Flag               | Description                            |
 | ------------------ | -------------------------------------- |
-| `--ignore PATTERN` | Additional ignore pattern (repeatable) |
+| `--ignore PATTERN` | Additional ignore pattern (repeatable, only affects create) |
 | `-n, --dry-run`    | Preview changes without making them    |
 | `-v, --verbose`    | Enable verbose output                  |
-| `-q, --quiet`      | Suppress all non-error output          |
 | `--no-color`       | Disable colored output                 |
 | `-V, --version`    | Show version information               |
 | `-h, --help`       | Show help message                      |
@@ -85,14 +77,11 @@ lnk create home
 # Link from absolute path
 lnk create ~/git/dotfiles
 
-# Specify target directory
-lnk create -t ~ .
-
 # Dry-run to preview changes
 lnk create -n .
 
 # Add ignore pattern
-lnk --ignore '*.swp' create .
+lnk create --ignore '*.swp' .
 ```
 
 ### Removing Links
@@ -125,57 +114,44 @@ lnk status -v .
 
 ```bash
 # Remove broken symlinks from current directory
-lnk prune
+lnk prune .
 
 # Remove broken symlinks from specific source
 lnk prune home
 
 # Dry-run to preview pruning
-lnk prune -n
+lnk prune -n .
 ```
 
 ### Adopting Files
 
 ```bash
 # Adopt files into current directory
-lnk adopt ~/.bashrc ~/.vimrc
+lnk adopt . ~/.bashrc ~/.vimrc
 
 # Adopt into specific source directory
-lnk adopt -s ~/git/dotfiles ~/.bashrc
+lnk adopt ~/git/dotfiles ~/.bashrc
 
 # Adopt with dry-run
-lnk adopt -n ~/.gitconfig
+lnk adopt -n . ~/.gitconfig
 ```
 
 ### Orphaning Files
 
 ```bash
-# Remove file from management
-lnk orphan ~/.bashrc
+# Remove file from management (current directory as source)
+lnk orphan . ~/.bashrc
 
 # Orphan with specific source
-lnk orphan -s ~/git/dotfiles ~/.bashrc
+lnk orphan ~/git/dotfiles ~/.bashrc
 
 # Dry-run to preview orphaning
-lnk orphan -n ~/.config/oldapp
+lnk orphan -n . ~/.config/oldapp
 ```
 
 ## Config Files
 
-lnk supports optional configuration files in your source directory. CLI flags always take precedence over config files.
-
-### .lnkconfig (optional)
-
-Place in source directory. Format: CLI flags, one per line.
-
-```
---target=~
---ignore=local/
---ignore=*.private
---ignore=*.local
-```
-
-Each line should be a valid CLI flag. Use `--flag=value` format for flags that take values.
+lnk supports an optional ignore file in your source directory.
 
 ### .lnkignore (optional)
 
@@ -202,7 +178,6 @@ lnk automatically ignores these patterns:
 - `README*`
 - `LICENSE*`
 - `CHANGELOG*`
-- `.lnkconfig`
 - `.lnkignore`
 
 ## How It Works
@@ -259,13 +234,12 @@ Use: `lnk create .` from within the directory
 
 Use: `lnk create home` to link public configs, or `lnk create ~/dotfiles/private` for private configs
 
-### Config File Precedence
+### Configuration
 
-For the **target directory**: CLI flags override config file, which overrides the
-default (`~`).
+The **target directory** is always `~` and is not configurable.
 
-For **ignore patterns**: all sources are combined — built-in defaults, `.lnkconfig`,
-`.lnkignore`, and `--ignore` flags are all merged into a single pattern list.
+For **ignore patterns**: all sources are combined — built-in defaults, `.lnkignore`,
+and `--ignore` flags are all merged into a single pattern list.
 
 ### Ignore Patterns
 
@@ -279,7 +253,6 @@ lnk supports gitignore-style patterns for excluding files from linking:
 Patterns can be specified via:
 
 - `.lnkignore` file (one pattern per line)
-- `.lnkconfig` file (`--ignore=pattern`)
 - CLI flags (`--ignore pattern`)
 
 ## Common Workflows
@@ -304,16 +277,16 @@ lnk create .
 ### Adding New Configurations
 
 ```bash
-# Adopt a new app config into your repository
-lnk adopt ~/.config/newapp
+# Adopt a new app config into your repository (current directory as source)
+lnk adopt . ~/.config/newapp
 
 # This will:
-# 1. Move ~/.config/newapp to ~/dotfiles/.config/newapp (from cwd)
+# 1. Move ~/.config/newapp to ./.config/newapp
 # 2. Create symlinks for each file in the directory tree
 # 3. Preserve the directory structure
 
 # Or specify source directory explicitly
-lnk adopt -s ~/dotfiles ~/.config/newapp
+lnk adopt ~/dotfiles ~/.config/newapp
 ```
 
 ### Managing Public and Private Configs
@@ -335,11 +308,8 @@ lnk create public
 lnk create private
 
 # Or adopt to appropriate location
-cd ~/dotfiles/public
-lnk adopt ~/.bashrc           # Public config to current dir
-
-cd ~/dotfiles/private
-lnk adopt ~/.ssh/config       # Private config to current dir
+lnk adopt ~/dotfiles/public ~/.bashrc    # Public config
+lnk adopt ~/dotfiles/private ~/.ssh/config  # Private config
 ```
 
 ### Migrating from Other Dotfile Managers
@@ -359,11 +329,11 @@ lnk create .
 ## Tips
 
 - **Always dry-run first** - Use `--dry-run` or `-n` to preview changes before making them
-- **Check status regularly** - Use `lnk status` to check for broken links
+- **Check status regularly** - Use `lnk status .` to check for broken links
 - **Organize your dotfiles** - Separate public and private configs into subdirectories
 - **Leverage .lnkignore** - Exclude build artifacts, local configs, and README files
 - **Test on VM first** - When setting up a new machine, test in a VM before production
-- **Version your configs** - Keep `.lnkconfig` and `.lnkignore` in git for reproducibility
+- **Version your configs** - Keep `.lnkignore` in git for reproducibility
 - **Use verbose mode for debugging** - Add `-v` to see what lnk is doing
 
 ## Comparison with Other Tools
@@ -411,9 +381,8 @@ lnk create .
 # Check if they're ignored
 lnk create -v .  # Verbose mode shows ignored files
 
-# Check .lnkignore and .lnkconfig
+# Check .lnkignore
 cat .lnkignore
-cat .lnkconfig
 ```
 
 ### Permission Denied Errors
