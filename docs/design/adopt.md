@@ -122,7 +122,8 @@ For each planned adoption in order:
 1. **Verify source still exists** (`os.Lstat(absPath)`): if gone, return error with hint
 2. Create parent directory of `destPath` (`os.MkdirAll`, mode `0755`)
 3. Move file from `absPath` to `destPath` via `MoveFile`
-4. Create symlink: `absPath` → `destPath`
+4. Create symlink via `CreateSymlink(destPath, absPath)` — `source=destPath` (the real
+   file in the repository), `target=absPath` (where the symlink appears)
 5. On success: print `"Adopted: <absPath>"`
 
 If any step fails:
@@ -176,9 +177,11 @@ A file is considered already adopted if:
 
 ## 6. Path Behavior
 
-- `SourceDir` is expanded with `ExpandPath` before use
-- `SourceDir` must exist and be a directory
-- Each `Path` is expanded with `ExpandPath` before processing
+- `SourceDir` is resolved to an absolute path: first `ExpandPath` (tilde expansion),
+  then `filepath.Abs` (relative-to-absolute conversion)
+- `SourceDir` must exist and be a directory; checked after path resolution via
+  `os.Stat` — returns `ValidationError` with hint if missing or not a directory
+- Each `Path` is resolved to an absolute path: first `ExpandPath`, then `filepath.Abs`
 - Each path must reside within `TargetDir` (always `~` from CLI); paths outside produce an error
 - Displayed paths use `ContractPath`
 

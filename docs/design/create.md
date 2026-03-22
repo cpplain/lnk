@@ -67,6 +67,10 @@ Walk `SourceDir` recursively. For each entry:
 2. Compute the relative path from `SourceDir`
 3. Check the relative path against ignore patterns via `PatternMatcher`
 4. If not ignored, add `PlannedLink{Source: absFile, Target: targetDir/relPath}`
+5. If `filepath.WalkDir` returns an error for any entry (e.g., permission denied on a
+   subdirectory), the walk aborts immediately and `CreateLinks` returns the error.
+   Source directories are under user control and should be fully readable — aborting
+   is the correct behavior (unlike target-dir walks which skip errors gracefully)
 
 If no files are found after filtering, print `"No files to link found."` and return nil.
 
@@ -115,13 +119,17 @@ For each `PlannedLink`:
    - If target is a regular file or directory: return error with hint to use `adopt`
 3. On success: print `"Created: <target>"`
 4. On skip (`LinkExistsError`): continue silently
-5. On failure: call `PrintWarningWithHint(err)` and increment failure counter; continue with remaining links
+5. On failure: print warning with `PrintWarning("Failed to create %s: %v", ContractPath(target), err)`,
+   then if `GetErrorHint(err)` is non-empty print the hint with `PrintDetail("Try: %s", hint)` on
+   stderr; increment failure counter; continue with remaining links
 
 After all links are processed:
 
 - If `created > 0`: print summary `"Created N symlink(s) successfully"`
 - If `created == 0` and `failed == 0`: print `"All symlinks already exist"`
-- If `failed > 0`: print warning `"Failed to create N symlink(s)"` and return error
+- If `failed > 0`: print warning `"Failed to create N symlink(s)"` via `PrintWarning`
+  and return `fmt.Errorf("failed to create %d symlink(s)", failed)` — this is a plain
+  error with no hint because per-item hints were already printed inline during execution
 - Print next-step hint only when `created > 0` and `failed == 0`
 
 ---
@@ -143,8 +151,12 @@ See [config.md](config.md) for the full list of active patterns and their source
 
 ## 5. Path Behavior
 
-- `SourceDir` and `TargetDir` are expanded with `ExpandPath` before use
-- `SourceDir` must exist and be a directory; validation error otherwise
+- `SourceDir` and `TargetDir` are resolved to absolute paths: first `ExpandPath` (tilde
+  expansion), then `filepath.Abs` (relative-to-absolute conversion). This ensures all
+  downstream operations use absolute paths regardless of whether the user passed `.`,
+  `~/dotfiles`, or `/home/user/dotfiles`
+- `SourceDir` must exist and be a directory; checked after path resolution via
+  `os.Stat` — returns `ValidationError` with hint if missing or not a directory
 - `TargetDir` does not need to exist; it is created as needed during execution
 - Displayed paths use `ContractPath` (home directory shown as `~`)
 

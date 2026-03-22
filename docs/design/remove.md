@@ -63,6 +63,10 @@ as `create`. For each file found, compute the corresponding symlink path in `Tar
   `filepath.EvalSymlinks`): add to the removal list
 - Otherwise: skip silently (not managed by this source)
 
+If `filepath.WalkDir` returns an error for any entry (e.g., permission denied), the
+walk aborts immediately and `RemoveLinks` returns the error — same rationale as
+`create`: source directories should be fully readable.
+
 **Scope**: this approach only removes symlinks for files that currently exist in
 `SourceDir`. Broken symlinks left by previously-deleted source files are out of
 scope for `remove` and are handled by `prune`.
@@ -91,7 +95,9 @@ For each managed link:
    - Verifies the path is a symlink before removing
    - Returns error if path is not a symlink or removal fails
 2. On success: print `"Removed: <path>"`
-3. On failure: call `PrintWarningWithHint(err)` and increment failure counter; continue with remaining links
+3. On failure: print warning with `PrintWarning("Failed to remove %s: %v", ContractPath(path), err)`,
+   then if `GetErrorHint(err)` is non-empty print the hint with `PrintDetail("Try: %s", hint)` on
+   stderr; increment failure counter; continue with remaining links
 
 After all links are processed:
 
@@ -100,7 +106,9 @@ After all links are processed:
   removing empty directories until reaching `targetDir` (which is never removed).
   Each removed directory is logged via `PrintVerbose`.
 - If `removed > 0`: print summary `"Removed N symlink(s) successfully"`
-- If `failed > 0`: print warning `"Failed to remove N symlink(s)"` and return error
+- If `failed > 0`: print warning `"Failed to remove N symlink(s)"` via `PrintWarning`
+  and return `fmt.Errorf("failed to remove %d symlink(s)", failed)` — plain error,
+  no hint (per-item hints already printed inline)
 - Print next-step hint only when `failed == 0`
 
 ---
@@ -126,8 +134,12 @@ Links that do not meet this criterion are ignored silently. If `filepath.EvalSym
 
 ## 5. Path Behavior
 
-- `SourceDir` and `TargetDir` are expanded with `ExpandPath` before use
-- `SourceDir` must exist and be a directory; validation error otherwise
+- `SourceDir` and `TargetDir` are resolved to absolute paths: first `ExpandPath` (tilde
+  expansion), then `filepath.Abs` (relative-to-absolute conversion). This ensures all
+  downstream operations use absolute paths regardless of whether the user passed `.`,
+  `~/dotfiles`, or `/home/user/dotfiles`
+- `SourceDir` must exist and be a directory; checked after path resolution via
+  `os.Stat` — returns `ValidationError` with hint if missing or not a directory
 - Displayed paths use `ContractPath` (home directory shown as `~`)
 
 ---

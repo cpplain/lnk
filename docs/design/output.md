@@ -140,15 +140,19 @@ Extracts a hint from the error (via `GetErrorHint`) and displays:
 
 Always writes to stderr. Not gated by verbosity (errors are always shown).
 
-#### PrintWarningWithHint(err error)
+#### Per-Item Failure Pattern (continue-on-failure commands)
 
-Extracts a hint from the error (via `GetErrorHint`) and displays:
+Commands that continue on per-item failure (`create`, `remove`, `prune`) handle
+errors inline rather than through a single helper. Each command:
 
-- Terminal: `"! <err>"` on stderr; if hint present: `"  Try: <hint>"` (cyan `Try:`)
-  on stderr
-- Piped: `"warning: <err>"` on stderr; if hint present: `"hint: <hint>"` on stderr
+1. Prints a warning via `PrintWarning("Failed to <verb> %s: %v", ContractPath(path), err)`
+2. If `GetErrorHint(err)` returns a non-empty string, prints the hint via
+   `PrintDetail("Try: %s", hint)` on stderr (terminal) or `fmt.Fprintf(os.Stderr, "hint: %s\n", hint)` (piped)
+3. Increments a failure counter and continues
 
-Always writes to stderr. Not gated by verbosity (warnings are always shown).
+This pattern gives each command control over the "Failed to" prefix and path formatting
+while reusing the standard hint extraction. See each command's Execute Mode section for
+the exact format.
 
 #### PrintCommandHeader(text string)
 

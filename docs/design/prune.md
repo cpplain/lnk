@@ -86,7 +86,9 @@ For each broken link:
 
 1. Call `RemoveSymlink(path)` to remove it
 2. On success: print `"Pruned: <path>"`
-3. On failure: call `PrintWarningWithHint(err)` and increment failure counter; continue with remaining links
+3. On failure: print warning with `PrintWarning("Failed to prune %s: %v", ContractPath(path), err)`,
+   then if `GetErrorHint(err)` is non-empty print the hint with `PrintDetail("Try: %s", hint)` on
+   stderr; increment failure counter; continue with remaining links
 
 After all links are processed:
 
@@ -95,7 +97,9 @@ After all links are processed:
   removing empty directories until reaching `targetDir` (which is never removed).
   Each removed directory is logged via `PrintVerbose`.
 - If `pruned > 0`: print summary `"Pruned N broken symlink(s) successfully"`
-- If `failed > 0`: print warning `"Failed to prune N symlink(s)"` and return error
+- If `failed > 0`: print warning `"Failed to prune N symlink(s)"` via `PrintWarning`
+  and return `fmt.Errorf("failed to prune %d symlink(s)", failed)` — plain error,
+  no hint (per-item hints already printed inline)
 - Print next-step hint only when `failed == 0`
 
 ---
@@ -111,8 +115,12 @@ step returning an error.
 
 ## 5. Path Behavior
 
-- `SourceDir` and `TargetDir` are expanded with `ExpandPath` before use
-- `SourceDir` must exist and be a directory; validation error otherwise
+- `SourceDir` and `TargetDir` are resolved to absolute paths: first `ExpandPath` (tilde
+  expansion), then `filepath.Abs` (relative-to-absolute conversion). This ensures all
+  downstream operations use absolute paths regardless of whether the user passed `.`,
+  `~/dotfiles`, or `/home/user/dotfiles`
+- `SourceDir` must exist and be a directory; checked after path resolution via
+  `os.Stat` — returns `ValidationError` with hint if missing or not a directory
 - Walk skips `Library` and `.Trash` directories on macOS
 - Displayed paths use `ContractPath` (home directory shown as `~`)
 

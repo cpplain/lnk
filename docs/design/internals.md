@@ -311,7 +311,7 @@ Used by: `LoadConfig` in `config.go`.
 - [remove.md](remove.md) — Uses `RemoveSymlink`, `CleanEmptyDirs` (source-dir walk)
 - [status.md](status.md) — Uses `FindManagedLinks`
 - [prune.md](prune.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `CleanEmptyDirs`
-- [adopt.md](adopt.md) — Uses `MoveFile`, `CleanEmptyDirs` (rollback), `ValidateSymlinkCreation`, `validateAdoptSource`
+- [adopt.md](adopt.md) — Uses `CreateSymlink`, `MoveFile`, `CleanEmptyDirs` (rollback), `ValidateSymlinkCreation`, `validateAdoptSource`
 - [orphan.md](orphan.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `MoveFile`, `CleanEmptyDirs`
 - [config.md](config.md) — Uses `LoadIgnoreFile`
 - [error-handling.md](error-handling.md) — Error types returned by these functions

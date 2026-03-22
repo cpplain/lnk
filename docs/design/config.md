@@ -130,7 +130,8 @@ func LoadConfig(sourceDir string, cliIgnorePatterns []string) (*Config, error)
 
 - `~` → `/home/user`
 - `~/foo` → `/home/user/foo`
-- Absolute paths and relative paths are returned unchanged
+- Absolute paths and relative paths are returned unchanged — callers that need
+  absolute paths must also call `filepath.Abs` after `ExpandPath`
 - Returns error if home directory cannot be determined
 
 ### ContractPath

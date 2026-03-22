@@ -93,6 +93,11 @@ covers.
 fail if any link in the chain is broken. For checking symlink metadata (is this a
 symlink? what is its raw target?) use `os.Lstat` and `os.Readlink` directly.
 
+**Single-level resolution in `adopt`/`orphan`**: these commands use `os.Readlink` +
+manual path resolution instead of `filepath.EvalSymlinks`. They need to verify where
+a specific symlink points (one level), not where a chain of symlinks resolves to.
+This is deliberate and does not contradict the general preference for `EvalSymlinks`.
+
 ### Broken link detection
 
 A managed symlink is broken when `os.Stat(resolvedTarget)` returns `os.IsNotExist`.

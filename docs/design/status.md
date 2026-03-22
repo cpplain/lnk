@@ -97,6 +97,11 @@ Symlink Status
 ✓ Total: 4 links (3 active, 1 broken)
 ```
 
+Active links use `PrintSuccess("Active: %s", ...)` (stdout). Broken links are printed
+directly to stdout — **not** via `PrintError` (which writes to stderr) — because broken
+links in status are informational, not errors. The `✗` icon and `Red` color are applied
+inline by the status command. The summary line uses `PrintSummary`.
+
 #### Piped Output
 
 When `ShouldSimplifyOutput()` is true (stdout is not a terminal), active links
@@ -141,8 +146,12 @@ lnk status . | grep ^broken
 
 ## 5. Path Behavior
 
-- `SourceDir` and `TargetDir` are expanded with `ExpandPath` before use
-- `SourceDir` must exist and be a directory; validation error otherwise
+- `SourceDir` and `TargetDir` are resolved to absolute paths: first `ExpandPath` (tilde
+  expansion), then `filepath.Abs` (relative-to-absolute conversion). This ensures all
+  downstream operations use absolute paths regardless of whether the user passed `.`,
+  `~/dotfiles`, or `/home/user/dotfiles`
+- `SourceDir` must exist and be a directory; checked after path resolution via
+  `os.Stat` — returns `ValidationError` with hint if missing or not a directory
 - Walk skips `Library` and `.Trash` directories on macOS
 - All displayed paths use `ContractPath` (home directory shown as `~`)
 

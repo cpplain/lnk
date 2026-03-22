@@ -277,6 +277,37 @@ Examples:
 | Broken symlink                | `PathError`       | `NewPathErrorWithHint(op, path, err, hint)`           |
 | No managed links in directory | `HintedError`     | `WithHint(err, hint)`                                 |
 
+### Create (Phase 2 validation and Phase 3 execution)
+
+| Scenario                        | Error Type        | Constructor / Source                                     |
+| ------------------------------- | ----------------- | -------------------------------------------------------- |
+| Circular reference or overlap   | `ValidationError` | returned by `ValidateSymlinkCreation`                    |
+| Target is a regular file or dir | `LinkError`       | returned by `CreateSymlink` with hint to use `lnk adopt` |
+| Symlink creation failure        | `LinkError`       | returned by `CreateSymlink`                              |
+| Aggregate (failed > 0)          | plain `error`     | `fmt.Errorf("failed to create %d symlink(s)", failed)`   |
+
+### Remove (execution)
+
+| Scenario               | Error Type    | Constructor / Source                                   |
+| ---------------------- | ------------- | ------------------------------------------------------ |
+| Path is not a symlink  | `PathError`   | returned by `RemoveSymlink` with `ErrNotSymlink`       |
+| Removal failure        | OS error      | returned by `os.Remove` via `RemoveSymlink`            |
+| Aggregate (failed > 0) | plain `error` | `fmt.Errorf("failed to remove %d symlink(s)", failed)` |
+
+### Status
+
+| Scenario                        | Error Type        | Constructor / Source           |
+| ------------------------------- | ----------------- | ------------------------------ |
+| Target directory unreadable     | OS error          | returned by `FindManagedLinks` |
+| Source dir missing or not a dir | `ValidationError` | checked during path resolution |
+
+### Prune (execution)
+
+| Scenario               | Error Type    | Constructor / Source                                  |
+| ---------------------- | ------------- | ----------------------------------------------------- |
+| Removal failure        | OS error      | returned by `os.Remove` via `RemoveSymlink`           |
+| Aggregate (failed > 0) | plain `error` | `fmt.Errorf("failed to prune %d symlink(s)", failed)` |
+
 ---
 
 ## 12. Related Specifications

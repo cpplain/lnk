@@ -89,8 +89,12 @@ Notes:
 3. Handle `--version`: print `lnk <version>` and exit 0
 4. Handle `--help` or bare `lnk` (invoked with no arguments at all): print usage and exit 0
 5. Set verbosity level
-6. Load configuration (see [config.md](config.md))
-7. Dispatch to the command handler
+6. Parse positional arguments: for all commands, the first positional argument is
+   `source-dir`; for `adopt` and `orphan`, remaining positional arguments are paths
+7. Load configuration via `LoadConfig(sourceDir, cliIgnorePatterns)` (see [config.md](config.md))
+8. Build the command's options struct (`LinkOptions`, `AdoptOptions`, or `OrphanOptions`)
+   by mapping `Config` fields plus CLI flags (`DryRun`, `Paths`) into the struct
+9. Dispatch to the command handler
 
 ### Command Dispatch
 

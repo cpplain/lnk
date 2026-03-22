@@ -82,7 +82,9 @@ found in <path>"` with hint to run `lnk status`. For each found link where
 5. **If file**:
    - Must be a symlink: if not, return `PathError` with `ErrNotSymlink` and hint to use
      `rm`
-   - Read symlink target with `os.Readlink`
+   - Read symlink target with `os.Readlink` — single-level resolution is used here
+     (not `filepath.EvalSymlinks`) because orphan needs to verify where this specific
+     symlink points, not where a chain of symlinks resolves to
    - Resolve the raw target to an absolute path: if `rawTarget` is relative, resolve it as
      `filepath.Join(filepath.Dir(absPath), rawTarget)`, then call `filepath.Clean` to normalize;
      if `rawTarget` is already absolute, use it directly
@@ -171,9 +173,11 @@ This is identical to the detection used by `FindManagedLinks`.
 
 ## 5. Path Behavior
 
-- `SourceDir` is expanded with `ExpandPath` before use
-- `SourceDir` must exist and be a directory
-- Each `Path` is expanded with `ExpandPath` before processing
+- `SourceDir` is resolved to an absolute path: first `ExpandPath` (tilde expansion),
+  then `filepath.Abs` (relative-to-absolute conversion)
+- `SourceDir` must exist and be a directory; checked after path resolution via
+  `os.Stat` — returns `ValidationError` with hint if missing or not a directory
+- Each `Path` is resolved to an absolute path: first `ExpandPath`, then `filepath.Abs`
 - Each path must reside within `TargetDir` (always `~` from CLI); paths outside produce an error
 - Displayed paths use `ContractPath`
 
