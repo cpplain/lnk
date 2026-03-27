@@ -99,12 +99,14 @@ Loads and merges configuration from all sources. `LoadIgnoreFile(sourceDir)` par
 ### Configuration Structure
 
 **`LoadConfig(sourceDir, cliIgnorePatterns)` algorithm** (from `docs/design/config.md`):
+
 1. Call `LoadIgnoreFile(sourceDir)` to parse `<sourceDir>/.lnkignore` (if present)
 2. Combine: `getBuiltInIgnorePatterns()` + `.lnkignore` patterns + CLI `--ignore` patterns
 3. Expand `~` to home directory via `ExpandPath("~")`
 4. Return `Config{SourceDir, TargetDir, IgnorePatterns}`
 
 **Path helpers** (in `lnk/config.go`):
+
 - `ExpandPath(path)`: expands `~` to home directory; other paths returned unchanged
 - `ContractPath(path)`: contracts home directory to `~` for display output
 

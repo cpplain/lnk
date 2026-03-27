@@ -54,14 +54,14 @@ For `adopt`/`orphan`: one or more file or directory paths within `~` are require
 
 ### Flags
 
-| Flag               | Description                            |
-| ------------------ | -------------------------------------- |
+| Flag               | Description                                                 |
+| ------------------ | ----------------------------------------------------------- |
 | `--ignore PATTERN` | Additional ignore pattern (repeatable, only affects create) |
-| `-n, --dry-run`    | Preview changes without making them    |
-| `-v, --verbose`    | Enable verbose output                  |
-| `--no-color`       | Disable colored output                 |
-| `-V, --version`    | Show version information               |
-| `-h, --help`       | Show help message                      |
+| `-n, --dry-run`    | Preview changes without making them                         |
+| `-v, --verbose`    | Enable verbose output                                       |
+| `--no-color`       | Disable colored output                                      |
+| `-V, --version`    | Show version information                                    |
+| `-h, --help`       | Show help message                                           |
 
 ## Examples
 

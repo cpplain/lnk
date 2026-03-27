@@ -18,6 +18,7 @@ Design documentation for `lnk`, an opinionated symlink manager for dotfiles.
 | [output.md](output.md)                 | Output system: verbosity, color, piped format                               |
 | [internals.md](internals.md)           | Internal helpers: `FindManagedLinks`, `CreateSymlink`, `MoveFile`, etc.     |
 | [stdlib.md](stdlib.md)                 | Standard library usage: which packages/functions to use and why             |
+| [testing.md](testing.md)               | Testing strategy: TDD workflow, test levels, conventions, helpers           |
 
 ## Glossary
 
