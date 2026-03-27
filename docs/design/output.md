@@ -115,6 +115,10 @@ Each function has two output modes:
 | `PrintVerbose`       | `[VERBOSE] <message>`                   | `[VERBOSE] <message>`          |
 | `PrintCommandHeader` | bold `<text>` + blank line              | nothing (no output)            |
 
+`PrintWarningWithHint` is documented below in Specialized Functions; it does not appear
+in this table because its output is composed from `PrintWarning` formatting plus a
+dedicated hint line, both on stderr.
+
 ### Verbosity Gating
 
 | Function             | Normal     | Verbose |
@@ -140,19 +144,22 @@ Extracts a hint from the error (via `GetErrorHint`) and displays:
 
 Always writes to stderr. Not gated by verbosity (errors are always shown).
 
-#### Per-Item Failure Pattern (continue-on-failure commands)
+#### PrintWarningWithHint(err error)
 
-Commands that continue on per-item failure (`create`, `remove`, `prune`) handle
-errors inline rather than through a single helper. Each command:
+Prints a warning with an optional hint extracted from the error. Used by
+continue-on-failure commands (`create`, `remove`, `prune`) for per-item failures.
 
-1. Prints a warning via `PrintWarning("Failed to <verb> %s: %v", ContractPath(path), err)`
-2. If `GetErrorHint(err)` returns a non-empty string, prints the hint via
-   `PrintDetail("Try: %s", hint)` on stderr (terminal) or `fmt.Fprintf(os.Stderr, "hint: %s\n", hint)` (piped)
-3. Increments a failure counter and continues
+Extracts a hint from the error (via `GetErrorHint`). Always writes to stderr.
+Not gated by verbosity (warnings are always shown).
 
-This pattern gives each command control over the "Failed to" prefix and path formatting
-while reusing the standard hint extraction. See each command's Execute Mode section for
-the exact format.
+- Terminal: `"! <err>"` (yellow icon, stderr); if hint present: `"  Try: <hint>"`
+  (cyan `Try:` label, stderr)
+- Piped: `"warning: <err>"` (stderr); if hint present: `"hint: <hint>"` (stderr)
+
+Each command formats the error message before passing it (e.g.,
+`fmt.Errorf("Failed to create %s: %w", ContractPath(path), err)`), then calls
+`PrintWarningWithHint(formattedErr)`. This gives each command control over the
+prefix and path formatting while centralizing hint extraction and display.
 
 #### PrintCommandHeader(text string)
 

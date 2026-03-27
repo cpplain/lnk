@@ -110,15 +110,22 @@ type Config struct {
 func LoadConfig(sourceDir string, cliIgnorePatterns []string) (*Config, error)
 ```
 
-1. Call `LoadIgnoreFile(sourceDir)` to parse `<sourceDir>/.lnkignore` (if it exists)
-2. Build combined ignore patterns:
+`LoadConfig` resolves and validates `sourceDir`, loads ignore patterns, and returns a
+fully resolved `Config`. The returned `SourceDir` is always an absolute, validated path.
+
+1. Resolve `sourceDir`: call `ExpandPath` (tilde expansion), then `filepath.Abs`
+   (relative-to-absolute conversion)
+2. Validate `sourceDir` exists and is a directory via `os.Stat` — return
+   `ValidationError` with hint if missing or not a directory
+3. Call `LoadIgnoreFile(resolvedSourceDir)` to parse `<sourceDir>/.lnkignore` (if it exists)
+4. Build combined ignore patterns:
    ```
    patterns = getBuiltInIgnorePatterns()
             + ignoreFilePatterns
             + cliIgnorePatterns
    ```
-3. Expand `~` to the user's home directory via `ExpandPath("~")`
-4. Return `Config{SourceDir: sourceDir, TargetDir: homeDir, IgnorePatterns: patterns}`
+5. Expand `~` to the user's home directory via `ExpandPath("~")` for `TargetDir`
+6. Return `Config{SourceDir: resolvedSourceDir, TargetDir: homeDir, IgnorePatterns: patterns}`
 
 ---
 

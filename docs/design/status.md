@@ -146,12 +146,9 @@ lnk status . | grep ^broken
 
 ## 5. Path Behavior
 
-- `SourceDir` and `TargetDir` are resolved to absolute paths: first `ExpandPath` (tilde
-  expansion), then `filepath.Abs` (relative-to-absolute conversion). This ensures all
-  downstream operations use absolute paths regardless of whether the user passed `.`,
-  `~/dotfiles`, or `/home/user/dotfiles`
-- `SourceDir` must exist and be a directory; checked after path resolution via
-  `os.Stat` — returns `ValidationError` with hint if missing or not a directory
+- `SourceDir` and `TargetDir` are resolved to absolute paths by `LoadConfig`
+  (see [config.md](config.md) §6) — `SourceDir` is validated to exist and be a
+  directory before the command runs
 - Walk skips `Library` and `.Trash` directories on macOS
 - All displayed paths use `ContractPath` (home directory shown as `~`)
 

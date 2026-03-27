@@ -119,9 +119,8 @@ For each `PlannedLink`:
    - If target is a regular file or directory: return error with hint to use `adopt`
 3. On success: print `"Created: <target>"`
 4. On skip (`LinkExistsError`): continue silently
-5. On failure: print warning with `PrintWarning("Failed to create %s: %v", ContractPath(target), err)`,
-   then if `GetErrorHint(err)` is non-empty print the hint with `PrintDetail("Try: %s", hint)` on
-   stderr; increment failure counter; continue with remaining links
+5. On failure: call `PrintWarningWithHint(fmt.Errorf("Failed to create %s: %w", ContractPath(target), err))`;
+   increment failure counter; continue with remaining links
 
 After all links are processed:
 
@@ -151,12 +150,9 @@ See [config.md](config.md) for the full list of active patterns and their source
 
 ## 5. Path Behavior
 
-- `SourceDir` and `TargetDir` are resolved to absolute paths: first `ExpandPath` (tilde
-  expansion), then `filepath.Abs` (relative-to-absolute conversion). This ensures all
-  downstream operations use absolute paths regardless of whether the user passed `.`,
-  `~/dotfiles`, or `/home/user/dotfiles`
-- `SourceDir` must exist and be a directory; checked after path resolution via
-  `os.Stat` — returns `ValidationError` with hint if missing or not a directory
+- `SourceDir` and `TargetDir` are resolved to absolute paths by `LoadConfig`
+  (see [config.md](config.md) §6) — `SourceDir` is validated to exist and be a
+  directory before the command runs
 - `TargetDir` does not need to exist; it is created as needed during execution
 - Displayed paths use `ContractPath` (home directory shown as `~`)
 

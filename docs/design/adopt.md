@@ -178,10 +178,9 @@ A file is considered already adopted if:
 
 ## 6. Path Behavior
 
-- `SourceDir` is resolved to an absolute path: first `ExpandPath` (tilde expansion),
-  then `filepath.Abs` (relative-to-absolute conversion)
-- `SourceDir` must exist and be a directory; checked after path resolution via
-  `os.Stat` — returns `ValidationError` with hint if missing or not a directory
+- `SourceDir` and `TargetDir` are resolved to absolute paths by `LoadConfig`
+  (see [config.md](config.md) §6) — `SourceDir` is validated to exist and be a
+  directory before the command runs
 - Each `Path` is resolved to an absolute path: first `ExpandPath`, then `filepath.Abs`
 - Each path must reside within `TargetDir` (always `~` from CLI); paths outside produce an error
 - Displayed paths use `ContractPath`
