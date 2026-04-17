@@ -4,10 +4,8 @@ package lnk
 type VerbosityLevel int
 
 const (
-	// VerbosityQuiet suppresses all non-error output
-	VerbosityQuiet VerbosityLevel = iota
 	// VerbosityNormal is the default output level
-	VerbosityNormal
+	VerbosityNormal VerbosityLevel = iota
 	// VerbosityVerbose includes additional debug information
 	VerbosityVerbose
 )
@@ -23,11 +21,6 @@ func SetVerbosity(level VerbosityLevel) {
 // GetVerbosity returns the current verbosity level
 func GetVerbosity() VerbosityLevel {
 	return verbosity
-}
-
-// IsQuiet returns true if running in quiet mode
-func IsQuiet() bool {
-	return verbosity == VerbosityQuiet
 }
 
 // IsVerbose returns true if running in verbose mode

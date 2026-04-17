@@ -38,9 +38,6 @@ import (
 
 // PrintSkip prints a skip message with a neutral icon
 func PrintSkip(format string, args ...interface{}) {
-	if IsQuiet() {
-		return
-	}
 	message := fmt.Sprintf(format, args...)
 	if ShouldSimplifyOutput() {
 		// For piped output, use simple text marker
@@ -63,9 +60,6 @@ func PrintWarning(format string, args ...interface{}) {
 
 // PrintSuccess prints a success message with the success icon
 func PrintSuccess(format string, args ...interface{}) {
-	if IsQuiet() {
-		return
-	}
 	message := fmt.Sprintf(format, args...)
 	if ShouldSimplifyOutput() {
 		// For piped output, use simple text marker
@@ -77,9 +71,6 @@ func PrintSuccess(format string, args ...interface{}) {
 
 // PrintDryRun prints a dry-run message with the dry-run prefix
 func PrintDryRun(format string, args ...interface{}) {
-	if IsQuiet() {
-		return
-	}
 	message := fmt.Sprintf(format, args...)
 	if ShouldSimplifyOutput() {
 		// For piped output, use simple text marker
@@ -121,17 +112,11 @@ func PrintErrorWithHint(err error) {
 
 // PrintInfo prints an informational message without any prefix
 func PrintInfo(format string, args ...interface{}) {
-	if IsQuiet() {
-		return
-	}
 	fmt.Printf(format+"\n", args...)
 }
 
 // PrintDetail prints an indented detail message (for sub-items)
 func PrintDetail(format string, args ...interface{}) {
-	if IsQuiet() {
-		return
-	}
 	message := fmt.Sprintf(format, args...)
 	fmt.Printf("  %s\n", message)
 }
@@ -148,10 +133,11 @@ func PrintVerbose(format string, args ...interface{}) {
 // PrintCommandHeader prints a command header with standard spacing
 // This ensures all commands have consistent header formatting
 func PrintCommandHeader(text string) {
-	if !IsQuiet() {
-		fmt.Println(Bold(text))
+	if ShouldSimplifyOutput() {
+		return
 	}
-	fmt.Println() // Standard newline after header
+	fmt.Println(Bold(text))
+	fmt.Println()
 }
 
 // PrintSummary prints a summary with standard spacing

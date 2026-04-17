@@ -15,20 +15,279 @@ var (
 	version = "dev"
 )
 
-// actionFlag represents the action to perform
-type actionFlag int
+// validCommands lists all recognized subcommands.
+var validCommands = []string{"create", "remove", "status", "prune", "adopt", "orphan"}
 
-const (
-	actionCreate actionFlag = iota
-	actionRemove
-	actionStatus
-	actionPrune
-	actionAdopt
-	actionOrphan
-)
+func main() {
+	args := os.Args[1:]
 
-// parseFlagValue parses a flag that might be in --flag=value or --flag value format
-// Returns the flag name, value, and whether a value was found
+	// Extract global flags that must be handled before command dispatch
+	var noColor bool
+	for _, arg := range args {
+		if arg == "--no-color" {
+			noColor = true
+		}
+	}
+	if noColor {
+		lnk.SetNoColor(true)
+	}
+
+	// Handle --version anywhere in args
+	for _, arg := range args {
+		if arg == "-V" || arg == "--version" {
+			fmt.Printf("lnk %s\n", version)
+			return
+		}
+	}
+
+	// Handle bare `lnk`
+	if len(args) == 0 {
+		printUsage()
+		os.Exit(lnk.ExitUsage)
+	}
+
+	// Extract the command name and remaining args
+	command, remaining := extractCommand(args)
+
+	// Handle --help: if no command found, show main help; otherwise defer to per-command help
+	for _, arg := range args {
+		if arg == "-h" || arg == "--help" {
+			if command == "" || !isValidCommand(command) {
+				printUsage()
+				return
+			}
+			printCommandHelp(command)
+			return
+		}
+	}
+
+	if command == "" {
+		lnk.PrintErrorWithHint(lnk.WithHint(
+			fmt.Errorf("no command specified"),
+			"Run 'lnk --help' to see available commands"))
+		os.Exit(lnk.ExitUsage)
+	}
+
+	// Validate command name
+	if !isValidCommand(command) {
+		suggestion := suggestCommand(command)
+		if suggestion != "" {
+			lnk.PrintErrorWithHint(lnk.WithHint(
+				fmt.Errorf("unknown command: %q", command),
+				fmt.Sprintf("Did you mean %q?", suggestion)))
+		} else {
+			lnk.PrintErrorWithHint(lnk.WithHint(
+				fmt.Errorf("unknown command: %q", command),
+				"Run 'lnk --help' to see available commands"))
+		}
+		os.Exit(lnk.ExitUsage)
+	}
+
+	// Parse flags and positional arguments from remaining args
+	var ignorePatterns []string
+	var dryRun bool
+	var verbose bool
+	var positional []string
+
+	for i := 0; i < len(remaining); i++ {
+		arg := remaining[i]
+
+		// Stop parsing flags after --
+		if arg == "--" {
+			positional = append(positional, remaining[i+1:]...)
+			break
+		}
+
+		// Non-flag argument = positional
+		if !strings.HasPrefix(arg, "-") {
+			positional = append(positional, arg)
+			continue
+		}
+
+		// Parse potential flag with value
+		flag, value, hasValue, consumed := parseFlagValue(arg, remaining, i)
+
+		switch flag {
+		case "--ignore":
+			if !hasValue {
+				lnk.PrintErrorWithHint(lnk.WithHint(
+					fmt.Errorf("--ignore requires a pattern argument"),
+					"Example: lnk create --ignore '*.swp' ."))
+				os.Exit(lnk.ExitUsage)
+			}
+			ignorePatterns = append(ignorePatterns, value)
+			i += consumed
+		case "-n", "--dry-run":
+			dryRun = true
+		case "-v", "--verbose":
+			verbose = true
+		case "--no-color":
+			// Already handled above
+		case "-h", "--help":
+			// Already handled above
+		default:
+			lnk.PrintErrorWithHint(lnk.WithHint(
+				fmt.Errorf("unknown flag: %s", flag),
+				fmt.Sprintf("Run 'lnk %s --help' to see available flags", command)))
+			os.Exit(lnk.ExitUsage)
+		}
+	}
+
+	// Set verbosity level
+	if verbose {
+		lnk.SetVerbosity(lnk.VerbosityVerbose)
+	}
+
+	// All commands require source-dir as first positional argument
+	if len(positional) == 0 {
+		lnk.PrintErrorWithHint(lnk.WithHint(
+			fmt.Errorf("missing required argument: <source-dir>"),
+			fmt.Sprintf("Usage: lnk %s [flags] <source-dir>", command)))
+		os.Exit(lnk.ExitUsage)
+	}
+
+	sourceDir := positional[0]
+	paths := positional[1:] // remaining positional args (for adopt/orphan)
+
+	// Load configuration (resolves sourceDir, loads ignore patterns)
+	config, err := lnk.LoadConfig(sourceDir, ignorePatterns)
+	if err != nil {
+		lnk.PrintErrorWithHint(err)
+		os.Exit(lnk.ExitError)
+	}
+
+	// Dispatch to command handler
+	switch command {
+	case "create":
+		handleCreate(config, dryRun, paths)
+	case "remove":
+		handleRemove(config, dryRun, paths)
+	case "status":
+		handleStatus(config, paths)
+	case "prune":
+		handlePrune(config, dryRun, paths)
+	case "adopt":
+		handleAdopt(config, dryRun, paths)
+	case "orphan":
+		handleOrphan(config, dryRun, paths)
+	}
+}
+
+func handleCreate(config *lnk.Config, dryRun bool, extra []string) {
+	if len(extra) > 0 {
+		lnk.PrintErrorWithHint(lnk.WithHint(
+			fmt.Errorf("create takes exactly one argument: <source-dir>"),
+			"Usage: lnk create [flags] <source-dir>"))
+		os.Exit(lnk.ExitUsage)
+	}
+	opts := lnk.LinkOptions{
+		SourceDir:      config.SourceDir,
+		TargetDir:      config.TargetDir,
+		IgnorePatterns: config.IgnorePatterns,
+		DryRun:         dryRun,
+	}
+	if err := lnk.CreateLinks(opts); err != nil {
+		lnk.PrintErrorWithHint(err)
+		os.Exit(lnk.ExitError)
+	}
+}
+
+func handleRemove(config *lnk.Config, dryRun bool, extra []string) {
+	if len(extra) > 0 {
+		lnk.PrintErrorWithHint(lnk.WithHint(
+			fmt.Errorf("remove takes exactly one argument: <source-dir>"),
+			"Usage: lnk remove [flags] <source-dir>"))
+		os.Exit(lnk.ExitUsage)
+	}
+	opts := lnk.LinkOptions{
+		SourceDir:      config.SourceDir,
+		TargetDir:      config.TargetDir,
+		IgnorePatterns: config.IgnorePatterns,
+		DryRun:         dryRun,
+	}
+	if err := lnk.RemoveLinks(opts); err != nil {
+		lnk.PrintErrorWithHint(err)
+		os.Exit(lnk.ExitError)
+	}
+}
+
+func handleStatus(config *lnk.Config, extra []string) {
+	if len(extra) > 0 {
+		lnk.PrintErrorWithHint(lnk.WithHint(
+			fmt.Errorf("status takes exactly one argument: <source-dir>"),
+			"Usage: lnk status [flags] <source-dir>"))
+		os.Exit(lnk.ExitUsage)
+	}
+	opts := lnk.LinkOptions{
+		SourceDir:      config.SourceDir,
+		TargetDir:      config.TargetDir,
+		IgnorePatterns: config.IgnorePatterns,
+	}
+	if err := lnk.Status(opts); err != nil {
+		lnk.PrintErrorWithHint(err)
+		os.Exit(lnk.ExitError)
+	}
+}
+
+func handlePrune(config *lnk.Config, dryRun bool, extra []string) {
+	if len(extra) > 0 {
+		lnk.PrintErrorWithHint(lnk.WithHint(
+			fmt.Errorf("prune takes exactly one argument: <source-dir>"),
+			"Usage: lnk prune [flags] <source-dir>"))
+		os.Exit(lnk.ExitUsage)
+	}
+	opts := lnk.LinkOptions{
+		SourceDir:      config.SourceDir,
+		TargetDir:      config.TargetDir,
+		IgnorePatterns: config.IgnorePatterns,
+		DryRun:         dryRun,
+	}
+	if err := lnk.Prune(opts); err != nil {
+		lnk.PrintErrorWithHint(err)
+		os.Exit(lnk.ExitError)
+	}
+}
+
+func handleAdopt(config *lnk.Config, dryRun bool, paths []string) {
+	if len(paths) == 0 {
+		lnk.PrintErrorWithHint(lnk.WithHint(
+			fmt.Errorf("adopt requires at least one file path after <source-dir>"),
+			"Usage: lnk adopt [flags] <source-dir> <path...>"))
+		os.Exit(lnk.ExitUsage)
+	}
+	opts := lnk.AdoptOptions{
+		SourceDir: config.SourceDir,
+		TargetDir: config.TargetDir,
+		Paths:     paths,
+		DryRun:    dryRun,
+	}
+	if err := lnk.Adopt(opts); err != nil {
+		lnk.PrintErrorWithHint(err)
+		os.Exit(lnk.ExitError)
+	}
+}
+
+func handleOrphan(config *lnk.Config, dryRun bool, paths []string) {
+	if len(paths) == 0 {
+		lnk.PrintErrorWithHint(lnk.WithHint(
+			fmt.Errorf("orphan requires at least one path after <source-dir>"),
+			"Usage: lnk orphan [flags] <source-dir> <path...>"))
+		os.Exit(lnk.ExitUsage)
+	}
+	opts := lnk.OrphanOptions{
+		SourceDir: config.SourceDir,
+		TargetDir: config.TargetDir,
+		Paths:     paths,
+		DryRun:    dryRun,
+	}
+	if err := lnk.Orphan(opts); err != nil {
+		lnk.PrintErrorWithHint(err)
+		os.Exit(lnk.ExitError)
+	}
+}
+
+// parseFlagValue parses a flag that might be in --flag=value or --flag value format.
+// Returns the flag name, value, whether a value was found, and how many extra args were consumed.
 func parseFlagValue(arg string, args []string, index int) (flag string, value string, hasValue bool, consumed int) {
 	// Check for --flag=value format
 	if idx := strings.Index(arg, "="); idx > 0 {
@@ -43,342 +302,233 @@ func parseFlagValue(arg string, args []string, index int) (flag string, value st
 	return arg, "", false, 0
 }
 
-// setAction validates that only one action flag is set and assigns the new action
-func setAction(actionSet *bool, newAction actionFlag, action *actionFlag) {
-	if *actionSet {
-		lnk.PrintErrorWithHint(lnk.WithHint(
-			fmt.Errorf("cannot use multiple action flags"),
-			"Use only one of: -C/--create, -R/--remove, -S/--status, -P/--prune, -A/--adopt, -O/--orphan"))
-		os.Exit(lnk.ExitUsage)
-	}
-	*action = newAction
-	*actionSet = true
-}
-
-func main() {
-	// Parse flags
-	var action actionFlag = actionCreate // default action
-	var actionSet bool = false           // track if action was explicitly set
-	var sourceDir string = "."           // default: current directory
-	var targetDir string = "~"           // default: home directory
-	var ignorePatterns []string
-	var dryRun bool
-	var verbose bool
-	var quiet bool
-	var noColor bool
-	var showVersion bool
-	var showHelp bool
-	var paths []string
-
-	args := os.Args[1:]
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-
-		// Stop parsing flags after --
+// extractCommand finds the command name in args, returning it and the remaining args.
+// The command is the first non-flag token that matches a valid command name or
+// appears to be a command (not starting with -).
+func extractCommand(args []string) (string, []string) {
+	for i, arg := range args {
+		// Stop at --
 		if arg == "--" {
-			paths = append(paths, args[i+1:]...)
 			break
 		}
 
-		// Non-flag argument = path (positional argument)
-		if !strings.HasPrefix(arg, "-") {
-			paths = append(paths, arg)
+		// Skip flags
+		if strings.HasPrefix(arg, "-") {
+			// Skip value of flags that take values (--ignore pattern)
+			if arg == "--ignore" && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				i++ // skip the value token so it isn't mistaken for a command
+			}
 			continue
 		}
 
-		// Parse potential flag with value
-		flag, value, hasValue, consumed := parseFlagValue(arg, args, i)
-
-		switch flag {
-		// Action flags (mutually exclusive)
-		case "-C", "--create":
-			setAction(&actionSet, actionCreate, &action)
-		case "-R", "--remove":
-			setAction(&actionSet, actionRemove, &action)
-		case "-S", "--status":
-			setAction(&actionSet, actionStatus, &action)
-		case "-P", "--prune":
-			setAction(&actionSet, actionPrune, &action)
-		case "-A", "--adopt":
-			setAction(&actionSet, actionAdopt, &action)
-		case "-O", "--orphan":
-			setAction(&actionSet, actionOrphan, &action)
-
-		// Directory flags
-		case "-s", "--source":
-			if !hasValue {
-				lnk.PrintErrorWithHint(lnk.WithHint(
-					fmt.Errorf("--source requires a directory argument"),
-					"Example: lnk --source ~/git/dotfiles"))
-				os.Exit(lnk.ExitUsage)
-			}
-			sourceDir = value
-			i += consumed
-		case "-t", "--target":
-			if !hasValue {
-				lnk.PrintErrorWithHint(lnk.WithHint(
-					fmt.Errorf("--target requires a directory argument"),
-					"Example: lnk --target ~"))
-				os.Exit(lnk.ExitUsage)
-			}
-			targetDir = value
-			i += consumed
-
-		// Other flags
-		case "--ignore":
-			if !hasValue {
-				lnk.PrintErrorWithHint(lnk.WithHint(
-					fmt.Errorf("--ignore requires a pattern argument"),
-					"Example: lnk --ignore '*.swp'"))
-				os.Exit(lnk.ExitUsage)
-			}
-			ignorePatterns = append(ignorePatterns, value)
-			i += consumed
-		case "-n", "--dry-run":
-			dryRun = true
-		case "-v", "--verbose":
-			verbose = true
-		case "-q", "--quiet":
-			quiet = true
-		case "--no-color":
-			noColor = true
-		case "-V", "--version":
-			showVersion = true
-		case "-h", "--help":
-			showHelp = true
-
-		default:
-			lnk.PrintErrorWithHint(lnk.WithHint(
-				fmt.Errorf("unknown flag: %s", flag),
-				"Run 'lnk --help' to see available flags"))
-			os.Exit(lnk.ExitUsage)
-		}
+		// Found a non-flag token — this is the command
+		remaining := make([]string, 0, len(args)-1)
+		remaining = append(remaining, args[:i]...)
+		remaining = append(remaining, args[i+1:]...)
+		return arg, remaining
 	}
 
-	// Set color preference first
-	if noColor {
-		lnk.SetNoColor(true)
-	}
-
-	// Handle --version
-	if showVersion {
-		fmt.Printf("lnk %s\n", version)
-		return
-	}
-
-	// Handle --help
-	if showHelp {
-		printUsage()
-		return
-	}
-
-	// Handle conflicting verbosity flags
-	if quiet && verbose {
-		lnk.PrintErrorWithHint(lnk.WithHint(
-			fmt.Errorf("cannot use --quiet and --verbose together"),
-			"Use either --quiet or --verbose, not both"))
-		os.Exit(lnk.ExitUsage)
-	}
-
-	// Set verbosity level
-	if quiet {
-		lnk.SetVerbosity(lnk.VerbosityQuiet)
-	} else if verbose {
-		lnk.SetVerbosity(lnk.VerbosityVerbose)
-	}
-
-	// Validate path requirements based on action
-	// For C/R/S: need at least one path (source directory)
-	// For A/O: need at least one path (files to operate on)
-	// For P: optional (defaults to current source)
-	if action != actionPrune && len(paths) == 0 {
-		lnk.PrintErrorWithHint(lnk.WithHint(
-			fmt.Errorf("at least one path is required"),
-			"Example: lnk . (link from current directory) or lnk -A ~/.bashrc (adopt file)"))
-		os.Exit(lnk.ExitUsage)
-	}
-
-	// For C/R/S actions, use the first path as the source directory
-	if action == actionCreate || action == actionRemove || action == actionStatus {
-		if len(paths) > 0 {
-			sourceDir = paths[0]
-		}
-	}
-
-	// Merge config from .lnkconfig and .lnkignore
-	mergedConfig, err := lnk.LoadConfig(sourceDir, targetDir, ignorePatterns)
-	if err != nil {
-		lnk.PrintErrorWithHint(err)
-		os.Exit(lnk.ExitError)
-	}
-
-	// Show effective configuration in verbose mode
-	lnk.PrintVerbose("Source directory: %s", mergedConfig.SourceDir)
-	lnk.PrintVerbose("Target directory: %s", mergedConfig.TargetDir)
-	if len(paths) > 0 {
-		lnk.PrintVerbose("Paths: %s", strings.Join(paths, ", "))
-	}
-
-	// Execute the appropriate action
-	switch action {
-	case actionCreate:
-		opts := lnk.LinkOptions{
-			SourceDir:      mergedConfig.SourceDir,
-			TargetDir:      mergedConfig.TargetDir,
-			IgnorePatterns: mergedConfig.IgnorePatterns,
-			DryRun:         dryRun,
-		}
-		if err := lnk.CreateLinks(opts); err != nil {
-			lnk.PrintErrorWithHint(err)
-			os.Exit(lnk.ExitError)
-		}
-
-	case actionRemove:
-		opts := lnk.LinkOptions{
-			SourceDir:      mergedConfig.SourceDir,
-			TargetDir:      mergedConfig.TargetDir,
-			IgnorePatterns: mergedConfig.IgnorePatterns,
-			DryRun:         dryRun,
-		}
-		if err := lnk.RemoveLinks(opts); err != nil {
-			lnk.PrintErrorWithHint(err)
-			os.Exit(lnk.ExitError)
-		}
-
-	case actionStatus:
-		opts := lnk.LinkOptions{
-			SourceDir:      mergedConfig.SourceDir,
-			TargetDir:      mergedConfig.TargetDir,
-			IgnorePatterns: mergedConfig.IgnorePatterns,
-			DryRun:         false, // status doesn't use dry-run
-		}
-		if err := lnk.Status(opts); err != nil {
-			lnk.PrintErrorWithHint(err)
-			os.Exit(lnk.ExitError)
-		}
-
-	case actionPrune:
-		// For prune, use current source if no path specified
-		pruneSource := mergedConfig.SourceDir
-		if len(paths) > 0 {
-			pruneSource = paths[0]
-			// Re-merge config with the specified source
-			pruneConfig, err := lnk.LoadConfig(pruneSource, targetDir, ignorePatterns)
-			if err != nil {
-				lnk.PrintErrorWithHint(err)
-				os.Exit(lnk.ExitError)
-			}
-			mergedConfig = pruneConfig
-		}
-		opts := lnk.LinkOptions{
-			SourceDir:      mergedConfig.SourceDir,
-			TargetDir:      mergedConfig.TargetDir,
-			IgnorePatterns: mergedConfig.IgnorePatterns,
-			DryRun:         dryRun,
-		}
-		if err := lnk.Prune(opts); err != nil {
-			lnk.PrintErrorWithHint(err)
-			os.Exit(lnk.ExitError)
-		}
-
-	case actionAdopt:
-		// For adopt, all paths are files to adopt
-		if len(paths) == 0 {
-			lnk.PrintErrorWithHint(lnk.WithHint(
-				fmt.Errorf("adopt requires at least one file path"),
-				"Example: lnk -A ~/.bashrc ~/.vimrc"))
-			os.Exit(lnk.ExitUsage)
-		}
-		opts := lnk.AdoptOptions{
-			SourceDir: mergedConfig.SourceDir,
-			TargetDir: mergedConfig.TargetDir,
-			Paths:     paths,
-			DryRun:    dryRun,
-		}
-		if err := lnk.Adopt(opts); err != nil {
-			lnk.PrintErrorWithHint(err)
-			os.Exit(lnk.ExitError)
-		}
-
-	case actionOrphan:
-		// For orphan, all paths are symlinks to orphan
-		if len(paths) == 0 {
-			lnk.PrintErrorWithHint(lnk.WithHint(
-				fmt.Errorf("orphan requires at least one path"),
-				"Example: lnk -O ~/.bashrc"))
-			os.Exit(lnk.ExitUsage)
-		}
-		opts := lnk.OrphanOptions{
-			SourceDir: mergedConfig.SourceDir,
-			TargetDir: mergedConfig.TargetDir,
-			Paths:     paths,
-			DryRun:    dryRun,
-		}
-		if err := lnk.Orphan(opts); err != nil {
-			lnk.PrintErrorWithHint(err)
-			os.Exit(lnk.ExitError)
-		}
-	}
+	return "", args
 }
 
+// isValidCommand returns true if name is a recognized command.
+func isValidCommand(name string) bool {
+	for _, cmd := range validCommands {
+		if cmd == name {
+			return true
+		}
+	}
+	return false
+}
+
+// suggestCommand returns the closest valid command name to input, or empty string
+// if no suggestion is close enough.
+func suggestCommand(input string) string {
+	threshold := len(input)/2 + 1
+	best, bestDist := "", threshold+1
+	for _, cmd := range validCommands {
+		if d := levenshteinDistance(input, cmd); d < bestDist {
+			best, bestDist = cmd, d
+		}
+	}
+	return best
+}
+
+// levenshteinDistance computes the edit distance between two strings.
+func levenshteinDistance(a, b string) int {
+	la, lb := len(a), len(b)
+	if la == 0 {
+		return lb
+	}
+	if lb == 0 {
+		return la
+	}
+
+	// Use single-row optimization
+	prev := make([]int, lb+1)
+	for j := range prev {
+		prev[j] = j
+	}
+
+	for i := 1; i <= la; i++ {
+		curr := make([]int, lb+1)
+		curr[0] = i
+		for j := 1; j <= lb; j++ {
+			cost := 1
+			if a[i-1] == b[j-1] {
+				cost = 0
+			}
+			curr[j] = min(curr[j-1]+1, min(prev[j]+1, prev[j-1]+cost))
+		}
+		prev = curr
+	}
+	return prev[lb]
+}
+
+// printUsage prints the top-level usage message.
 func printUsage() {
-	fmt.Print(`Usage: lnk [action] [flags] <path(s)>
+	fmt.Print(`Usage: lnk <command> [flags] <source-dir>
 
 An opinionated symlink manager for dotfiles and more
 
-Paths are positional arguments that come last (POSIX-style).
-For create/remove/status: path is the source directory to link from.
-For adopt/orphan: paths are the files to operate on.
+Commands:
+  create <source-dir>           Create symlinks from source to ~
+  remove <source-dir>           Remove managed symlinks
+  status <source-dir>           Show status of managed symlinks
+  prune  <source-dir>           Remove broken symlinks
+  adopt  <source-dir> <path...> Adopt files into source directory
+  orphan <source-dir> <path...> Remove files from management
 
-Action Flags (mutually exclusive):
-  -C, --create          Create symlinks (default action)
-  -R, --remove          Remove symlinks
-  -S, --status          Show status of symlinks
-  -P, --prune           Remove broken symlinks
-  -A, --adopt           Adopt files into source directory
-  -O, --orphan          Remove files from management
-
-Directory Flags:
-  -s, --source DIR      Source directory (default: cwd for adopt/orphan)
-  -t, --target DIR      Target directory (default: ~)
-
-Other Flags:
-      --ignore PATTERN  Additional ignore pattern (repeatable)
+Flags:
+      --ignore PATTERN  Additional ignore pattern, repeatable
   -n, --dry-run         Preview changes without making them
   -v, --verbose         Enable verbose output
-  -q, --quiet           Suppress all non-error output
       --no-color        Disable colored output
   -V, --version         Show version information
   -h, --help            Show this help message
 
 Examples:
-  lnk .                          Create links from current directory
-  lnk -C .                       Explicit create from current directory
-  lnk -C -t /tmp .               Create with custom target
-  lnk -C ~/git/dotfiles          Create from absolute path
-  lnk -n .                       Dry-run (preview without changes)
-  lnk -R .                       Remove links
-  lnk -S .                       Show status
-  lnk -P                         Prune broken symlinks from current source
-  lnk -A ~/.bashrc ~/.vimrc      Adopt files into current directory
-  lnk -A -s ~/dotfiles ~/.bashrc Adopt with explicit source
-  lnk -O ~/.bashrc               Orphan file (remove from management)
-  lnk --ignore '*.swp' .         Add ignore pattern
+  lnk create .                        Create links from current directory
+  lnk create ~/git/dotfiles           Create from absolute path
+  lnk create -n .                     Dry-run preview
+  lnk remove .                        Remove links
+  lnk status .                        Show status
+  lnk prune .                         Prune broken symlinks
+  lnk prune ~/git/dotfiles            Prune from specific source
+  lnk adopt . ~/.bashrc ~/.vimrc      Adopt files into current directory
+  lnk adopt ~/dotfiles ~/.bashrc      Adopt with explicit source
+  lnk orphan . ~/.bashrc              Remove file from management
+  lnk create --ignore '*.swp' .       Add ignore pattern
 
 Config Files:
-  .lnkconfig in source directory (repo-specific)
-    Format: CLI flags, one per line
-    Example:
-      --target=~
-      --ignore=local/
-
   .lnkignore in source directory
     Format: gitignore syntax
-    Example:
-      .git
-      *.swp
-      README.md
-
-  CLI flags take precedence over config files
+    Patterns are combined with built-in defaults and --ignore flags
 `)
+}
+
+// printCommandHelp prints help for a specific command.
+func printCommandHelp(command string) {
+	switch command {
+	case "create":
+		fmt.Print(`Usage: lnk create [flags] <source-dir>
+
+Create symlinks from source directory to home directory.
+
+Arguments:
+  source-dir    Source directory to link from (required)
+
+Flags:
+  (all global flags apply)
+
+Examples:
+  lnk create .
+  lnk create ~/git/dotfiles
+  lnk create -n .
+`)
+	case "remove":
+		fmt.Print(`Usage: lnk remove [flags] <source-dir>
+
+Remove managed symlinks from home directory.
+
+Arguments:
+  source-dir    Source directory whose managed links to remove (required)
+
+Flags:
+  (all global flags apply)
+
+Examples:
+  lnk remove .
+  lnk remove ~/git/dotfiles
+  lnk remove -n .
+`)
+	case "status":
+		fmt.Print(`Usage: lnk status [flags] <source-dir>
+
+Show status of managed symlinks in home directory.
+
+Arguments:
+  source-dir    Source directory to check (required)
+
+Flags:
+  (all global flags apply)
+
+Examples:
+  lnk status .
+  lnk status ~/git/dotfiles
+  lnk status ~/git/dotfiles | grep ^broken
+`)
+	case "prune":
+		fmt.Print(`Usage: lnk prune [flags] <source-dir>
+
+Remove broken managed symlinks from home directory.
+
+Arguments:
+  source-dir    Source directory whose broken links to prune (required)
+
+Flags:
+  (all global flags apply)
+
+Examples:
+  lnk prune .
+  lnk prune ~/git/dotfiles
+  lnk prune -n .
+`)
+	case "adopt":
+		fmt.Print(`Usage: lnk adopt [flags] <source-dir> <path...>
+
+Adopt files into the source directory.
+
+Arguments:
+  source-dir    Source directory to move files into (required)
+  path          One or more files or directories to adopt; must be within ~ (required)
+
+Flags:
+  (all global flags apply)
+
+Examples:
+  lnk adopt . ~/.bashrc
+  lnk adopt . ~/.bashrc ~/.vimrc
+  lnk adopt ~/git/dotfiles ~/.config/nvim
+  lnk adopt -n . ~/.bashrc
+`)
+	case "orphan":
+		fmt.Print(`Usage: lnk orphan [flags] <source-dir> <path...>
+
+Remove files from management.
+
+Arguments:
+  source-dir    Source directory that manages the files (required)
+  path          One or more managed symlinks or directories to orphan; must be within ~ (required)
+
+Flags:
+  (all global flags apply)
+
+Examples:
+  lnk orphan . ~/.bashrc
+  lnk orphan . ~/.bashrc ~/.vimrc
+  lnk orphan ~/git/dotfiles ~/.config/nvim
+  lnk orphan -n . ~/.bashrc
+`)
+	}
 }

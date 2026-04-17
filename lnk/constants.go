@@ -9,7 +9,6 @@ const (
 
 // Configuration file names
 const (
-	ConfigFileName = ".lnkconfig" // Configuration file
 	IgnoreFileName = ".lnkignore" // Gitignore-style ignore file
 )
 
