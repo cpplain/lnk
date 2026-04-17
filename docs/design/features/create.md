@@ -26,7 +26,45 @@ Directories themselves are never symlinked — only individual files are.
 
 ---
 
-## 2. Interface
+## 2. Scope Fences
+
+### Out of Scope
+
+- Ignore pattern format and matching semantics (see [../config.md](../config.md))
+- `PatternMatcher` implementation (see [../internals.md](../internals.md))
+- `ValidateSymlinkCreation` implementation (see [../internals.md](../internals.md))
+- `CreateSymlink` implementation (see [../internals.md](../internals.md))
+- Error type definitions (see [../error-handling.md](../error-handling.md))
+- Output function behavior (see [../output.md](../output.md))
+
+### Do NOT Change
+
+- `LinkOptions` struct shape — shared with `remove`, `status`, `prune`
+- `PlannedLink` struct shape — used by collect phase
+- 3-phase execution order (collect → validate → execute)
+- `LinkExistsError` semantics — caller skips silently
+
+---
+
+## 3. Dependencies
+
+### Prerequisites
+
+- `LoadConfig` resolves and validates `SourceDir` before `CreateLinks` is called
+- `PatternMatcher`, `ValidateSymlinkCreation`, `CreateSymlink` from internals
+- `PrintSuccess`, `PrintWarningWithHint`, `PrintSummary`, `PrintNextStep`, `PrintDryRun`, `PrintDryRunSummary`, `PrintCommandHeader`, `PrintEmptyResult` from output
+
+### Build Order
+
+1. `PlannedLink` struct
+2. Phase 1: collect (walk + pattern matching)
+3. Phase 2: validate (`ValidateSymlinkCreation` per link)
+4. Phase 3: execute (dry-run path, then real execution with `CreateSymlink`)
+5. Summary and next-step output
+
+---
+
+## 4. Interface
 
 ### CLI
 
@@ -54,7 +92,7 @@ type LinkOptions struct {
 
 ---
 
-## 3. Execution Phases
+## 5. Execution Phases
 
 `CreateLinks` executes in three sequential phases. If any phase fails, subsequent
 phases do not run.
@@ -133,7 +171,7 @@ After all links are processed:
 
 ---
 
-## 4. Ignore Pattern Matching
+## 6. Ignore Pattern Matching
 
 Patterns are applied to the **relative path** from `SourceDir` (not the absolute path).
 Pattern matching follows gitignore semantics:
@@ -144,21 +182,21 @@ Pattern matching follows gitignore semantics:
 - `!pattern` — negates a previously matched pattern
 - `**` — matches across directory boundaries
 
-See [config.md](config.md) for the full list of active patterns and their sources.
+See [../config.md](../config.md) for the full list of active patterns and their sources.
 
 ---
 
-## 5. Path Behavior
+## 7. Path Behavior
 
 - `SourceDir` and `TargetDir` are resolved to absolute paths by `LoadConfig`
-  (see [config.md](config.md) §6) — `SourceDir` is validated to exist and be a
+  (see [../config.md](../config.md) §6) — `SourceDir` is validated to exist and be a
   directory before the command runs
 - `TargetDir` does not need to exist; it is created as needed during execution
 - Displayed paths use `ContractPath` (home directory shown as `~`)
 
 ---
 
-## 6. Collision Handling
+## 8. Collision Handling
 
 | Target state                       | Behavior                                                                                                                                                         |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -172,7 +210,7 @@ attempted. The command exits non-zero if any collisions occurred.
 
 ---
 
-## 7. Examples
+## 9. Examples
 
 ```sh
 # Create links from current directory
@@ -193,7 +231,7 @@ lnk create -v ~/git/dotfiles
 
 ---
 
-## 8. Output
+## 10. Output
 
 ```
 Creating Symlinks
@@ -238,10 +276,34 @@ Creating Symlinks
 
 ---
 
-## 9. Related Specifications
+## 11. Verification
 
-- [config.md](config.md) — Ignore pattern sources and loading
+### Test Commands
+
+```bash
+go test -v ./lnk -run TestCreateLinks
+go test -v ./test -run TestE2ECreate
+```
+
+### Test Scenarios
+
+1. Create links from a source with multiple files — all symlinks created
+2. Dry-run — no filesystem changes, output shows planned links
+3. Idempotent re-run — all links already exist, no errors
+4. Source with ignore patterns — matching files excluded
+5. Negated ignore pattern (`!pattern`) — previously ignored file included
+6. Target is a regular file — warning with adopt hint, other links still created
+7. Target is a symlink pointing elsewhere — removed and recreated
+8. Empty source directory (after filtering) — `"No files to link found."`
+9. Walk error (permission denied on subdirectory) — abort immediately
+10. Circular reference (source inside target) — validation error, no execution
+
+---
+
+## 12. Related Specifications
+
+- [../config.md](../config.md) — Ignore pattern sources and loading
 - [status.md](status.md) — Verifying links after creation
 - [adopt.md](adopt.md) — Adopting existing files before linking
-- [error-handling.md](error-handling.md) — Error types used during validation
-- [output.md](output.md) — Output functions and verbosity
+- [../error-handling.md](../error-handling.md) — Error types used during validation
+- [../output.md](../output.md) — Output functions and verbosity

@@ -195,5 +195,5 @@ lnk create --ignore '!README*' .
 ## 10. Related Specifications
 
 - [cli.md](cli.md) — Flag definitions and parsing
-- [create.md](create.md) — How ignore patterns are applied during link collection
+- [features/create.md](features/create.md) — How ignore patterns are applied during link collection
 - [output.md](output.md) — Verbose logging conventions

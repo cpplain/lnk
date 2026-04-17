@@ -218,8 +218,8 @@ import (
 
 - [internals.md](internals.md) — Internal helper functions and their stdlib usage
 - [config.md](config.md) — `LoadIgnoreFile` and path handling
-- [create.md](create.md) — Source-dir traversal pattern
-- [remove.md](remove.md) — Source-dir traversal for removal
-- [status.md](status.md) — Target-dir traversal via `FindManagedLinks`
-- [prune.md](prune.md) — Target-dir traversal via `FindManagedLinks`
-- [orphan.md](orphan.md) — Target-dir traversal via `FindManagedLinks`
+- [features/create.md](features/create.md) — Source-dir traversal pattern
+- [features/remove.md](features/remove.md) — Source-dir traversal for removal
+- [features/status.md](features/status.md) — Target-dir traversal via `FindManagedLinks`
+- [features/prune.md](features/prune.md) — Target-dir traversal via `FindManagedLinks`
+- [features/orphan.md](features/orphan.md) — Target-dir traversal via `FindManagedLinks`

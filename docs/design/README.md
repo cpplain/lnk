@@ -1,24 +1,37 @@
-# lnk Specifications
+# lnk — Design Specifications
 
 Design documentation for `lnk`, an opinionated symlink manager for dotfiles.
 
-## Index
+---
+
+## Foundation
+
+Read these first. They define conventions and cross-cutting concerns
+that all feature specs assume.
 
 | Spec                                   | Description                                                                 |
 | -------------------------------------- | --------------------------------------------------------------------------- |
 | [cli.md](cli.md)                       | Command-line interface: subcommands, flags, help, version, typo suggestions |
 | [config.md](config.md)                 | Configuration system: `.lnkignore`, ignore patterns, built-in defaults      |
-| [create.md](create.md)                 | `create` command: symlink creation with 3-phase execution                   |
-| [remove.md](remove.md)                 | `remove` command: removing managed symlinks                                 |
-| [status.md](status.md)                 | `status` command: displaying managed symlink status                         |
-| [prune.md](prune.md)                   | `prune` command: removing broken symlinks                                   |
-| [adopt.md](adopt.md)                   | `adopt` command: adopting files into the source directory                   |
-| [orphan.md](orphan.md)                 | `orphan` command: removing files from management                            |
 | [error-handling.md](error-handling.md) | Error types, hints, exit codes, and per-operation error type mappings       |
 | [output.md](output.md)                 | Output system: verbosity, color, piped format                               |
 | [internals.md](internals.md)           | Internal helpers: `FindManagedLinks`, `CreateSymlink`, `MoveFile`, etc.     |
 | [stdlib.md](stdlib.md)                 | Standard library usage: which packages/functions to use and why             |
 | [testing.md](testing.md)               | Testing strategy: TDD workflow, test levels, conventions, helpers           |
+
+## Feature Specs
+
+Each spec covers one command end-to-end: behavior, acceptance criteria,
+error cases.
+
+| Spec                                     | Description                              |
+| ---------------------------------------- | ---------------------------------------- |
+| [features/create.md](features/create.md) | Symlink creation with 3-phase execution  |
+| [features/remove.md](features/remove.md) | Removing managed symlinks                |
+| [features/status.md](features/status.md) | Displaying managed symlink status        |
+| [features/prune.md](features/prune.md)   | Removing broken symlinks                 |
+| [features/adopt.md](features/adopt.md)   | Adopting files into the source directory |
+| [features/orphan.md](features/orphan.md) | Removing files from management           |
 
 ## Glossary
 

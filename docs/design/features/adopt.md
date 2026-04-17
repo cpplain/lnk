@@ -27,7 +27,45 @@ creates a symlink in the original location pointing to the new repository copy.
 
 ---
 
-## 2. Interface
+## 2. Scope Fences
+
+### Out of Scope
+
+- `MoveFile` implementation details (see [../internals.md](../internals.md))
+- `CreateSymlink` implementation (see [../internals.md](../internals.md))
+- `ValidateSymlinkCreation` implementation (see [../internals.md](../internals.md))
+- `validateAdoptSource` implementation (see [../internals.md](../internals.md))
+- Error type definitions (see [../error-handling.md](../error-handling.md))
+- Output function behavior (see [../output.md](../output.md))
+
+### Do NOT Change
+
+- `AdoptOptions` struct shape
+- Transactional execution — all succeed or all rolled back
+- Ignore patterns not applied to explicitly specified paths
+- `CleanEmptyDirs` boundary behavior — `sourceDir` is never removed during rollback
+
+---
+
+## 3. Dependencies
+
+### Prerequisites
+
+- `LoadConfig` resolves and validates `SourceDir` before `Adopt` is called
+- `MoveFile`, `CreateSymlink`, `ValidateSymlinkCreation`, `validateAdoptSource`, `CleanEmptyDirs` from internals
+- `PrintSuccess`, `PrintSummary`, `PrintNextStep`, `PrintDryRun`, `PrintDryRunSummary`, `PrintCommandHeader`, `PrintDetail` from output
+
+### Build Order
+
+1. Phase 1: collect and validate (path expansion, lstat, adopt-source validation, destination checks)
+2. Deduplication
+3. Dry-run output path
+4. Phase 2: execute with rollback (move file, create symlink, rollback on failure)
+5. Summary and next-step output
+
+---
+
+## 4. Interface
 
 ### CLI
 
@@ -56,7 +94,7 @@ type AdoptOptions struct {
 
 ---
 
-## 3. Behavior
+## 5. Behavior
 
 `Adopt` executes in two sequential phases. If Phase 1 fails for any path, Phase 2 does
 not run. If any operation in Phase 2 fails, all completed adoptions are rolled back and
@@ -148,7 +186,7 @@ After all adoptions succeed:
 
 ---
 
-## 4. Already-Adopted Detection
+## 6. Already-Adopted Detection
 
 A file is considered already adopted if:
 
@@ -159,7 +197,7 @@ A file is considered already adopted if:
 
 ---
 
-## 5. MoveFile Behavior
+## 7. MoveFile Behavior
 
 `MoveFile(src, dst)` attempts:
 
@@ -176,10 +214,10 @@ A file is considered already adopted if:
 
 ---
 
-## 6. Path Behavior
+## 8. Path Behavior
 
 - `SourceDir` and `TargetDir` are resolved to absolute paths by `LoadConfig`
-  (see [config.md](config.md) §6) — `SourceDir` is validated to exist and be a
+  (see [../config.md](../config.md) §6) — `SourceDir` is validated to exist and be a
   directory before the command runs
 - Each `Path` is resolved to an absolute path: first `ExpandPath`, then `filepath.Abs`
 - Each path must reside within `TargetDir` (always `~` from CLI); paths outside produce an error
@@ -187,7 +225,7 @@ A file is considered already adopted if:
 
 ---
 
-## 7. Examples
+## 9. Examples
 
 ```sh
 # Adopt a single file
@@ -208,7 +246,7 @@ lnk adopt -n . ~/.bashrc ~/.vimrc
 
 ---
 
-## 8. Output
+## 10. Output
 
 ```
 Adopting Files
@@ -222,7 +260,7 @@ Next: Run 'lnk status <source-dir>' to view adopted files
 
 ---
 
-## 9. Error Cases
+## 11. Error Cases
 
 | Scenario                      | Error Message                                                                     |
 | ----------------------------- | --------------------------------------------------------------------------------- |
@@ -237,10 +275,36 @@ Next: Run 'lnk status <source-dir>' to view adopted files
 
 ---
 
-## 10. Related Specifications
+## 12. Verification
+
+### Test Commands
+
+```bash
+go test -v ./lnk -run TestAdopt
+go test -v ./test -run TestE2EAdopt
+```
+
+### Test Scenarios
+
+1. Adopt single file — moved to source dir, symlink created at original location
+2. Adopt multiple files — all adopted atomically
+3. Dry-run — no filesystem changes, output shows planned moves and symlinks
+4. File already adopted — error with hint to run `lnk status`
+5. Path is a non-adopted symlink — error with hint to remove symlink first
+6. Path outside home directory — validation error
+7. Destination already exists in source dir — error with hint to remove first
+8. Directory argument — each regular file within adopted individually
+9. Empty directory argument — error with hint
+10. Execution failure triggers rollback — all completed adoptions reversed
+11. Rollback failure — combined error reported
+12. Cross-device move — copy+verify+delete fallback works
+
+---
+
+## 13. Related Specifications
 
 - [orphan.md](orphan.md) — The inverse operation
 - [create.md](create.md) — Creating symlinks after adoption
 - [status.md](status.md) — Verifying adopted files
-- [error-handling.md](error-handling.md) — Error types and rollback behavior
-- [output.md](output.md) — Output functions and verbosity
+- [../error-handling.md](../error-handling.md) — Error types and rollback behavior
+- [../output.md](../output.md) — Output functions and verbosity

@@ -27,7 +27,47 @@ back to the target location, and restores the original file permissions.
 
 ---
 
-## 2. Interface
+## 2. Scope Fences
+
+### Out of Scope
+
+- `FindManagedLinks` implementation (see [../internals.md](../internals.md))
+- `RemoveSymlink` implementation (see [../internals.md](../internals.md))
+- `MoveFile` implementation details (see [../internals.md](../internals.md))
+- `CleanEmptyDirs` implementation (see [../internals.md](../internals.md))
+- Error type definitions (see [../error-handling.md](../error-handling.md))
+- Output function behavior (see [../output.md](../output.md))
+
+### Do NOT Change
+
+- `OrphanOptions` struct shape
+- Transactional execution — all succeed or all rolled back
+- Single-level symlink resolution via `os.Readlink` (not `filepath.EvalSymlinks`)
+- Permission restoration is best-effort only
+- `CleanEmptyDirs` boundary behavior — `sourceDir` is never removed
+
+---
+
+## 3. Dependencies
+
+### Prerequisites
+
+- `LoadConfig` resolves and validates `SourceDir` before `Orphan` is called
+- `FindManagedLinks`, `RemoveSymlink`, `MoveFile`, `CleanEmptyDirs` from internals
+- `PrintSuccess`, `PrintSummary`, `PrintNextStep`, `PrintDryRun`, `PrintDryRunSummary`, `PrintCommandHeader`, `PrintDetail`, `PrintVerbose` from output
+
+### Build Order
+
+1. Phase 1: collect and validate (path expansion, lstat, managed-link verification, broken-link rejection)
+2. Deduplication
+3. Dry-run output path
+4. Phase 2: execute with rollback (remove symlink, move file, restore permissions, rollback on failure)
+5. `CleanEmptyDirs` on source-side parents
+6. Summary and next-step output
+
+---
+
+## 4. Interface
 
 ### CLI
 
@@ -57,7 +97,7 @@ type OrphanOptions struct {
 
 ---
 
-## 3. Behavior
+## 5. Behavior
 
 `Orphan` executes in two sequential phases. If Phase 1 fails for any path, Phase 2
 does not run — no filesystem changes are made.
@@ -160,7 +200,7 @@ After all orphans succeed:
 
 ---
 
-## 4. Managed Link Validation
+## 6. Managed Link Validation
 
 A symlink is considered managed by `absSourceDir` when:
 
@@ -171,10 +211,10 @@ This is identical to the detection used by `FindManagedLinks`.
 
 ---
 
-## 5. Path Behavior
+## 7. Path Behavior
 
 - `SourceDir` and `TargetDir` are resolved to absolute paths by `LoadConfig`
-  (see [config.md](config.md) §6) — `SourceDir` is validated to exist and be a
+  (see [../config.md](../config.md) §6) — `SourceDir` is validated to exist and be a
   directory before the command runs
 - Each `Path` is resolved to an absolute path: first `ExpandPath`, then `filepath.Abs`
 - Each path must reside within `TargetDir` (always `~` from CLI); paths outside produce an error
@@ -182,7 +222,7 @@ This is identical to the detection used by `FindManagedLinks`.
 
 ---
 
-## 6. Examples
+## 8. Examples
 
 ```sh
 # Orphan a single file
@@ -203,7 +243,7 @@ lnk orphan -n . ~/.bashrc
 
 ---
 
-## 7. Output
+## 9. Output
 
 ```
 Orphaning Files
@@ -217,7 +257,7 @@ Next: Run 'lnk status <source-dir>' to view remaining managed files
 
 ---
 
-## 8. Error Cases
+## 10. Error Cases
 
 All Phase 1 errors abort the entire operation before any filesystem changes are made.
 
@@ -234,10 +274,37 @@ All Phase 1 errors abort the entire operation before any filesystem changes are 
 
 ---
 
-## 9. Related Specifications
+## 11. Verification
+
+### Test Commands
+
+```bash
+go test -v ./lnk -run TestOrphan
+go test -v ./test -run TestE2EOrphan
+```
+
+### Test Scenarios
+
+1. Orphan single file — symlink removed, file restored to original location
+2. Orphan multiple files — all orphaned atomically
+3. Dry-run — no filesystem changes, output shows planned operations
+4. Path does not exist — error with hint
+5. Path is not a symlink — error with hint to use `rm`
+6. Symlink not managed by specified source — error with hint
+7. Broken symlink — error with hint to use `rm`
+8. Directory argument — all managed active symlinks within orphaned
+9. Directory with no managed links — error with hint to run `lnk status`
+10. Execution failure triggers rollback — all completed orphans reversed
+11. Rollback failure — combined error reported
+12. File permissions restored after orphaning (best-effort)
+13. Empty source-side parent directories cleaned up
+
+---
+
+## 12. Related Specifications
 
 - [adopt.md](adopt.md) — The inverse operation
 - [status.md](status.md) — Verifying remaining managed files after orphaning
 - [remove.md](remove.md) — Removing symlinks without restoring files
-- [error-handling.md](error-handling.md) — Error types and rollback behavior
-- [output.md](output.md) — Output functions and verbosity
+- [../error-handling.md](../error-handling.md) — Error types and rollback behavior
+- [../output.md](../output.md) — Output functions and verbosity

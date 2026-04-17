@@ -26,7 +26,36 @@ broken (link target does not exist).
 
 ---
 
-## 2. Interface
+## 2. Scope Fences
+
+### Out of Scope
+
+- `FindManagedLinks` implementation (see [../internals.md](../internals.md))
+- What files would be linked by `create` (see [create.md](create.md))
+- Error type definitions (see [../error-handling.md](../error-handling.md))
+- Output function behavior (see [../output.md](../output.md))
+
+### Do NOT Change
+
+- `LinkOptions` struct shape — shared with `create`, `remove`, `prune`
+- `ManagedLink` struct shape — returned by `FindManagedLinks`
+- Exit code 0 for broken links — broken links are informational, not errors
+- Piped output format — `status path` pairs, no summary line
+
+---
+
+## 3. Dependencies
+
+### Prerequisites
+
+- `LoadConfig` resolves and validates `SourceDir` before `Status` is called
+- `FindManagedLinks` from internals
+- `PrintSuccess`, `PrintSummary`, `PrintCommandHeader`, `PrintEmptyResult`, `PrintInfo` from output
+- `ShouldSimplifyOutput` from terminal detection
+
+---
+
+## 4. Interface
 
 ### CLI
 
@@ -54,7 +83,7 @@ type LinkOptions struct {
 
 ---
 
-## 3. Behavior
+## 5. Behavior
 
 ### Step 1: Discover Managed Links
 
@@ -131,7 +160,7 @@ No managed links found.
 
 ---
 
-## 4. Exit Code
+## 6. Exit Code
 
 `status` exits 0 whenever it successfully reports, even when broken links are found.
 Broken links are informational — not a runtime error. Exit 1 only on actual failures
@@ -144,17 +173,17 @@ lnk status . | grep ^broken
 
 ---
 
-## 5. Path Behavior
+## 7. Path Behavior
 
 - `SourceDir` and `TargetDir` are resolved to absolute paths by `LoadConfig`
-  (see [config.md](config.md) §6) — `SourceDir` is validated to exist and be a
+  (see [../config.md](../config.md) §6) — `SourceDir` is validated to exist and be a
   directory before the command runs
 - Walk skips `Library` and `.Trash` directories on macOS
 - All displayed paths use `ContractPath` (home directory shown as `~`)
 
 ---
 
-## 6. Broken Link Detection
+## 8. Broken Link Detection
 
 A link is broken when `os.Stat(resolvedTarget)` returns `os.IsNotExist`. This follows
 symlinks (unlike `os.Lstat`), so a broken link is one whose ultimate target does not
@@ -162,7 +191,7 @@ exist.
 
 ---
 
-## 7. Examples
+## 9. Examples
 
 ```sh
 # Status of current directory
@@ -180,7 +209,7 @@ lnk status ~/git/dotfiles | grep ^broken
 
 ---
 
-## 8. Output
+## 10. Output
 
 ```
 Symlink Status
@@ -207,10 +236,31 @@ Symlink Status
 
 ---
 
-## 9. Related Specifications
+## 11. Verification
+
+### Test Commands
+
+```bash
+go test -v ./lnk -run TestStatus
+go test -v ./test -run TestE2EStatus
+```
+
+### Test Scenarios
+
+1. All active links — all displayed as active with correct count
+2. Mix of active and broken links — grouped correctly, blank separator between groups
+3. No managed links — `"No managed links found."`
+4. Piped output — `status path` pairs, no icons, no summary line
+5. Broken links do not cause non-zero exit
+6. Links sorted alphabetically by path
+7. Verbose mode — additional detail shown
+
+---
+
+## 12. Related Specifications
 
 - [create.md](create.md) — Creating the links shown by status
 - [remove.md](remove.md) — Removing active links
 - [prune.md](prune.md) — Removing broken links shown by status
-- [output.md](output.md) — Terminal vs. machine-readable output rules
-- [stdlib.md](stdlib.md) — `filepath.WalkDir` and `filepath.EvalSymlinks` used by `FindManagedLinks`
+- [../output.md](../output.md) — Terminal vs. machine-readable output rules
+- [../stdlib.md](../stdlib.md) — `filepath.WalkDir` and `filepath.EvalSymlinks` used by `FindManagedLinks`

@@ -25,7 +25,37 @@ file no longer exists (e.g., after files were deleted from the source repository
 
 ---
 
-## 2. Interface
+## 2. Scope Fences
+
+### Out of Scope
+
+- `FindManagedLinks` implementation (see [../internals.md](../internals.md))
+- `RemoveSymlink` implementation (see [../internals.md](../internals.md))
+- `CleanEmptyDirs` implementation (see [../internals.md](../internals.md))
+- Removing active managed symlinks (see [remove.md](remove.md))
+- Error type definitions (see [../error-handling.md](../error-handling.md))
+- Output function behavior (see [../output.md](../output.md))
+
+### Do NOT Change
+
+- `LinkOptions` struct shape — shared with `create`, `remove`, `status`
+- `ManagedLink` struct shape — returned by `FindManagedLinks`
+- Broken-only filtering — `prune` never removes active links
+- `CleanEmptyDirs` boundary behavior — `targetDir` is never removed
+
+---
+
+## 3. Dependencies
+
+### Prerequisites
+
+- `LoadConfig` resolves and validates `SourceDir` before `Prune` is called
+- `FindManagedLinks`, `RemoveSymlink`, `CleanEmptyDirs` from internals
+- `PrintSuccess`, `PrintWarning`, `PrintWarningWithHint`, `PrintSummary`, `PrintNextStep`, `PrintDryRun`, `PrintDryRunSummary`, `PrintCommandHeader`, `PrintEmptyResult` from output
+
+---
+
+## 4. Interface
 
 ### CLI
 
@@ -53,7 +83,7 @@ type LinkOptions struct {
 
 ---
 
-## 3. Behavior
+## 5. Behavior
 
 ### Step 1: Discover Managed Links
 
@@ -103,7 +133,7 @@ After all links are processed:
 
 ---
 
-## 4. Broken Link Detection
+## 6. Broken Link Detection
 
 A link is marked broken during `FindManagedLinks` when `os.Stat(resolvedTarget)`
 returns `os.IsNotExist`. This check is performed at discovery time; links that
@@ -112,17 +142,17 @@ step returning an error.
 
 ---
 
-## 5. Path Behavior
+## 7. Path Behavior
 
 - `SourceDir` and `TargetDir` are resolved to absolute paths by `LoadConfig`
-  (see [config.md](config.md) §6) — `SourceDir` is validated to exist and be a
+  (see [../config.md](../config.md) §6) — `SourceDir` is validated to exist and be a
   directory before the command runs
 - Walk skips `Library` and `.Trash` directories on macOS
 - Displayed paths use `ContractPath` (home directory shown as `~`)
 
 ---
 
-## 6. Examples
+## 8. Examples
 
 ```sh
 # Prune broken links from current directory
@@ -140,7 +170,7 @@ lnk prune -v ~/git/dotfiles
 
 ---
 
-## 7. Output
+## 9. Output
 
 ```
 Pruning Broken Symlinks
@@ -173,7 +203,7 @@ Pruning Broken Symlinks
 
 ---
 
-## 8. Relationship to Other Commands
+## 10. Relationship to Other Commands
 
 | Scenario                                   | Use          |
 | ------------------------------------------ | ------------ |
@@ -183,9 +213,29 @@ Pruning Broken Symlinks
 
 ---
 
-## 9. Related Specifications
+## 11. Verification
+
+### Test Commands
+
+```bash
+go test -v ./lnk -run TestPrune
+go test -v ./test -run TestE2EPrune
+```
+
+### Test Scenarios
+
+1. Prune broken links — only broken removed, active untouched
+2. Dry-run — no filesystem changes, output shows broken links to prune
+3. No broken links — `"No broken symlinks found."`
+4. Empty parent directories cleaned up after pruning
+5. Permission denied on removal — warning, continues with others
+6. Link becomes broken between discovery and execution — handled gracefully
+
+---
+
+## 12. Related Specifications
 
 - [remove.md](remove.md) — Removing all managed links (not just broken)
 - [status.md](status.md) — Identifying broken links before pruning
-- [error-handling.md](error-handling.md) — Error types used during removal
-- [output.md](output.md) — Output functions and verbosity
+- [../error-handling.md](../error-handling.md) — Error types used during removal
+- [../output.md](../output.md) — Output functions and verbosity

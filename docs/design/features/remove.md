@@ -24,7 +24,35 @@ Only managed symlinks are removed; other files are untouched.
 
 ---
 
-## 2. Interface
+## 2. Scope Fences
+
+### Out of Scope
+
+- `RemoveSymlink` implementation (see [../internals.md](../internals.md))
+- `CleanEmptyDirs` implementation (see [../internals.md](../internals.md))
+- Removing broken symlinks from deleted source files (see [prune.md](prune.md))
+- Error type definitions (see [../error-handling.md](../error-handling.md))
+- Output function behavior (see [../output.md](../output.md))
+
+### Do NOT Change
+
+- `LinkOptions` struct shape — shared with `create`, `status`, `prune`
+- Source-walk traversal strategy — `remove` walks the source dir, not the target dir
+- `CleanEmptyDirs` boundary behavior — `targetDir` is never removed
+
+---
+
+## 3. Dependencies
+
+### Prerequisites
+
+- `LoadConfig` resolves and validates `SourceDir` before `RemoveLinks` is called
+- `RemoveSymlink`, `CleanEmptyDirs` from internals
+- `PrintSuccess`, `PrintWarningWithHint`, `PrintSummary`, `PrintNextStep`, `PrintDryRun`, `PrintDryRunSummary`, `PrintCommandHeader`, `PrintEmptyResult` from output
+
+---
+
+## 4. Interface
 
 ### CLI
 
@@ -52,7 +80,7 @@ type LinkOptions struct {
 
 ---
 
-## 3. Behavior
+## 5. Behavior
 
 ### Step 1: Collect Managed Links
 
@@ -112,7 +140,7 @@ After all links are processed:
 
 ---
 
-## 4. Managed Link Detection
+## 6. Managed Link Detection
 
 A symlink is "managed" by a source directory if its fully resolved target path
 is inside `sourceDir`. Resolution uses `filepath.EvalSymlinks` to follow the complete
@@ -131,16 +159,16 @@ Links that do not meet this criterion are ignored silently. If `filepath.EvalSym
 
 ---
 
-## 5. Path Behavior
+## 7. Path Behavior
 
 - `SourceDir` and `TargetDir` are resolved to absolute paths by `LoadConfig`
-  (see [config.md](config.md) §6) — `SourceDir` is validated to exist and be a
+  (see [../config.md](../config.md) §6) — `SourceDir` is validated to exist and be a
   directory before the command runs
 - Displayed paths use `ContractPath` (home directory shown as `~`)
 
 ---
 
-## 6. Examples
+## 8. Examples
 
 ```sh
 # Remove links from current directory
@@ -158,7 +186,7 @@ lnk remove -v ~/git/dotfiles
 
 ---
 
-## 7. Output
+## 9. Output
 
 ```
 Removing Symlinks
@@ -192,11 +220,33 @@ Removing Symlinks
 
 ---
 
-## 8. Related Specifications
+## 10. Verification
+
+### Test Commands
+
+```bash
+go test -v ./lnk -run TestRemoveLinks
+go test -v ./test -run TestE2ERemove
+```
+
+### Test Scenarios
+
+1. Remove links from a source with multiple managed symlinks — all removed
+2. Dry-run — no filesystem changes, output shows planned removals
+3. No managed symlinks found — `"No symlinks to remove found."`
+4. Mixed managed and unmanaged symlinks — only managed ones removed
+5. Broken symlinks from deleted source files — skipped (not managed by source walk)
+6. Empty parent directories cleaned up after removal
+7. Permission denied on symlink removal — warning, continues with others
+8. Walk error on source directory — abort immediately
+
+---
+
+## 11. Related Specifications
 
 - [create.md](create.md) — The inverse operation
 - [status.md](status.md) — Verifying links before and after removal
 - [prune.md](prune.md) — Removing only broken links
-- [error-handling.md](error-handling.md) — Error types used during removal
-- [output.md](output.md) — Output functions and verbosity
-- [stdlib.md](stdlib.md) — Source-dir traversal strategy and `filepath.EvalSymlinks` usage
+- [../error-handling.md](../error-handling.md) — Error types used during removal
+- [../output.md](../output.md) — Output functions and verbosity
+- [../stdlib.md](../stdlib.md) — Source-dir traversal strategy and `filepath.EvalSymlinks` usage

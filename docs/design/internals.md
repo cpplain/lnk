@@ -307,12 +307,12 @@ Used by: `LoadConfig` in `config.go`.
 
 ## 12. Related Specifications
 
-- [create.md](create.md) — Uses `CreateSymlink`, `ValidateSymlinkCreation`, `PatternMatcher`
-- [remove.md](remove.md) — Uses `RemoveSymlink`, `CleanEmptyDirs` (source-dir walk)
-- [status.md](status.md) — Uses `FindManagedLinks`
-- [prune.md](prune.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `CleanEmptyDirs`
-- [adopt.md](adopt.md) — Uses `CreateSymlink`, `MoveFile`, `CleanEmptyDirs` (rollback), `ValidateSymlinkCreation`, `validateAdoptSource`
-- [orphan.md](orphan.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `MoveFile`, `CleanEmptyDirs`
+- [features/create.md](features/create.md) — Uses `CreateSymlink`, `ValidateSymlinkCreation`, `PatternMatcher`
+- [features/remove.md](features/remove.md) — Uses `RemoveSymlink`, `CleanEmptyDirs` (source-dir walk)
+- [features/status.md](features/status.md) — Uses `FindManagedLinks`
+- [features/prune.md](features/prune.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `CleanEmptyDirs`
+- [features/adopt.md](features/adopt.md) — Uses `CreateSymlink`, `MoveFile`, `CleanEmptyDirs` (rollback), `ValidateSymlinkCreation`, `validateAdoptSource`
+- [features/orphan.md](features/orphan.md) — Uses `FindManagedLinks`, `RemoveSymlink`, `MoveFile`, `CleanEmptyDirs`
 - [config.md](config.md) — Uses `LoadIgnoreFile`
 - [error-handling.md](error-handling.md) — Error types returned by these functions
 - [stdlib.md](stdlib.md) — Standard library functions used by these helpers
