@@ -1,5 +1,5 @@
 ---
-status: test
+status: implement
 ---
 
 # Task: Add `CleanEmptyDirs` call to `prune` after symlink removal
@@ -49,7 +49,13 @@ targetDir)` after the removal loop.
 
 ### Testing
 
-- ...
+- Added two test cases to `lnk/prune_test.go`:
+  - "empty parent directories cleaned after pruning" — broken symlink in nested
+    dir `~/.config/app/settings.conf`; after pruning, asserts both `.config/app`
+    and `.config` are removed, but `targetDir` is preserved
+  - "non-empty parent directories preserved after pruning" — broken symlink
+    alongside an unmanaged file; asserts parent dir is kept
+- Both compile cleanly; the empty-dir test fails as expected (no implementation)
 
 ### Implementation
 

@@ -158,6 +158,69 @@ func TestPrune(t *testing.T) {
 			},
 		},
 		{
+			name: "empty parent directories cleaned after pruning",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				homeDir := filepath.Join(tmpDir, "home")
+
+				// Create nested source directory (but no source file — symlink will be broken)
+				os.MkdirAll(filepath.Join(configRepo), 0755)
+
+				// Create broken symlink in nested target directory
+				createTestSymlink(t,
+					filepath.Join(configRepo, ".config", "app", "settings.conf"),
+					filepath.Join(homeDir, ".config", "app", "settings.conf"))
+
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      homeDir,
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			checkResult: func(t *testing.T, tmpDir, configRepo string) {
+				homeDir := filepath.Join(tmpDir, "home")
+				// Broken symlink should be removed
+				assertNotExists(t, filepath.Join(homeDir, ".config", "app", "settings.conf"))
+				// Empty parent directories should be cleaned up
+				assertNotExists(t, filepath.Join(homeDir, ".config", "app"))
+				assertNotExists(t, filepath.Join(homeDir, ".config"))
+				// But the target dir itself (homeDir) should still exist
+				assertDirExists(t, homeDir)
+			},
+		},
+		{
+			name: "non-empty parent directories preserved after pruning",
+			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
+				configRepo := filepath.Join(tmpDir, "repo")
+				homeDir := filepath.Join(tmpDir, "home")
+
+				os.MkdirAll(filepath.Join(configRepo), 0755)
+
+				// Create broken symlink in nested directory
+				createTestSymlink(t,
+					filepath.Join(configRepo, ".config", "app", "managed.conf"),
+					filepath.Join(homeDir, ".config", "app", "managed.conf"))
+
+				// Create an unmanaged file in the same parent directory
+				createTestFile(t, filepath.Join(homeDir, ".config", "app", "local.conf"), "# local")
+
+				return configRepo, LinkOptions{
+					SourceDir:      configRepo,
+					TargetDir:      homeDir,
+					IgnorePatterns: []string{},
+					DryRun:         false,
+				}
+			},
+			checkResult: func(t *testing.T, tmpDir, configRepo string) {
+				homeDir := filepath.Join(tmpDir, "home")
+				// Broken symlink should be removed
+				assertNotExists(t, filepath.Join(homeDir, ".config", "app", "managed.conf"))
+				// Parent directory should still exist because it has other files
+				assertDirExists(t, filepath.Join(homeDir, ".config", "app"))
+			},
+		},
+		{
 			name: "error: source directory does not exist",
 			setup: func(t *testing.T, tmpDir string) (string, LinkOptions) {
 				configRepo := filepath.Join(tmpDir, "nonexistent")
