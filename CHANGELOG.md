@@ -7,17 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
 ### Changed
 
-### Deprecated
+- **BREAKING:** Replaced action flags (`-C`, `-R`, `-S`, `-P`, `-A`, `-O`) with subcommands (`create`, `remove`, `status`, `prune`, `adopt`, `orphan`)
+- **BREAKING:** Replaced hand-rolled flag parser with stdlib `flag` package
+- **BREAKING:** `adopt`/`orphan` now use positional arguments (`<source-dir> <path...>`) instead of explicit flags
+- **BREAKING:** Target directory is always `~`; removed `--target`/`-t` flag
+- **BREAKING:** Simplified to two verbosity levels: normal and verbose (removed quiet level)
 
 ### Removed
 
-### Fixed
-
-### Security
+- **BREAKING:** `--quiet` / `-q` flag
+- **BREAKING:** `--yes` flag and confirmation prompts
+- **BREAKING:** `--output` flag and JSON output format
+- **BREAKING:** `--source` / `-s` flag (replaced by required positional argument)
+- **BREAKING:** `.lnkconfig` config file support (use `.lnkignore` for ignore patterns)
+- Progress indicators
 
 ## [0.5.0] - 2026-02-16
 
@@ -38,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Comprehensive end-to-end testing suite
-- Zero-configuration defaults with flexible config discovery (`~/.config/lnk/config.json`, `~/.lnk.json`)
+- Zero-configuration defaults with flexible config discovery (`.lnkconfig` in source dir, `~/.config/lnk/config`, `~/.lnkconfig`)
 - Global flags: `--verbose`, `--quiet`, `--yes`, `--no-color`, `--output`
 - Command suggestions for typos, progress indicators, confirmation prompts
 - JSON output and specific exit codes for scripting
