@@ -109,11 +109,11 @@ func CreateLinks(opts LinkOptions) error {
 	}
 
 	// Execute the plan
-	return executePlannedLinks(plannedLinks)
+	return executePlannedLinks(plannedLinks, sourceDir)
 }
 
 // executePlannedLinks creates the symlinks according to the plan
-func executePlannedLinks(links []PlannedLink) error {
+func executePlannedLinks(links []PlannedLink, sourceDir string) error {
 	// Track which directories we've created to avoid redundant checks
 	createdDirs := make(map[string]bool)
 
@@ -156,7 +156,7 @@ func executePlannedLinks(links []PlannedLink) error {
 	// Print summary
 	if created > 0 {
 		PrintSummary("Created %d symlink(s) successfully", created)
-		PrintNextStep("status", "verify links")
+		PrintNextStep("status", sourceDir, "verify links")
 	} else if failed == 0 {
 		// All links were skipped (already exist)
 		PrintInfo("All symlinks already exist")

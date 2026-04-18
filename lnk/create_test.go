@@ -3,6 +3,7 @@ package lnk
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -169,5 +170,48 @@ func TestCreateLinks(t *testing.T) {
 				tt.checkResult(t, tmpDir, configRepo)
 			}
 		})
+	}
+}
+
+// TestCreateLinksPerItemWarning verifies that per-item execution failures use
+// PrintWarningWithHint, which propagates hints from the underlying error via %w wrapping.
+// CreateSymlink returns a hinted error on failure (e.g., permission denied), so the
+// hint line must appear in stderr — distinguishing PrintWarningWithHint(%w) from
+// PrintWarning(%v) which loses the hint.
+func TestCreateLinksPerItemWarning(t *testing.T) {
+	tmpDir := t.TempDir()
+	configRepo := filepath.Join(tmpDir, "repo")
+	homeDir := filepath.Join(tmpDir, "home")
+
+	// Create source file
+	createTestFile(t, filepath.Join(configRepo, ".bashrc"), "# bashrc")
+
+	// Pre-create the target directory as read-only so CreateSymlink fails with
+	// "operation not permitted" — CreateSymlink wraps this with a hint.
+	if err := os.MkdirAll(homeDir, 0555); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(homeDir, 0755)
+
+	opts := LinkOptions{
+		SourceDir:      configRepo,
+		TargetDir:      homeDir,
+		IgnorePatterns: []string{},
+		DryRun:         false,
+	}
+
+	stdout, stderr := captureOutput(t, func() {
+		CreateLinks(opts)
+	})
+
+	// Failure should be reported as warning on stderr (not error: prefix)
+	if !strings.Contains(stderr, "warning:") {
+		t.Errorf("CreateLinks() per-item failure should use warning prefix\nstdout: %q\nstderr: %q", stdout, stderr)
+	}
+	// PrintWarningWithHint with %w wrapping must propagate the hint from CreateSymlink.
+	// CreateSymlink returns "Check that the parent directory exists and you have write permissions"
+	// as a hint — this only appears when PrintWarningWithHint is used with %w (not PrintWarning with %v).
+	if !strings.Contains(stderr, "hint:") {
+		t.Errorf("CreateLinks() per-item failure must propagate hint via PrintWarningWithHint\nstderr: %q", stderr)
 	}
 }

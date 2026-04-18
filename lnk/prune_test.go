@@ -3,6 +3,7 @@ package lnk
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -253,6 +254,71 @@ func TestPrune(t *testing.T) {
 				tt.checkResult(t, tmpDir, configRepo)
 			}
 		})
+	}
+}
+
+// TestPrunePerItemWarning verifies that per-item failures use PrintWarningWithHint
+// (written to stderr) rather than PrintError.
+func TestPrunePerItemWarning(t *testing.T) {
+	tmpDir := t.TempDir()
+	configRepo := filepath.Join(tmpDir, "repo")
+	homeDir := filepath.Join(tmpDir, "home")
+
+	os.MkdirAll(configRepo, 0755)
+
+	// Create broken symlink in a subdirectory
+	subDir := filepath.Join(homeDir, "sub")
+	createTestSymlink(t, filepath.Join(configRepo, ".missing"), filepath.Join(subDir, ".missing"))
+
+	// Make the subdirectory read-only to cause RemoveSymlink to fail
+	if err := os.Chmod(subDir, 0555); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(subDir, 0755)
+
+	opts := LinkOptions{
+		SourceDir: configRepo,
+		TargetDir: homeDir,
+	}
+
+	stdout, stderr := captureOutput(t, func() {
+		Prune(opts)
+	})
+
+	// Failure should be reported as warning on stderr (not error: prefix)
+	if !strings.Contains(stderr, "warning:") {
+		t.Errorf("Prune() per-item failure should use warning prefix\nstdout: %q\nstderr: %q", stdout, stderr)
+	}
+	// Should NOT use "error:" prefix for per-item failures
+	if strings.Contains(stderr, "error:") {
+		t.Errorf("Prune() per-item failure must not use error: prefix\nstderr: %q", stderr)
+	}
+}
+
+// TestPruneNextStep verifies a next-step hint is printed after successful pruning.
+func TestPruneNextStep(t *testing.T) {
+	tmpDir := t.TempDir()
+	configRepo := filepath.Join(tmpDir, "repo")
+	homeDir := filepath.Join(tmpDir, "home")
+
+	os.MkdirAll(configRepo, 0755)
+
+	// Create broken symlink
+	createTestSymlink(t, filepath.Join(configRepo, ".missing"), filepath.Join(homeDir, ".missing"))
+
+	opts := LinkOptions{
+		SourceDir: configRepo,
+		TargetDir: homeDir,
+	}
+
+	stdout, _ := captureOutput(t, func() {
+		if err := Prune(opts); err != nil {
+			t.Fatalf("Prune() unexpected error: %v", err)
+		}
+	})
+
+	if !strings.Contains(stdout, "Next:") {
+		t.Errorf("Prune() should print next-step hint after successful pruning\nstdout: %q", stdout)
 	}
 }
 

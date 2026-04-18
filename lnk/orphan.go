@@ -236,6 +236,6 @@ func Orphan(opts OrphanOptions) error {
 	CleanEmptyDirs(parentDirs, absSourceDir)
 
 	PrintSummary("Orphaned %d file(s) successfully", len(managedLinks))
-	PrintNextStep("status", "view remaining managed files")
+	PrintNextStep("status", absSourceDir, "view remaining managed files")
 	return nil
 }

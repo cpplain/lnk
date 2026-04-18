@@ -3,6 +3,7 @@ package lnk
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -312,5 +313,66 @@ func TestRemoveLinks(t *testing.T) {
 				tt.checkResult(t, tmpDir, configRepo)
 			}
 		})
+	}
+}
+
+// TestRemoveLinksPerItemWarning verifies that per-item failures use PrintWarningWithHint
+// (written to stderr) rather than PrintError.
+func TestRemoveLinksPerItemWarning(t *testing.T) {
+	tmpDir := t.TempDir()
+	configRepo := filepath.Join(tmpDir, "repo")
+	homeDir := filepath.Join(tmpDir, "home")
+
+	// Create source file and managed symlink
+	createTestFile(t, filepath.Join(configRepo, ".bashrc"), "# bashrc")
+	createTestSymlink(t, filepath.Join(configRepo, ".bashrc"), filepath.Join(homeDir, ".bashrc"))
+
+	// Make the parent directory read-only to cause RemoveSymlink to fail
+	if err := os.Chmod(filepath.Join(homeDir), 0555); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(filepath.Join(homeDir), 0755)
+
+	opts := LinkOptions{
+		SourceDir: configRepo,
+		TargetDir: homeDir,
+	}
+
+	stdout, stderr := captureOutput(t, func() {
+		RemoveLinks(opts)
+	})
+
+	// Failure should be reported as warning on stderr (not error: prefix)
+	if !strings.Contains(stderr, "warning:") {
+		t.Errorf("RemoveLinks() per-item failure should use warning prefix\nstdout: %q\nstderr: %q", stdout, stderr)
+	}
+	// Should NOT use "error:" prefix for per-item failures
+	if strings.Contains(stderr, "error:") {
+		t.Errorf("RemoveLinks() per-item failure must not use error: prefix\nstderr: %q", stderr)
+	}
+}
+
+// TestRemoveLinksNextStep verifies a next-step hint is printed after successful removal.
+func TestRemoveLinksNextStep(t *testing.T) {
+	tmpDir := t.TempDir()
+	configRepo := filepath.Join(tmpDir, "repo")
+	homeDir := filepath.Join(tmpDir, "home")
+
+	createTestFile(t, filepath.Join(configRepo, ".bashrc"), "# bashrc")
+	createTestSymlink(t, filepath.Join(configRepo, ".bashrc"), filepath.Join(homeDir, ".bashrc"))
+
+	opts := LinkOptions{
+		SourceDir: configRepo,
+		TargetDir: homeDir,
+	}
+
+	stdout, _ := captureOutput(t, func() {
+		if err := RemoveLinks(opts); err != nil {
+			t.Fatalf("RemoveLinks() unexpected error: %v", err)
+		}
+	})
+
+	if !strings.Contains(stdout, "Next:") {
+		t.Errorf("RemoveLinks() should print next-step hint after successful removal\nstdout: %q", stdout)
 	}
 }

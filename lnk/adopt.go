@@ -214,7 +214,7 @@ func Adopt(opts AdoptOptions) error {
 	}
 
 	PrintSummary("Adopted %d file(s) successfully", len(planned))
-	PrintNextStep("status", "view adopted files")
+	PrintNextStep("status", absSourceDir, "view adopted files")
 	return nil
 }
 

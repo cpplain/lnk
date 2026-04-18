@@ -152,8 +152,15 @@ func PrintEmptyResult(itemType string) {
 	PrintInfo("No %s found.", itemType)
 }
 
-// PrintNextStep prints a standard next step hint
-func PrintNextStep(command, description string) {
+// PrintWarningWithHint prints a warning message with an optional hint extracted from the error.
+// Always writes to stderr. Not gated by verbosity.
+func PrintWarningWithHint(err error) {
+	// stub — implementation pending
+}
+
+// PrintNextStep prints a standard next step hint.
+// sourceDir is contracted via ContractPath for display.
+func PrintNextStep(command, sourceDir, description string) {
 	PrintInfo("Next: Run 'lnk %s' to %s", command, description)
 }
 

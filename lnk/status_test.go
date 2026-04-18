@@ -7,6 +7,62 @@ import (
 	"testing"
 )
 
+// TestStatusBrokenLinksToStdout verifies broken links are printed to stdout, not stderr.
+// The spec (status.md §5 step 3) requires broken links to be informational output on stdout.
+func TestStatusBrokenLinksToStdout(t *testing.T) {
+	tmpDir := t.TempDir()
+	sourceDir := filepath.Join(tmpDir, "dotfiles")
+	targetDir := filepath.Join(tmpDir, "home")
+	os.MkdirAll(sourceDir, 0755)
+	os.MkdirAll(targetDir, 0755)
+
+	// Create broken symlink (source file does not exist)
+	createTestSymlink(t, filepath.Join(sourceDir, ".missing"), filepath.Join(targetDir, ".missing"))
+
+	opts := LinkOptions{SourceDir: sourceDir, TargetDir: targetDir}
+
+	stdout, stderr := captureOutput(t, func() {
+		if err := Status(opts); err != nil {
+			t.Fatalf("Status() unexpected error: %v", err)
+		}
+	})
+
+	// "broken" output must appear on stdout (piped format: "broken <path>")
+	if !strings.Contains(stdout, "broken") {
+		t.Errorf("Status() broken link not in stdout\nstdout: %q\nstderr: %q", stdout, stderr)
+	}
+	if !strings.Contains(stdout, ".missing") {
+		t.Errorf("Status() broken link path not in stdout\nstdout: %q", stdout)
+	}
+
+	// "broken" must NOT appear on stderr — broken links are informational, not errors
+	if strings.Contains(stderr, "broken") || strings.Contains(stderr, ".missing") {
+		t.Errorf("Status() broken link must not go to stderr\nstderr: %q", stderr)
+	}
+}
+
+// TestStatusEmptyResultMessage verifies the exact message when no managed links exist.
+func TestStatusEmptyResultMessage(t *testing.T) {
+	tmpDir := t.TempDir()
+	sourceDir := filepath.Join(tmpDir, "dotfiles")
+	targetDir := filepath.Join(tmpDir, "home")
+	os.MkdirAll(sourceDir, 0755)
+	os.MkdirAll(targetDir, 0755)
+
+	opts := LinkOptions{SourceDir: sourceDir, TargetDir: targetDir}
+
+	stdout, _ := captureOutput(t, func() {
+		if err := Status(opts); err != nil {
+			t.Fatalf("Status() unexpected error: %v", err)
+		}
+	})
+
+	want := "No managed links found."
+	if !strings.Contains(stdout, want) {
+		t.Errorf("Status() empty result = %q, want to contain %q", stdout, want)
+	}
+}
+
 func TestStatus(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -80,7 +136,7 @@ func TestStatus(t *testing.T) {
 				}
 			},
 			wantError:    false,
-			wantContains: []string{"No active links found"},
+			wantContains: []string{"No managed links found."},
 		},
 		{
 			name: "package with . (current directory)",

@@ -1,5 +1,5 @@
 ---
-status: test
+status: implement
 ---
 
 <!-- Valid statuses: test | implement | blocked | completed -->
@@ -95,7 +95,28 @@ References: `docs/design/output.md` §5, `docs/design/features/create.md` §5,
 
 ### Testing
 
-- ...
+- Created `lnk/output_test.go`: tests for `PrintWarningWithHint` (piped mode: writes
+  to stderr as "warning:", emits "hint:" line only when error has hint) and `PrintNextStep`
+  (3-arg signature, contracts home dir, formats as "Next: Run 'lnk <cmd> <dir>' to <desc>").
+- Updated `lnk/status_test.go`: fixed "no matching links" test to expect "No managed
+  links found." (was "No active links found"); added `TestStatusBrokenLinksToStdout`
+  (piped mode: broken paths in stdout, not stderr) and `TestStatusEmptyResultMessage`
+  (exact empty-result phrasing).
+- Added `TestCreateLinksPerItemWarning` to `lnk/create_test.go`: verifies hint line
+  appears in stderr — distinguishes `PrintWarningWithHint(%w)` from `PrintWarning(%v)`
+  since `CreateSymlink` returns a hinted `LinkError` on permission denied.
+- Added `TestRemoveLinksPerItemWarning` and `TestRemoveLinksNextStep` to
+  `lnk/remove_test.go`: per-item failure must use "warning:" (not "error:"); next-step
+  hint "Next:" must appear after successful removal.
+- Added `TestPrunePerItemWarning` and `TestPruneNextStep` to `lnk/prune_test.go`:
+  same pattern as remove.
+- Added stubs to `lnk/output.go`: `PrintWarningWithHint(err error)` (empty body) and
+  changed `PrintNextStep` signature to `(command, sourceDir, description string)`.
+- Updated callers to compile: `executePlannedLinks` in `create.go` gains `sourceDir`
+  param; `adopt.go` and `orphan.go` pass `absSourceDir`.
+- 9 tests fail as expected (no implementation); no panics; e2e suite passes.
+- Edge cases covered: piped vs terminal distinction, hint propagation via %w, next-step
+  only on full success (failed==0), exact empty-result string.
 
 ### Implementation
 
