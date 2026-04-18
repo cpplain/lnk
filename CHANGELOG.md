@@ -7,21 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-04-17
+
+### Added
+
+- `.lnkignore` file support for gitignore-style ignore patterns in source directories
+- `-n` short flag for `--dry-run`
+- `-V` short flag for `--version`
+- Transactional execution with rollback for `adopt` and `orphan` operations
+
 ### Changed
 
-- **BREAKING:** Replaced action flags (`-C`, `-R`, `-S`, `-P`, `-A`, `-O`) with subcommands (`create`, `remove`, `status`, `prune`, `adopt`, `orphan`)
-- **BREAKING:** Replaced hand-rolled flag parser with stdlib `flag` package
-- **BREAKING:** `adopt`/`orphan` now use positional arguments (`<source-dir> <path...>`) instead of explicit flags
-- **BREAKING:** Target directory is always `~`; removed `--target`/`-t` flag
-- **BREAKING:** Simplified to two verbosity levels: normal and verbose (removed quiet level)
+- **BREAKING:** `adopt` now uses positional arguments (`<source-dir> <path...>`) instead of `--path` and `--source-dir` flags
+- **BREAKING:** `orphan` now uses positional arguments (`<source-dir> <path...>`) instead of config-based source discovery
+- **BREAKING:** All commands require `<source-dir>` as a positional argument instead of using config file link mappings
+- **BREAKING:** Target directory is always `~`; no longer configurable via config file mappings
+- **BREAKING:** Simplified to two verbosity levels: normal and verbose
+- **BREAKING:** `--ignore` accepts a single pattern per flag (repeatable) instead of comma-separated list
 
 ### Removed
 
+- **BREAKING:** `version` subcommand (use `-V` or `--version` flag)
+- **BREAKING:** `config` help topic
 - **BREAKING:** `--quiet` / `-q` flag
-- **BREAKING:** `--yes` flag and confirmation prompts
+- **BREAKING:** `--yes` / `-y` flag and confirmation prompts
 - **BREAKING:** `--output` flag and JSON output format
-- **BREAKING:** `--source` / `-s` flag (replaced by required positional argument)
-- **BREAKING:** `.lnkconfig` config file support (use `.lnkignore` for ignore patterns)
+- **BREAKING:** `--config` flag and JSON configuration system (`.lnk.json`, `~/.config/lnk/config.json`)
+- **BREAKING:** `--path` flag from `adopt` and `orphan`
+- **BREAKING:** `--source-dir` flag from `adopt`
 - Progress indicators
 
 ## [0.5.0] - 2026-02-16
@@ -127,7 +140,8 @@ Initial release of cfgman.
 - **Performance** - Concurrent operations for status checking
 - **Zero dependencies** - Pure Go implementation using only standard library
 
-[unreleased]: https://github.com/cpplain/lnk/compare/v0.5.0...HEAD
+[unreleased]: https://github.com/cpplain/lnk/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/cpplain/lnk/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/cpplain/lnk/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/cpplain/lnk/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/cpplain/lnk/compare/v0.2.0...v0.3.0
