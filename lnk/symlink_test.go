@@ -64,9 +64,11 @@ func TestFindManagedLinksTargetIsAbsolute(t *testing.T) {
 		t.Errorf("ManagedLink.Target should be absolute, got %q", links[0].Target)
 	}
 
-	// Target must resolve to the source file
-	if links[0].Target != sourceFile {
-		t.Errorf("ManagedLink.Target = %q, want %q", links[0].Target, sourceFile)
+	// Target must resolve to the source file (use EvalSymlinks for expected value
+	// since Target uses EvalSymlinks which resolves path symlinks like /var → /private/var)
+	expectedTarget, _ := filepath.EvalSymlinks(sourceFile)
+	if links[0].Target != expectedTarget {
+		t.Errorf("ManagedLink.Target = %q, want %q", links[0].Target, expectedTarget)
 	}
 }
 
@@ -98,8 +100,9 @@ func TestFindManagedLinksTargetAbsoluteForAbsoluteSymlinks(t *testing.T) {
 	if !filepath.IsAbs(links[0].Target) {
 		t.Errorf("ManagedLink.Target should be absolute, got %q", links[0].Target)
 	}
-	if links[0].Target != sourceFile {
-		t.Errorf("ManagedLink.Target = %q, want %q", links[0].Target, sourceFile)
+	expectedTarget, _ := filepath.EvalSymlinks(sourceFile)
+	if links[0].Target != expectedTarget {
+		t.Errorf("ManagedLink.Target = %q, want %q", links[0].Target, expectedTarget)
 	}
 }
 
@@ -134,8 +137,11 @@ func TestFindManagedLinksBrokenLinkTargetIsAbsolute(t *testing.T) {
 	if !filepath.IsAbs(links[0].Target) {
 		t.Errorf("Broken link Target should be absolute, got %q", links[0].Target)
 	}
-	if links[0].Target != missingFile {
-		t.Errorf("ManagedLink.Target = %q, want %q", links[0].Target, missingFile)
+	// For broken links, the parent dir is resolved via EvalSymlinks but the file doesn't exist
+	resolvedParent, _ := filepath.EvalSymlinks(sourceDir)
+	expectedTarget := filepath.Join(resolvedParent, "missing.txt")
+	if links[0].Target != expectedTarget {
+		t.Errorf("ManagedLink.Target = %q, want %q", links[0].Target, expectedTarget)
 	}
 }
 

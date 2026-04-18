@@ -2,6 +2,7 @@ package lnk
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,10 +19,22 @@ type ManagedLink struct {
 // FindManagedLinks finds all symlinks in startPath that point to any of the specified source directories.
 // sources should be absolute paths (use ExpandPath first if needed).
 func FindManagedLinks(startPath string, sources []string) ([]ManagedLink, error) {
+	// Resolve sources to canonical paths so containment checks work
+	// when EvalSymlinks resolves path components (e.g., /var → /private/var on macOS)
+	resolvedSources := make([]string, len(sources))
+	for i, s := range sources {
+		resolved, err := filepath.EvalSymlinks(s)
+		if err != nil {
+			resolvedSources[i] = s
+		} else {
+			resolvedSources[i] = resolved
+		}
+	}
+
 	var links []ManagedLink
 	var walkErrors []error
 
-	err := filepath.Walk(startPath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(startPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			PrintVerbose("Error walking path %s: %v", path, err)
 			walkErrors = append(walkErrors, err)
@@ -29,7 +42,7 @@ func FindManagedLinks(startPath string, sources []string) ([]ManagedLink, error)
 		}
 
 		// Skip directories
-		if info.IsDir() {
+		if d.IsDir() {
 			name := filepath.Base(path)
 			// Skip specific system directories
 			if name == LibraryDir || name == TrashDir {
@@ -39,35 +52,73 @@ func FindManagedLinks(startPath string, sources []string) ([]ManagedLink, error)
 		}
 
 		// Check if it's a symlink
-		if info.Mode()&os.ModeSymlink == 0 {
+		if d.Type()&fs.ModeSymlink == 0 {
 			return nil
 		}
 
-		// Read symlink target
-		target, err := os.Readlink(path)
-		if err != nil {
-			PrintVerbose("Failed to read symlink %s: %v", path, err)
-			return nil
+		// Try filepath.EvalSymlinks first for non-broken links
+		var resolvedTarget string
+		var isBroken bool
+
+		evalTarget, evalErr := filepath.EvalSymlinks(path)
+		if evalErr == nil {
+			// EvalSymlinks succeeded — link is not broken
+			resolvedTarget = evalTarget
+		} else {
+			// EvalSymlinks failed — likely a broken link; fall back to manual resolution
+			rawTarget, err := os.Readlink(path)
+			if err != nil {
+				PrintVerbose("Failed to read symlink %s: %v", path, err)
+				return nil
+			}
+
+			absTarget := rawTarget
+			if !filepath.IsAbs(rawTarget) {
+				absTarget = filepath.Join(filepath.Dir(path), rawTarget)
+			}
+			cleanTarget, err := filepath.Abs(absTarget)
+			if err != nil {
+				PrintVerbose("Failed to get absolute path for target %s: %v", rawTarget, err)
+				return nil
+			}
+			// Resolve the parent directory to handle path symlinks (e.g., /var → /private/var)
+			parentDir := filepath.Dir(cleanTarget)
+			if resolvedParent, err := filepath.EvalSymlinks(parentDir); err == nil {
+				resolvedTarget = filepath.Join(resolvedParent, filepath.Base(cleanTarget))
+			} else {
+				resolvedTarget = cleanTarget
+			}
+
+			// Verify the target is genuinely missing vs other error
+			if _, statErr := os.Stat(resolvedTarget); statErr != nil {
+				if os.IsNotExist(statErr) {
+					isBroken = true
+				} else {
+					// Other error (e.g., permission denied) — skip, can't classify
+					return nil
+				}
+			}
 		}
 
-		// Get absolute target path
-		absTarget := target
-		if !filepath.IsAbs(target) {
-			absTarget = filepath.Join(filepath.Dir(path), target)
-		}
-		cleanTarget, err := filepath.Abs(absTarget)
-		if err != nil {
-			PrintVerbose("Failed to get absolute path for target %s: %v", target, err)
-			return nil
-		}
-
-		// Check if target points to any of our sources
+		// Check if target points to any of our sources.
+		// Try resolved sources first (for EvalSymlinks-resolved targets), then
+		// fall back to original sources (for manually resolved broken link targets
+		// where parent directory resolution may have failed).
 		var managedBySource string
-		for _, source := range sources {
-			relPath, err := filepath.Rel(source, cleanTarget)
+		for i, resolved := range resolvedSources {
+			relPath, err := filepath.Rel(resolved, resolvedTarget)
 			if err == nil && !strings.HasPrefix(relPath, "..") && relPath != "." {
-				managedBySource = source
+				managedBySource = sources[i]
 				break
+			}
+		}
+		if managedBySource == "" {
+			for _, source := range sources {
+				relPath, err := filepath.Rel(source, resolvedTarget)
+				if err == nil && !strings.HasPrefix(relPath, "..") && relPath != "." {
+					managedBySource = source
+					break
+				}
 			}
 		}
 
@@ -75,18 +126,12 @@ func FindManagedLinks(startPath string, sources []string) ([]ManagedLink, error)
 			return nil
 		}
 
-		link := ManagedLink{
-			Path:   path,
-			Target: target,
-			Source: managedBySource,
-		}
-
-		// Check if link is broken
-		if _, err := os.Stat(cleanTarget); err != nil {
-			link.IsBroken = true
-		}
-
-		links = append(links, link)
+		links = append(links, ManagedLink{
+			Path:     path,
+			Target:   resolvedTarget,
+			IsBroken: isBroken,
+			Source:   managedBySource,
+		})
 		return nil
 	})
 

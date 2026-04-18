@@ -1,5 +1,5 @@
 ---
-status: implement
+status: completed
 ---
 
 # Task: Replace filepath.Walk with WalkDir and fix ManagedLink.Target
@@ -72,4 +72,16 @@ restructuring.
 
 ### Implementation
 
-- ...
+- Replaced `filepath.Walk` with `filepath.WalkDir` in both `lnk/symlink.go` and
+  `lnk/create.go`, using `fs.DirEntry` and `d.Type()&fs.ModeSymlink` / `d.IsDir()`
+- Restructured `FindManagedLinks` to use `filepath.EvalSymlinks` first for non-broken
+  links, with manual `os.Readlink` + resolution fallback for broken links
+- For broken links, the fallback resolves the parent directory via `EvalSymlinks` when
+  possible to handle path symlinks (e.g., `/var` → `/private/var` on macOS)
+- Set `ManagedLink.Target` to the resolved absolute path in all cases
+- Resolved `sources` array through `EvalSymlinks` at function entry so containment
+  checks work with fully-resolved target paths; added fallback containment check
+  against original sources for broken links where parent resolution may fail
+- Fixed test expectations to use `filepath.EvalSymlinks` for expected target values,
+  accounting for macOS `/var` → `/private/var` resolution
+- `make check` passes (fmt + all tests + vet)

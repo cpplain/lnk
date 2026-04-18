@@ -2,6 +2,7 @@ package lnk
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -28,13 +29,13 @@ func collectPlannedLinksWithPatterns(sourcePath, targetPath string, ignorePatter
 	// Create pattern matcher once before walk for efficiency
 	pm := NewPatternMatcher(ignorePatterns)
 
-	err := filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(sourcePath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		// Skip directories - we only link files
-		if info.IsDir() {
+		if d.IsDir() {
 			return nil
 		}
 
