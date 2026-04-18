@@ -1,5 +1,5 @@
 ---
-status: implement
+status: completed
 ---
 
 # Task: Rewrite `orphan` to use two-phase transactional execution
@@ -101,4 +101,19 @@ success.
 
 ### Implementation
 
-- ...
+- Rewrote `Orphan` function to two-phase transactional execution matching spec §5
+- Phase 1: fail-fast validation — returns error immediately on first invalid path,
+  no filesystem changes made. Validates: path exists, within target dir, is symlink,
+  managed by source, not broken. Directory expansion via `FindManagedLinks` with
+  broken-link rejection. Deduplication by `Path`.
+- Phase 2: execute with batch rollback — `RemoveSymlink` + `MoveFile` + `os.Chmod`
+  (best-effort, logged via `PrintVerbose`). On failure, rolls back all completed
+  orphans in reverse order (move file back, recreate symlink). Combined error on
+  rollback failure.
+- Added `CleanEmptyDirs` call on source-side parent directories after success
+- Fixed dry-run output: "Move from:" instead of "Copy from:", removed "Remove from
+  repository:" line
+- Fixed summary: "Orphaned N file(s) successfully" instead of "Successfully orphaned"
+- Fixed `PrintWarning` → `PrintVerbose` for permission restoration failure
+- Updated e2e test `TestEdgeCases/orphan non-symlink` to expect exit code 1 (was 0
+  under continue-on-failure model)

@@ -167,7 +167,7 @@ func TestEdgeCases(t *testing.T) {
 			},
 			args: []string{"orphan", filepath.Join(sourceDir, "home"),
 				filepath.Join(targetDir, ".regular")},
-			wantExit: 0,
+			wantExit: 1,
 			contains: []string{"not a symlink"},
 		},
 		{

@@ -15,14 +15,14 @@ type OrphanOptions struct {
 	DryRun    bool     // preview mode
 }
 
-// Orphan removes files from package management using the new options-based interface
+// Orphan removes files from package management using two-phase transactional execution.
 func Orphan(opts OrphanOptions) error {
 	PrintCommandHeader("Orphaning Files")
 
 	// Validate inputs
 	if len(opts.Paths) == 0 {
 		return NewValidationErrorWithHint("paths", "", "at least one file path is required",
-			"Specify which files to orphan, e.g.: lnk -O ~/.bashrc")
+			"Specify which files to orphan, e.g.: lnk orphan <source-dir> ~/.bashrc")
 	}
 
 	// Expand and validate paths
@@ -34,192 +34,208 @@ func Orphan(opts OrphanOptions) error {
 	PrintVerbose("Source directory: %s", absSourceDir)
 	PrintVerbose("Target directory: %s", absTargetDir)
 
-	// Collect managed links to orphan
+	// Phase 1: Collect and Validate
 	var managedLinks []ManagedLink
+	seen := make(map[string]bool)
 
 	for _, path := range opts.Paths {
-		// Expand path
 		absPath, err := ExpandPath(path)
 		if err != nil {
-			PrintErrorWithHint(WithHint(
+			return WithHint(
 				fmt.Errorf("failed to expand path %s: %w", path, err),
-				"Check that the path is valid"))
-			continue
+				"Check that the path is valid")
 		}
 
-		// Check if path exists
+		// Stat with Lstat (don't follow symlinks)
 		linkInfo, err := os.Lstat(absPath)
 		if err != nil {
 			if os.IsNotExist(err) {
-				PrintErrorWithHint(NewPathErrorWithHint("orphan", absPath, err,
-					"Check that the file path is correct"))
-			} else {
-				PrintErrorWithHint(NewPathError("orphan", absPath, err))
+				return NewPathErrorWithHint("orphan", absPath, err,
+					"Check that the file path is correct")
 			}
-			continue
+			return NewPathError("orphan", absPath, err)
 		}
 
-		// Handle directories by finding all managed symlinks within
+		// Validate target directory
+		relToTarget, err := filepath.Rel(absTargetDir, absPath)
+		if err != nil || strings.HasPrefix(relToTarget, "..") {
+			return NewValidationErrorWithHint("path", ContractPath(absPath),
+				fmt.Sprintf("path %s must be within target directory", ContractPath(absPath)),
+				"Only paths within the target directory can be orphaned")
+		}
+
+		// Handle directories
 		if linkInfo.IsDir() && linkInfo.Mode()&os.ModeSymlink == 0 {
-			// For directories, find all managed symlinks within that point to source dir
 			sources := []string{absSourceDir}
 			managed, err := FindManagedLinks(absPath, sources)
 			if err != nil {
-				PrintErrorWithHint(WithHint(
-					fmt.Errorf("failed to find managed links in %s: %w", path, err),
-					"Check directory permissions"))
-				continue
+				return NewPathError("orphan", absPath, err)
 			}
 			if len(managed) == 0 {
-				PrintErrorWithHint(WithHint(
-					fmt.Errorf("no managed symlinks found in directory: %s", path),
-					"Use 'lnk -S' to see managed links"))
-				continue
+				return WithHint(
+					fmt.Errorf("no managed symlinks found in %s", ContractPath(absPath)),
+					"Use 'lnk status' to see managed links")
 			}
-			managedLinks = append(managedLinks, managed...)
+			// Reject broken links
+			for _, link := range managed {
+				if link.IsBroken {
+					return NewPathErrorWithHint("orphan", link.Path,
+						fmt.Errorf("symlink target does not exist"),
+						"Use 'rm' to remove the broken symlink directly")
+				}
+			}
+			// Add active links, deduplicating
+			for _, link := range managed {
+				if !seen[link.Path] {
+					seen[link.Path] = true
+					managedLinks = append(managedLinks, link)
+				}
+			}
 			continue
 		}
 
-		// For single files, validate it's a managed symlink
+		// Handle files
 		if linkInfo.Mode()&os.ModeSymlink == 0 {
-			PrintErrorWithHint(NewPathErrorWithHint("orphan", absPath, ErrNotSymlink,
-				"Only symlinks can be orphaned. Use 'rm' to remove regular files"))
-			continue
+			return NewPathErrorWithHint("orphan", absPath, ErrNotSymlink,
+				"Only symlinks can be orphaned. Use 'rm' to remove regular files")
 		}
 
-		// Check if this is a managed link pointing to our source directory
-		target, err := os.Readlink(absPath)
+		// Read symlink target
+		rawTarget, err := os.Readlink(absPath)
 		if err != nil {
-			PrintErrorWithHint(WithHint(
-				fmt.Errorf("failed to read symlink %s: %w", path, err),
-				"Check symlink permissions"))
-			continue
+			return WithHint(
+				fmt.Errorf("failed to read symlink %s: %w", ContractPath(absPath), err),
+				"Check symlink permissions")
 		}
 
-		// Resolve to absolute target path
-		absTarget := target
-		if !filepath.IsAbs(target) {
-			absTarget = filepath.Join(filepath.Dir(absPath), target)
+		// Resolve to absolute path
+		resolvedTarget := rawTarget
+		if !filepath.IsAbs(rawTarget) {
+			resolvedTarget = filepath.Join(filepath.Dir(absPath), rawTarget)
 		}
-		absTarget, err = filepath.Abs(absTarget)
-		if err != nil {
-			PrintErrorWithHint(WithHint(
-				fmt.Errorf("failed to resolve target for %s: %w", path, err),
-				"Check symlink target"))
-			continue
+		resolvedTarget = filepath.Clean(resolvedTarget)
+
+		// Verify target is within source directory
+		relPath, err := filepath.Rel(absSourceDir, resolvedTarget)
+		if err != nil || strings.HasPrefix(relPath, "..") || relPath == "." {
+			return NewLinkErrorWithHint("orphan", absPath, rawTarget,
+				fmt.Errorf("not managed by source"),
+				"This symlink was not created by lnk from this source. Use 'rm' to remove it directly")
 		}
 
-		// Check if target is within source directory
-		relPath, err := filepath.Rel(absSourceDir, absTarget)
-		if err != nil || strings.HasPrefix(relPath, "..") {
-			PrintErrorWithHint(WithHint(
-				fmt.Errorf("symlink is not managed by source directory: %s -> %s", path, target),
-				"This symlink was not created by lnk from this source. Use 'rm' to remove it manually"))
-			continue
+		// Verify target exists (not broken)
+		if _, err := os.Stat(resolvedTarget); os.IsNotExist(err) {
+			return NewPathErrorWithHint("orphan", absPath,
+				fmt.Errorf("symlink target does not exist"),
+				"The file in the repository has been deleted. Use 'rm' to remove the broken symlink")
 		}
 
-		// Check if link is broken
-		if _, err := os.Stat(absTarget); os.IsNotExist(err) {
-			PrintErrorWithHint(WithHint(
-				fmt.Errorf("symlink target does not exist: %s", ContractPath(absTarget)),
-				"The file in the repository has been deleted. Use 'rm' to remove the broken symlink"))
-			continue
+		// Deduplicate and add
+		if !seen[absPath] {
+			seen[absPath] = true
+			managedLinks = append(managedLinks, ManagedLink{
+				Path:     absPath,
+				Target:   resolvedTarget,
+				IsBroken: false,
+				Source:   absSourceDir,
+			})
 		}
-
-		// Add to managed links
-		managedLinks = append(managedLinks, ManagedLink{
-			Path:     absPath,
-			Target:   absTarget,
-			IsBroken: false,
-			Source:   absSourceDir,
-		})
 	}
 
-	// If no managed links found, return
+	// Empty collection after dedup
 	if len(managedLinks) == 0 {
-		PrintInfo("No managed symlinks to orphan")
+		PrintInfo("No managed symlinks found.")
 		return nil
 	}
 
-	// Handle dry-run
+	// Dry-run
 	if opts.DryRun {
 		fmt.Println()
-		PrintDryRun("Would orphan %d symlink(s)", len(managedLinks))
+		PrintDryRun("Would orphan %d symlink(s):", len(managedLinks))
 		for _, link := range managedLinks {
-			fmt.Println()
 			PrintDryRun("Would orphan: %s", ContractPath(link.Path))
 			PrintDetail("Remove symlink: %s", ContractPath(link.Path))
-			PrintDetail("Copy from: %s", ContractPath(link.Target))
-			PrintDetail("Remove from repository: %s", ContractPath(link.Target))
+			PrintDetail("Move from: %s", ContractPath(link.Target))
 		}
 		fmt.Println()
 		PrintDryRunSummary()
 		return nil
 	}
 
-	// Process each link
-	errors := []string{}
-	var orphaned int
+	// Phase 2: Execute with rollback
+	type completedOrphan struct {
+		link           ManagedLink
+		symlinkRemoved bool
+		fileMoved      bool
+	}
+	var completed []completedOrphan
+
+	rollback := func(originalErr error) error {
+		var rollbackErrors []string
+		for i := len(completed) - 1; i >= 0; i-- {
+			c := completed[i]
+			if c.fileMoved {
+				if err := MoveFile(c.link.Path, c.link.Target); err != nil {
+					rollbackErrors = append(rollbackErrors, fmt.Sprintf("restore %s: %v", ContractPath(c.link.Target), err))
+					continue
+				}
+			}
+			if c.symlinkRemoved {
+				if err := os.Symlink(c.link.Target, c.link.Path); err != nil {
+					rollbackErrors = append(rollbackErrors, fmt.Sprintf("recreate symlink %s: %v", ContractPath(c.link.Path), err))
+				}
+			}
+		}
+		if len(rollbackErrors) > 0 {
+			return fmt.Errorf("orphan failed: %v; rollback failed: %s", originalErr, strings.Join(rollbackErrors, "; "))
+		}
+		return originalErr
+	}
 
 	for _, link := range managedLinks {
-		err := orphanManagedLink(link)
+		c := completedOrphan{link: link}
+
+		// Verify target still exists
+		targetInfo, err := os.Lstat(link.Target)
 		if err != nil {
-			errors = append(errors, fmt.Sprintf("%s: %v", ContractPath(link.Path), err))
-		} else {
-			orphaned++
+			completed = append(completed, c)
+			return rollback(WithHint(
+				fmt.Errorf("orphan failed: symlink target does not exist: %s", ContractPath(link.Target)),
+				"Use 'rm' to remove the broken symlink"))
 		}
-	}
+		originalMode := targetInfo.Mode()
 
-	// Report summary
-	if orphaned > 0 {
-		PrintSummary("Successfully orphaned %d file(s)", orphaned)
-		PrintNextStep("status", "view remaining managed files")
-	}
-	if len(errors) > 0 {
-		fmt.Println()
-		PrintError("Failed to orphan %d file(s):", len(errors))
-		for _, err := range errors {
-			PrintDetail("• %s", err)
+		// Remove symlink
+		if err := RemoveSymlink(link.Path); err != nil {
+			completed = append(completed, c)
+			return rollback(fmt.Errorf("failed to remove symlink: %w", err))
 		}
-		return fmt.Errorf("failed to complete all orphan operations")
-	}
+		c.symlinkRemoved = true
 
-	return nil
-}
-
-// orphanManagedLink performs the actual orphaning of a validated managed link
-func orphanManagedLink(link ManagedLink) error {
-	// Check if target exists (in case it became broken since discovery)
-	targetInfo, err := os.Stat(link.Target)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return WithHint(
-				fmt.Errorf("failed to orphan: symlink target does not exist: %s", ContractPath(link.Target)),
-				"The file in the repository has been deleted. Use 'rm' to remove the broken symlink")
+		// Move file from source to target
+		if err := MoveFile(link.Target, link.Path); err != nil {
+			completed = append(completed, c)
+			return rollback(err)
 		}
-		return fmt.Errorf("failed to check target: %w", err)
-	}
+		c.fileMoved = true
+		completed = append(completed, c)
 
-	// Remove the symlink first
-	if err := RemoveSymlink(link.Path); err != nil {
-		return fmt.Errorf("failed to remove symlink: %w", err)
-	}
-
-	// Move content from repo to original location
-	if err := MoveFile(link.Target, link.Path); err != nil {
-		// Try to restore symlink on error
-		if rollbackErr := os.Symlink(link.Target, link.Path); rollbackErr != nil {
-			return fmt.Errorf("failed to move from repository: %v (rollback failed, symlink lost: %v)", err, rollbackErr)
+		// Restore permissions (best-effort)
+		if err := os.Chmod(link.Path, originalMode); err != nil {
+			PrintVerbose("Failed to restore permissions for %s: %v", ContractPath(link.Path), err)
 		}
-		return fmt.Errorf("failed to move from repository: %w", err)
+
+		PrintSuccess("Orphaned: %s", ContractPath(link.Path))
 	}
 
-	// Set appropriate permissions
-	if err := os.Chmod(link.Path, targetInfo.Mode()); err != nil {
-		PrintWarning("Failed to set permissions: %v", err)
+	// Clean empty source-side parent directories
+	var parentDirs []string
+	for _, link := range managedLinks {
+		parentDirs = append(parentDirs, filepath.Dir(link.Target))
 	}
+	CleanEmptyDirs(parentDirs, absSourceDir)
 
-	PrintSuccess("Orphaned: %s", ContractPath(link.Path))
-
+	PrintSummary("Orphaned %d file(s) successfully", len(managedLinks))
+	PrintNextStep("status", "view remaining managed files")
 	return nil
 }

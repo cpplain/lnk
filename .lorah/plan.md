@@ -42,7 +42,7 @@ The issues fall into these categories:
 - [x] `adopt` uses two-phase execution: Phase 1 validates ALL paths (fail-fast on
       first error), Phase 2 executes with batch rollback on any failure, matching
       `docs/design/features/adopt.md` §5
-- [ ] `orphan` uses two-phase execution: Phase 1 validates ALL paths (fail-fast on
+- [x] `orphan` uses two-phase execution: Phase 1 validates ALL paths (fail-fast on
       first error), Phase 2 executes with batch rollback on any failure, matching
       `docs/design/features/orphan.md` §5
 
@@ -58,9 +58,9 @@ The issues fall into these categories:
       execution failures, matching their respective specs
 - [ ] `remove` and `prune` print next-step hints when `failed == 0`, matching their
       respective specs
-- [ ] `adopt` and `orphan` deduplicate collected paths by absolute path, matching
+- [x] `adopt` and `orphan` deduplicate collected paths by absolute path, matching
       their respective specs
-- [ ] `orphan` rejects broken links found during directory expansion, matching
+- [x] `orphan` rejects broken links found during directory expansion, matching
       `docs/design/features/orphan.md` §5 phase 1
 
 ### Medium
