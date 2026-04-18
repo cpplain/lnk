@@ -67,9 +67,9 @@ The issues fall into these categories:
 
 - [x] All `filepath.Walk` calls replaced with `filepath.WalkDir`, matching
       `docs/design/stdlib.md` §2
-- [ ] Bare `lnk` (no arguments) exits with code 0, matching
+- [x] Bare `lnk` (no arguments) exits with code 0, matching
       `docs/design/cli.md` §3 step 4
-- [ ] `extractCommand` in `main.go` handles `--ignore=value` syntax before the
+- [x] `extractCommand` in `main.go` handles `--ignore=value` syntax before the
       command name
 - [x] `FindManagedLinks` sets `ManagedLink.Target` to the normalized absolute path,
       matching `docs/design/internals.md` §3

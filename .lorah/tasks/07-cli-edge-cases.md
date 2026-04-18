@@ -1,5 +1,5 @@
 ---
-status: implement
+status: completed
 ---
 
 # Task: fix CLI edge cases — bare lnk exit code and extractCommand --ignore parsing
@@ -68,4 +68,8 @@ Two fixes in `main.go` to align with `docs/design/cli.md`:
 
 ### Implementation
 
-- ...
+- Changed bare `lnk` handler from `os.Exit(lnk.ExitUsage)` to `return` (exit 0).
+- Converted `extractCommand` from `for i, arg := range args` to C-style `for i := 0; i < len(args); i++` so the `i++` skip past `--ignore` values actually works.
+- The `--ignore=value` form was already handled correctly (starts with `-`, so `continue` skips it); the comment was updated to document this explicitly.
+- All `TestExtractCommand` tests pass (13/13). E2e `TestHelp/no_arguments_shows_usage_and_exits_0` passes.
+- Pre-existing `TestIgnorePatterns` failures are sandbox-related (symlink "operation not permitted"), not caused by these changes.

@@ -43,7 +43,7 @@ func main() {
 	// Handle bare `lnk`
 	if len(args) == 0 {
 		printUsage()
-		os.Exit(lnk.ExitUsage)
+		return
 	}
 
 	// Extract the command name and remaining args
@@ -306,7 +306,9 @@ func parseFlagValue(arg string, args []string, index int) (flag string, value st
 // The command is the first non-flag token that matches a valid command name or
 // appears to be a command (not starting with -).
 func extractCommand(args []string) (string, []string) {
-	for i, arg := range args {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+
 		// Stop at --
 		if arg == "--" {
 			break
@@ -314,7 +316,7 @@ func extractCommand(args []string) (string, []string) {
 
 		// Skip flags
 		if strings.HasPrefix(arg, "-") {
-			// Skip value of flags that take values (--ignore pattern)
+			// Skip value of flags that take values (--ignore pattern or --ignore=pattern)
 			if arg == "--ignore" && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
 				i++ // skip the value token so it isn't mistaken for a command
 			}
