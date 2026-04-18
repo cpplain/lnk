@@ -30,6 +30,151 @@ func TestManagedLinkStruct(t *testing.T) {
 	}
 }
 
+// TestFindManagedLinksTargetIsAbsolute verifies that ManagedLink.Target is always
+// an absolute path, even when the symlink was created with a relative target.
+// Per internals.md §2: Target stores "absolute path of the symlink's resolved
+// target (never relative)".
+func TestFindManagedLinksTargetIsAbsolute(t *testing.T) {
+	tmpDir := t.TempDir()
+	sourceDir := filepath.Join(tmpDir, "repo", "home")
+	targetDir := filepath.Join(tmpDir, "home")
+
+	os.MkdirAll(sourceDir, 0755)
+	os.MkdirAll(targetDir, 0755)
+
+	// Create source file
+	sourceFile := filepath.Join(sourceDir, "config.txt")
+	os.WriteFile(sourceFile, []byte("config"), 0644)
+
+	// Create symlink with a RELATIVE target
+	linkPath := filepath.Join(targetDir, "config-link")
+	relTarget, _ := filepath.Rel(targetDir, sourceFile)
+	os.Symlink(relTarget, linkPath)
+
+	links, err := FindManagedLinks(targetDir, []string{sourceDir})
+	if err != nil {
+		t.Fatalf("FindManagedLinks error: %v", err)
+	}
+	if len(links) != 1 {
+		t.Fatalf("Expected 1 link, got %d", len(links))
+	}
+
+	// Target must be absolute, not the raw relative readlink value
+	if !filepath.IsAbs(links[0].Target) {
+		t.Errorf("ManagedLink.Target should be absolute, got %q", links[0].Target)
+	}
+
+	// Target must resolve to the source file
+	if links[0].Target != sourceFile {
+		t.Errorf("ManagedLink.Target = %q, want %q", links[0].Target, sourceFile)
+	}
+}
+
+// TestFindManagedLinksTargetAbsoluteForAbsoluteSymlinks verifies Target is the
+// normalized absolute path even when the symlink was created with an absolute target.
+func TestFindManagedLinksTargetAbsoluteForAbsoluteSymlinks(t *testing.T) {
+	tmpDir := t.TempDir()
+	sourceDir := filepath.Join(tmpDir, "repo", "home")
+	targetDir := filepath.Join(tmpDir, "home")
+
+	os.MkdirAll(sourceDir, 0755)
+	os.MkdirAll(targetDir, 0755)
+
+	sourceFile := filepath.Join(sourceDir, "bashrc")
+	os.WriteFile(sourceFile, []byte("bashrc"), 0644)
+
+	// Create symlink with absolute target
+	linkPath := filepath.Join(targetDir, ".bashrc")
+	os.Symlink(sourceFile, linkPath)
+
+	links, err := FindManagedLinks(targetDir, []string{sourceDir})
+	if err != nil {
+		t.Fatalf("FindManagedLinks error: %v", err)
+	}
+	if len(links) != 1 {
+		t.Fatalf("Expected 1 link, got %d", len(links))
+	}
+
+	if !filepath.IsAbs(links[0].Target) {
+		t.Errorf("ManagedLink.Target should be absolute, got %q", links[0].Target)
+	}
+	if links[0].Target != sourceFile {
+		t.Errorf("ManagedLink.Target = %q, want %q", links[0].Target, sourceFile)
+	}
+}
+
+// TestFindManagedLinksBrokenLinkTargetIsAbsolute verifies that even broken links
+// have an absolute Target path. Per internals.md §3 broken link handling:
+// Target is set to "the normalized absolute path computed in step 3".
+func TestFindManagedLinksBrokenLinkTargetIsAbsolute(t *testing.T) {
+	tmpDir := t.TempDir()
+	sourceDir := filepath.Join(tmpDir, "repo", "home")
+	targetDir := filepath.Join(tmpDir, "home")
+
+	os.MkdirAll(sourceDir, 0755)
+	os.MkdirAll(targetDir, 0755)
+
+	// Create a broken symlink with a relative target pointing into sourceDir
+	missingFile := filepath.Join(sourceDir, "missing.txt")
+	linkPath := filepath.Join(targetDir, "broken-link")
+	relTarget, _ := filepath.Rel(targetDir, missingFile)
+	os.Symlink(relTarget, linkPath)
+
+	links, err := FindManagedLinks(targetDir, []string{sourceDir})
+	if err != nil {
+		t.Fatalf("FindManagedLinks error: %v", err)
+	}
+	if len(links) != 1 {
+		t.Fatalf("Expected 1 link, got %d", len(links))
+	}
+
+	if !links[0].IsBroken {
+		t.Error("Link should be marked as broken")
+	}
+	if !filepath.IsAbs(links[0].Target) {
+		t.Errorf("Broken link Target should be absolute, got %q", links[0].Target)
+	}
+	if links[0].Target != missingFile {
+		t.Errorf("ManagedLink.Target = %q, want %q", links[0].Target, missingFile)
+	}
+}
+
+// TestFindManagedLinksUsesEvalSymlinks verifies that FindManagedLinks uses
+// filepath.EvalSymlinks for non-broken links, which resolves the full symlink
+// chain. Per internals.md §3: "Calls filepath.EvalSymlinks to resolve the full
+// symlink chain to a clean absolute path".
+func TestFindManagedLinksUsesEvalSymlinks(t *testing.T) {
+	tmpDir := t.TempDir()
+	sourceDir := filepath.Join(tmpDir, "repo", "home")
+	targetDir := filepath.Join(tmpDir, "home")
+
+	os.MkdirAll(sourceDir, 0755)
+	os.MkdirAll(targetDir, 0755)
+
+	// Create the actual source file
+	sourceFile := filepath.Join(sourceDir, "config.txt")
+	os.WriteFile(sourceFile, []byte("config"), 0644)
+
+	// Create symlink in targetDir pointing to source file
+	linkPath := filepath.Join(targetDir, "config-link")
+	os.Symlink(sourceFile, linkPath)
+
+	links, err := FindManagedLinks(targetDir, []string{sourceDir})
+	if err != nil {
+		t.Fatalf("FindManagedLinks error: %v", err)
+	}
+	if len(links) != 1 {
+		t.Fatalf("Expected 1 link, got %d", len(links))
+	}
+
+	// For non-broken links, Target should be the EvalSymlinks result —
+	// a fully resolved, clean absolute path
+	expectedTarget, _ := filepath.EvalSymlinks(linkPath)
+	if links[0].Target != expectedTarget {
+		t.Errorf("ManagedLink.Target = %q, want EvalSymlinks result %q", links[0].Target, expectedTarget)
+	}
+}
+
 func TestFindManagedLinks(t *testing.T) {
 	tests := []struct {
 		name          string

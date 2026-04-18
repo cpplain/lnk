@@ -1,5 +1,5 @@
 ---
-status: test
+status: implement
 ---
 
 # Task: Replace filepath.Walk with WalkDir and fix ManagedLink.Target
@@ -62,7 +62,13 @@ restructuring.
 
 ### Testing
 
-- ...
+- Added 4 tests to `lnk/symlink_test.go`:
+  - `TestFindManagedLinksTargetIsAbsolute`: relative symlink → Target must be absolute (FAILS: stores raw readlink)
+  - `TestFindManagedLinksTargetAbsoluteForAbsoluteSymlinks`: absolute symlink → Target is absolute (passes)
+  - `TestFindManagedLinksBrokenLinkTargetIsAbsolute`: broken relative symlink → Target must be absolute (FAILS: stores raw readlink)
+  - `TestFindManagedLinksUsesEvalSymlinks`: non-broken link Target matches `filepath.EvalSymlinks` result (FAILS: manual resolution doesn't resolve macOS `/var` → `/private/var`)
+- No tests for WalkDir migration itself (same observable behavior as Walk; verified by acceptance criteria code check)
+- Existing `TestFindManagedLinks` table tests all pass unchanged
 
 ### Implementation
 
