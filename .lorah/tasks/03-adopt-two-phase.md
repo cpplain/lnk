@@ -1,5 +1,5 @@
 ---
-status: test
+status: implement
 ---
 
 # Task: Rewrite `adopt` to use two-phase transactional execution
@@ -82,7 +82,21 @@ caller using the lstat result from step 2.
 
 ### Testing
 
-- ...
+- Rewrote `lnk/adopt_test.go` with tests organized by phase:
+  - **Phase 1 validation**: fail-fast (no filesystem changes when any path fails),
+    already-adopted detection, non-adopted symlink rejection, destination-exists,
+    path-outside-target-dir, no-paths
+  - **Directory walking**: walks files individually, empty directory returns error,
+    symlinks inside directories are skipped
+  - **Deduplication**: same file via directory and explicit path adopted once
+  - **Phase 2 execution**: single file, multiple files, nested file
+  - **Rollback**: execution failure triggers reverse-order rollback restoring files,
+    CleanEmptyDirs called on dirs created during operation
+  - **Dry-run**: no filesystem changes, per-file detail output, directory per-file detail
+  - **Summary output**: "Adopted N file(s) successfully" format, next-step hint
+  - **validateAdoptSource unit tests**: already-adopted and regular file cases
+- Edge cases covered: permission-based Phase 2 failure trigger (read-only dest dir),
+  symlinks inside walked directories, empty directories, duplicate path collection
 
 ### Implementation
 
