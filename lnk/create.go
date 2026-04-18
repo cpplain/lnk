@@ -34,8 +34,8 @@ func collectPlannedLinksWithPatterns(sourcePath, targetPath string, ignorePatter
 			return err
 		}
 
-		// Skip directories - we only link files
-		if d.IsDir() {
+		// Only collect regular files — skip directories, symlinks, and special entries
+		if !d.Type().IsRegular() {
 			return nil
 		}
 
@@ -140,9 +140,10 @@ func executePlannedLinks(links []PlannedLink, sourceDir string) error {
 					continue
 				}
 				// Print warning but continue with other links
-				PrintWarningWithHint(fmt.Errorf("Failed to link %s: %w", ContractPath(link.Target), err))
+				PrintWarningWithHint(fmt.Errorf("Failed to create %s: %w", ContractPath(link.Target), err))
 				failed++
 			} else {
+				PrintSuccess("Created: %s", ContractPath(link.Target))
 				created++
 			}
 		}
@@ -157,7 +158,9 @@ func executePlannedLinks(links []PlannedLink, sourceDir string) error {
 	// Print summary
 	if created > 0 {
 		PrintSummary("Created %d symlink(s) successfully", created)
-		PrintNextStep("status", sourceDir, "verify links")
+		if failed == 0 {
+			PrintNextStep("status", sourceDir, "verify links")
+		}
 	} else if failed == 0 {
 		// All links were skipped (already exist)
 		PrintInfo("All symlinks already exist")

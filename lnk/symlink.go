@@ -180,7 +180,6 @@ func CreateSymlink(source, target string) error {
 			"Check that the parent directory exists and you have write permissions")
 	}
 
-	PrintSuccess("Created: %s", ContractPath(target))
 	return nil
 }
 
@@ -192,7 +191,7 @@ func RemoveSymlink(path string) error {
 		return NewPathError("remove symlink", path, err)
 	}
 	if info.Mode()&os.ModeSymlink == 0 {
-		return NewPathErrorWithHint("remove symlink", path, fmt.Errorf("not a symlink"),
+		return NewPathErrorWithHint("remove symlink", path, ErrNotSymlink,
 			"Only symlinks can be removed with this operation")
 	}
 	return os.Remove(path)

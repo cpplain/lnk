@@ -73,10 +73,9 @@ func copyFile(src, dst string) error {
 		return copyErr
 	}
 
-	// Set file permissions
+	// Set file permissions (best-effort — don't abort the copy)
 	if err = os.Chmod(dst, srcInfo.Mode()); err != nil {
-		copyErr = fmt.Errorf("failed to set file permissions: %w", err)
-		return copyErr
+		PrintVerbose("Warning: failed to set file permissions on %s: %v", dst, err)
 	}
 
 	return copyErr
