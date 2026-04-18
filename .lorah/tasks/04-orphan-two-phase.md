@@ -1,5 +1,5 @@
 ---
-status: test
+status: implement
 ---
 
 # Task: Rewrite `orphan` to use two-phase transactional execution
@@ -84,7 +84,20 @@ success.
 
 ### Testing
 
-- ...
+- Rewrote `lnk/orphan_test.go` with two-phase test structure matching adopt pattern
+- Moved `containsString` helper to `lnk/testutil_test.go` (shared by other test files)
+- Phase 1 validation tests: fail-fast, path not found, regular file rejected, unmanaged
+  symlink rejected, broken symlink rejected, path outside target dir, no paths
+- Directory expansion tests: managed links collected, no managed links error, broken
+  links rejected during expansion
+- Deduplication test: same path via directory + explicit deduplicated
+- Phase 2 execution tests: single file, multiple files, permission restoration,
+  CleanEmptyDirs on source-side parents
+- Phase 2 rollback test: uses read-only source dir to trigger MoveFile failure,
+  verifies completed orphans rolled back
+- Dry-run tests: no changes, output format matches spec ("Move from:" not "Copy from:")
+- Summary output test: "Orphaned N file(s) successfully" and next-step hint
+- 11 tests fail as expected (current continue-on-failure code), 6 pass, 2 skipped
 
 ### Implementation
 

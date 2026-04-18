@@ -9,6 +9,15 @@ import (
 )
 
 // ==========================================
+// String Helpers
+// ==========================================
+
+// containsString checks if s contains substr
+func containsString(s, substr string) bool {
+	return strings.Contains(s, substr)
+}
+
+// ==========================================
 // Output Capture Helpers
 // ==========================================
 
