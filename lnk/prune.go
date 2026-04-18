@@ -2,6 +2,7 @@ package lnk
 
 import (
 	"fmt"
+	"path/filepath"
 )
 
 // Prune removes broken symlinks managed by the source directory
@@ -49,6 +50,7 @@ func Prune(opts LinkOptions) error {
 
 	// Track results for summary
 	var pruned, failed int
+	var removedParents []string
 
 	// Remove the broken links
 	for _, link := range brokenLinks {
@@ -59,7 +61,11 @@ func Prune(opts LinkOptions) error {
 		}
 		PrintSuccess("Pruned: %s", ContractPath(link.Path))
 		pruned++
+		removedParents = append(removedParents, filepath.Dir(link.Path))
 	}
+
+	// Clean empty parent directories
+	CleanEmptyDirs(removedParents, targetDir)
 
 	// Print summary
 	if pruned > 0 {

@@ -1,5 +1,5 @@
 ---
-status: implement
+status: completed
 ---
 
 # Task: Add `CleanEmptyDirs` call to `prune` after symlink removal
@@ -59,4 +59,9 @@ targetDir)` after the removal loop.
 
 ### Implementation
 
-- ...
+- Added `path/filepath` import to `prune.go`
+- Added `removedParents` slice to track parent dirs of successfully pruned links
+- Appended `filepath.Dir(link.Path)` on each successful prune
+- Called `CleanEmptyDirs(removedParents, targetDir)` after the removal loop
+- Pattern matches `remove.go` lines 98-113 exactly
+- All tests pass including both new directory-cleanup test cases
