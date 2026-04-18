@@ -121,7 +121,6 @@ func copyDir(src, dst string) error {
 
 // CleanEmptyDirs removes empty parent directories up to (but not including) boundaryDir.
 // Returns the number of directories removed.
-// TODO: implement per docs/design/internals.md §7
 func CleanEmptyDirs(dirs []string, boundaryDir string) int {
 	removed := 0
 	for _, dir := range dirs {

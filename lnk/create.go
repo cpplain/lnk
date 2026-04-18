@@ -127,8 +127,11 @@ func executePlannedLinks(links []PlannedLink, sourceDir string) error {
 			parentDir := filepath.Dir(link.Target)
 			if !createdDirs[parentDir] {
 				if err := os.MkdirAll(parentDir, 0755); err != nil {
-					return NewPathErrorWithHint("create directory", parentDir, err,
-						"Check that you have write permissions in the parent directory")
+					PrintWarningWithHint(fmt.Errorf("Failed to create %s: %w", ContractPath(link.Target),
+						NewPathErrorWithHint("create directory", parentDir, err,
+							"Check that you have write permissions in the parent directory")))
+					failed++
+					continue
 				}
 				createdDirs[parentDir] = true
 			}
