@@ -1,5 +1,5 @@
 ---
-status: test
+status: implement
 ---
 
 # Task: Fix `remove` to use source-walk traversal and call `CleanEmptyDirs`
@@ -62,7 +62,19 @@ functions for now.
 
 ### Testing
 
-- ...
+- Updated `lnk/remove_test.go` with tests for source-walk behavior
+- Added `CleanEmptyDirs` implementation in `lnk/file_ops.go` (needed for tests
+  to verify cleanup; implemented per `docs/design/internals.md` §7)
+- New test cases added:
+  - `skips non-managed symlinks in target` — only managed links removed
+  - `skips target path that is a regular file` — regular files untouched
+  - `broken symlinks from deleted source files are not found by source walk` —
+    validates source-walk only finds current source files (FAILS: expected)
+  - `empty parent directories cleaned after removal` — validates CleanEmptyDirs
+    is called (FAILS: expected)
+  - `non-empty parent directories preserved after removal` — boundary behavior
+- Expected failures: 2 tests fail against current target-walk implementation,
+  will pass after source-walk implementation
 
 ### Implementation
 

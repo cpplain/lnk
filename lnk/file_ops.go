@@ -120,6 +120,30 @@ func copyDir(src, dst string) error {
 	return nil
 }
 
+// CleanEmptyDirs removes empty parent directories up to (but not including) boundaryDir.
+// Returns the number of directories removed.
+// TODO: implement per docs/design/internals.md §7
+func CleanEmptyDirs(dirs []string, boundaryDir string) int {
+	removed := 0
+	for _, dir := range dirs {
+		current := dir
+		for current != boundaryDir {
+			entries, err := os.ReadDir(current)
+			if err != nil || len(entries) > 0 {
+				break
+			}
+			if err := os.Remove(current); err != nil {
+				PrintVerbose("Failed to remove empty directory %s: %v", ContractPath(current), err)
+				break
+			}
+			PrintVerbose("Removed empty directory: %s", ContractPath(current))
+			removed++
+			current = filepath.Dir(current)
+		}
+	}
+	return removed
+}
+
 // MoveFile moves a file from src to dst, using os.Rename when possible
 // and falling back to copy+delete for cross-device moves.
 // Returns error if the move fails.
