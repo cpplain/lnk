@@ -1,5 +1,5 @@
 ---
-status: implement
+status: completed
 ---
 
 # Task: Rewrite `adopt` to use two-phase transactional execution
@@ -100,4 +100,20 @@ caller using the lstat result from step 2.
 
 ### Implementation
 
-- ...
+- Rewrote `Adopt` function with two-phase transactional execution:
+  - Phase 1: collects and validates all paths before any filesystem changes,
+    fails fast on first validation error
+  - Phase 2: executes moves and symlinks with full reverse-order rollback on
+    any failure, tracks newly created directories for `CleanEmptyDirs`
+- Refactored `validateAdoptSource` to only check already-adopted status;
+  non-adopted symlink rejection moved to caller via lstat result
+- Replaced `performAdoption` and `performDirectoryAdoption` with
+  `collectAdoption` helper (validation only, no side effects)
+- Directory walking uses `filepath.WalkDir` (spec-compliant), collects
+  regular files only, skips symlinks
+- Deduplication by absolute path after collection
+- Dry-run prints per-file detail with move destination and symlink info
+- `ValidateSymlinkCreation` called with `(destPath, absPath)` per spec
+- Updated e2e tests to match new error messages (direct errors instead
+  of aggregate `"failed to adopt N file(s)"`)
+- All tests pass: `make check` clean

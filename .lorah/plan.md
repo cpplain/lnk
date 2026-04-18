@@ -39,7 +39,7 @@ The issues fall into these categories:
       matching `remove.md` §5 step 2
 - [x] `prune` calls `CleanEmptyDirs` on parent directories of pruned symlinks,
       matching `docs/design/features/prune.md` §5
-- [ ] `adopt` uses two-phase execution: Phase 1 validates ALL paths (fail-fast on
+- [x] `adopt` uses two-phase execution: Phase 1 validates ALL paths (fail-fast on
       first error), Phase 2 executes with batch rollback on any failure, matching
       `docs/design/features/adopt.md` §5
 - [ ] `orphan` uses two-phase execution: Phase 1 validates ALL paths (fail-fast on

@@ -354,8 +354,8 @@ func TestAdoptMultipleFiles(t *testing.T) {
 	os.MkdirAll(targetDir, 0755)
 
 	files := map[string]string{
-		".bashrc":  "bash config",
-		".vimrc":   "vim config",
+		".bashrc":    "bash config",
+		".vimrc":     "vim config",
 		".gitconfig": "git config",
 	}
 	var paths []string

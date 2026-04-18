@@ -180,7 +180,7 @@ func TestEdgeCases(t *testing.T) {
 			args: []string{"adopt", filepath.Join(sourceDir, "private", "home"),
 				filepath.Join(targetDir, ".ssh", "config")},
 			wantExit: 1,
-			contains: []string{"failed to adopt 1 file(s)"},
+			contains: []string{"already adopted"},
 		},
 	}
 
