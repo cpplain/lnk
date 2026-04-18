@@ -33,9 +33,9 @@ The issues fall into these categories:
 
 ### Critical
 
-- [ ] `remove` walks `SourceDir` (not `TargetDir`) to find managed links, matching
+- [x] `remove` walks `SourceDir` (not `TargetDir`) to find managed links, matching
       `docs/design/features/remove.md` §5 step 1
-- [ ] `remove` calls `CleanEmptyDirs` on parent directories of removed symlinks,
+- [x] `remove` calls `CleanEmptyDirs` on parent directories of removed symlinks,
       matching `remove.md` §5 step 2
 - [ ] `prune` calls `CleanEmptyDirs` on parent directories of pruned symlinks,
       matching `docs/design/features/prune.md` §5

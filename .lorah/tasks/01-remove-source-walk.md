@@ -1,5 +1,5 @@
 ---
-status: implement
+status: completed
 ---
 
 # Task: Fix `remove` to use source-walk traversal and call `CleanEmptyDirs`
@@ -78,4 +78,12 @@ functions for now.
 
 ### Implementation
 
-- ...
+- Replaced `FindManagedLinks` (target-walk) with `collectManagedLinks` (source-walk)
+- `collectManagedLinks` uses `filepath.WalkDir` on `SourceDir`, computes expected
+  target paths, checks each with `os.Lstat` + `filepath.EvalSymlinks` for managed
+  link detection (per spec §6)
+- Resolves `sourceDir` via `filepath.EvalSymlinks` before comparison to handle
+  OS-level symlinks (macOS `/var` -> `/private/var`)
+- Added `CleanEmptyDirs` call on parent directories of removed symlinks with
+  `targetDir` as boundary
+- All 10 tests pass, `make check` passes
