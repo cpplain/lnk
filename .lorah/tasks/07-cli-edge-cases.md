@@ -1,5 +1,5 @@
 ---
-status: test
+status: implement
 ---
 
 # Task: fix CLI edge cases — bare lnk exit code and extractCommand --ignore parsing
@@ -54,7 +54,17 @@ Two fixes in `main.go` to align with `docs/design/cli.md`:
 
 ### Testing
 
-- ...
+- Created `main_test.go` with `TestExtractCommand` covering:
+  - `--ignore pattern create .` (space form, the main bug)
+  - `--ignore=pattern create .` (equals form)
+  - `--ignore pattern` with no command (should return empty)
+  - Multiple `--ignore` flags before command
+  - `--ignore` after command (already works)
+  - `--ignore` as last arg with no value
+  - `--ignore` where value starts with dash (not skipped)
+  - Basic cases: simple command, flags before command, no args, only flags, `--` stop
+- Updated `test/e2e_test.go` "no arguments" test: changed expected exit code from 2 to 0
+- All tests compile; expected failures confirmed (3 unit test failures for --ignore bug, 1 e2e failure for exit code)
 
 ### Implementation
 

@@ -71,9 +71,9 @@ func TestHelp(t *testing.T) {
 			stream:   "stdout",
 		},
 		{
-			name:     "no arguments shows usage error",
+			name:     "no arguments shows usage and exits 0",
 			args:     []string{},
-			wantExit: 2,
+			wantExit: 0,
 			contains: []string{"Usage:"},
 			stream:   "stdout",
 		},
