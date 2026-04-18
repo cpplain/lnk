@@ -1,5 +1,5 @@
 ---
-status: implement
+status: completed
 ---
 
 <!-- Valid statuses: test | implement | blocked | completed -->
@@ -120,4 +120,18 @@ References: `docs/design/output.md` §5, `docs/design/features/create.md` §5,
 
 ### Implementation
 
-- ...
+- Implemented `PrintWarningWithHint(err error)` in `lnk/output.go`: piped mode writes
+  `"warning: <err>\n"` + optional `"hint: <hint>\n"` to stderr; terminal mode uses
+  yellow warning icon + cyan "Try:" hint line.
+- Fixed `PrintNextStep` to include `sourceDir` via `ContractPath`:
+  `"Next: Run 'lnk <command> <contractedSourceDir>' to <description>"`.
+- Fixed `status.go`: broken links now print to stdout using `fmt.Printf` with red icon
+  (terminal) or `"broken <path>"` (piped); empty result uses `PrintInfo("No managed
+  links found.")` instead of `PrintEmptyResult("active links")`.
+- Updated `create.go`, `remove.go`, `prune.go` to use `PrintWarningWithHint` for
+  per-item execution failures (wraps error with path context via `fmt.Errorf("%w")`).
+- Added `PrintNextStep("status", sourceDir, ...)` to `remove.go` and `prune.go` after
+  summary, only when `failed == 0`.
+- Updated e2e tests (`test/e2e_test.go`, `test/workflows_test.go`) to expect
+  `"No managed links found."` instead of old `"No active links found"`.
+- All tests pass: `make check` green.

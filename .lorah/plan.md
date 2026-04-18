@@ -48,15 +48,15 @@ The issues fall into these categories:
 
 ### High
 
-- [ ] `PrintWarningWithHint(err error)` exists in `lnk/output.go`, matching
+- [x] `PrintWarningWithHint(err error)` exists in `lnk/output.go`, matching
       `docs/design/output.md` §5 Specialized Functions
-- [ ] `PrintNextStep` takes three arguments `(command, sourceDir, description)` and
+- [x] `PrintNextStep` takes three arguments `(command, sourceDir, description)` and
       contracts `sourceDir` via `ContractPath`, matching `output.md` §5
-- [ ] `status` prints broken links to stdout (not stderr), matching
+- [x] `status` prints broken links to stdout (not stderr), matching
       `docs/design/features/status.md` §5 step 3
-- [ ] `create`, `remove`, and `prune` use `PrintWarningWithHint` for per-item
+- [x] `create`, `remove`, and `prune` use `PrintWarningWithHint` for per-item
       execution failures, matching their respective specs
-- [ ] `remove` and `prune` print next-step hints when `failed == 0`, matching their
+- [x] `remove` and `prune` print next-step hints when `failed == 0`, matching their
       respective specs
 - [x] `adopt` and `orphan` deduplicate collected paths by absolute path, matching
       their respective specs
@@ -73,5 +73,5 @@ The issues fall into these categories:
       command name
 - [ ] `FindManagedLinks` sets `ManagedLink.Target` to the normalized absolute path,
       matching `docs/design/internals.md` §3
-- [ ] `status` empty result prints "No managed links found." matching
+- [x] `status` empty result prints "No managed links found." matching
       `docs/design/features/status.md`

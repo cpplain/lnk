@@ -20,7 +20,7 @@ func TestCompleteWorkflow(t *testing.T) {
 		homeSourceDir := filepath.Join(sourceDir, "home")
 		result := runCommand(t, "status", homeSourceDir)
 		assertExitCode(t, result, 0)
-		assertContains(t, result.Stdout, "No active links found")
+		assertContains(t, result.Stdout, "No managed links found.")
 	})
 
 	// Step 2: Create links
@@ -36,7 +36,7 @@ func TestCompleteWorkflow(t *testing.T) {
 		homeSourceDir := filepath.Join(sourceDir, "home")
 		result := runCommand(t, "status", homeSourceDir)
 		assertExitCode(t, result, 0)
-		assertNotContains(t, result.Stdout, "No active links found")
+		assertNotContains(t, result.Stdout, "No managed links found.")
 	})
 
 	// Step 4: Adopt a new file
@@ -77,7 +77,7 @@ func TestCompleteWorkflow(t *testing.T) {
 		homeSourceDir := filepath.Join(sourceDir, "home")
 		result := runCommand(t, "status", homeSourceDir)
 		assertExitCode(t, result, 0)
-		assertContains(t, result.Stdout, "No active links found")
+		assertContains(t, result.Stdout, "No managed links found.")
 	})
 }
 

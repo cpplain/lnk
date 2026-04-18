@@ -63,7 +63,7 @@ func Status(opts LinkOptions) error {
 					// For piped output, use simple format
 					fmt.Printf("broken %s\n", ContractPath(link.Path))
 				} else {
-					PrintError("Broken: %s", ContractPath(link.Path))
+					fmt.Printf("%s Broken: %s\n", Red(FailureIcon), ContractPath(link.Path))
 				}
 			}
 		}
@@ -77,7 +77,7 @@ func Status(opts LinkOptions) error {
 				Red(fmt.Sprintf("%d", len(brokenLinks))))
 		}
 	} else {
-		PrintEmptyResult("active links")
+		PrintInfo("No managed links found.")
 	}
 
 	return nil

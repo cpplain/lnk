@@ -100,7 +100,7 @@ func RemoveLinks(opts LinkOptions) error {
 	// Remove links
 	for _, path := range managed {
 		if err := RemoveSymlink(path); err != nil {
-			PrintError("Failed to remove %s: %v", ContractPath(path), err)
+			PrintWarningWithHint(fmt.Errorf("Failed to remove %s: %w", ContractPath(path), err))
 			failed++
 			continue
 		}
@@ -119,6 +119,9 @@ func RemoveLinks(opts LinkOptions) error {
 	if failed > 0 {
 		PrintWarning("Failed to remove %d symlink(s)", failed)
 		return fmt.Errorf("failed to remove %d symlink(s)", failed)
+	}
+	if failed == 0 {
+		PrintNextStep("status", sourceDir, "verify links")
 	}
 
 	return nil

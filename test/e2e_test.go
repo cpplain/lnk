@@ -196,7 +196,7 @@ func TestStatus(t *testing.T) {
 			name:     "status with no links",
 			args:     []string{"status", filepath.Join(sourceDir, "home")},
 			wantExit: 0,
-			contains: []string{"No active links found"},
+			contains: []string{"No managed links found."},
 		},
 		{
 			name: "status with links",

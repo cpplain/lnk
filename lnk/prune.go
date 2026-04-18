@@ -55,7 +55,7 @@ func Prune(opts LinkOptions) error {
 	// Remove the broken links
 	for _, link := range brokenLinks {
 		if err := RemoveSymlink(link.Path); err != nil {
-			PrintError("Failed to prune %s: %v", ContractPath(link.Path), err)
+			PrintWarningWithHint(fmt.Errorf("Failed to prune %s: %w", ContractPath(link.Path), err))
 			failed++
 			continue
 		}
@@ -74,6 +74,9 @@ func Prune(opts LinkOptions) error {
 	if failed > 0 {
 		PrintWarning("Failed to prune %d symlink(s)", failed)
 		return fmt.Errorf("failed to prune %d symlink(s)", failed)
+	}
+	if failed == 0 {
+		PrintNextStep("status", sourceDir, "view remaining managed files")
 	}
 
 	return nil

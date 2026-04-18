@@ -155,13 +155,23 @@ func PrintEmptyResult(itemType string) {
 // PrintWarningWithHint prints a warning message with an optional hint extracted from the error.
 // Always writes to stderr. Not gated by verbosity.
 func PrintWarningWithHint(err error) {
-	// stub — implementation pending
+	if ShouldSimplifyOutput() {
+		fmt.Fprintf(os.Stderr, "warning: %v\n", err)
+		if hint := GetErrorHint(err); hint != "" {
+			fmt.Fprintf(os.Stderr, "hint: %s\n", hint)
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "%s %v\n", Yellow(WarningIcon), err)
+		if hint := GetErrorHint(err); hint != "" {
+			fmt.Fprintf(os.Stderr, "  %s %s\n", Cyan("Try:"), hint)
+		}
+	}
 }
 
 // PrintNextStep prints a standard next step hint.
 // sourceDir is contracted via ContractPath for display.
 func PrintNextStep(command, sourceDir, description string) {
-	PrintInfo("Next: Run 'lnk %s' to %s", command, description)
+	PrintInfo("Next: Run 'lnk %s %s' to %s", command, ContractPath(sourceDir), description)
 }
 
 // PrintDryRunSummary prints the standard dry-run mode message

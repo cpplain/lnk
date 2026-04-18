@@ -139,7 +139,7 @@ func executePlannedLinks(links []PlannedLink, sourceDir string) error {
 					continue
 				}
 				// Print warning but continue with other links
-				PrintWarning("Failed to link %s: %v", ContractPath(link.Target), err)
+				PrintWarningWithHint(fmt.Errorf("Failed to link %s: %w", ContractPath(link.Target), err))
 				failed++
 			} else {
 				created++
